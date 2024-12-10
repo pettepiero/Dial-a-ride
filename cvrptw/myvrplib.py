@@ -150,8 +150,8 @@ def plot_solution(
 
     for idx, route in enumerate(solution.routes):
         ax.plot(
-            [data["node_coord"][loc][0] for loc in route],
-            [data["node_coord"][loc][1] for loc in route],
+            [data["node_coord"][loc][0] for loc in route.customers_list],
+            [data["node_coord"][loc][1] for loc in route.customers_list],
             color=cmap(idx),
             marker=".",
             label=f"Vehicle {idx}",
@@ -241,7 +241,7 @@ def verify_time_windows(data, state):
     Counts the number of customers that are served late or early in the solution.
     """
     late, early, ontime = 0, 0, 0
-    planned_customers = [customer for route in state.routes for customer in route]
+    planned_customers = [customer for route in state.routes for customer in route.customers_list]
     planned_customers = [
         customer for customer in planned_customers if customer not in data["depots"]
     ]
