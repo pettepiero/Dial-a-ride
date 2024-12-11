@@ -13,6 +13,8 @@ from alns.accept import RecordToRecordTravel
 from alns.select import RouletteWheel
 from alns.stop import MaxIterations
 
+END_OF_DAY = 1000
+
 
 def cost_matrix_from_coords(coords: list) -> list:
     """
@@ -99,6 +101,7 @@ def read_cordeau_data(file: str, print_data: bool = False) -> dict:
     begin_times = [row[11] for row in customers]
     end_times = [row[12] for row in customers]
     data_dict["time_window"] = [[a, b] for a, b in zip(begin_times, end_times)]
+    data_dict["time_window"] += [[0, END_OF_DAY] for row in depots]
 
     data_dict["service_time"] = [row[3] for row in customers]
     data_dict["service_time"] += [row[3] for row in depots]
