@@ -20,15 +20,8 @@ def greedy_repair(state, rng):
         if route is not None:
             route.insert(idx, customer)
             state.update_times()
-            # DEBUG
-            # print(f"\nCustomer {customer} inserted in route {route} at position {idx}.")
-            # print(f"Planned service time for customer {customer}: {state.times[state.routes.index(route)][idx]}")
-            # print(f"Requested time window: {data['time_window'][customer]}\n")
         else:
-            # Initialize a new route and corresponding timings
-            # Check if the number of routes is less than the number of vehicles
             if len(state.routes) < data["vehicles"]:
-                # DEBUG
                 vehicle_number = len(state.routes)
                 state.routes.append(
                     Route(
@@ -39,11 +32,38 @@ def greedy_repair(state, rng):
                         ]
                     )
                 )
-                # state.times.append([0])
                 state.update_times()  # NOTE: maybe not needed
-            # else:
-            #     print(f"Customer {customer} could not be inserted in any route. Maximum number of routes/vehicles reached.")
+    return state
 
+
+def greey_repair_wang(state, rng):
+    """
+    Inserts the unassigned customers in the best route. If there are no
+    feasible insertions, then a new route is created. Uses the Wang et al (2024)
+    insertion heuristics with time window compatibility checks.
+    """
+    rng.shuffle(state.unassigned)
+
+    while len(state.unassigned) != 0:
+        customer = state.unassigned.pop()
+        route, idx = best_insert_wang(customer, state)
+
+        if route is not None:
+            route.insert(idx, customer)
+            state.update_times()
+        else:
+            if len(state.routes) < data["vehicles"]:
+                vehicle_number = len(state.routes)
+                state.routes.append(
+                    Route(
+                        [
+                            data["vehicle_to_depot"][vehicle_number],
+                            customer,
+                            data["vehicle_to_depot"][vehicle_number],
+                        ]
+                    )
+                )
+                state.update_times()  # NOTE: maybe not needed
     return state
 
 
@@ -74,6 +94,25 @@ def greedy_repair_tw(state, rng):
     return state
 
 
+def best_insert_wang(customer, state: CvrptwState):
+    """
+    Finds the best feasible route and insertion idx for the customer.
+    Return (None, None) if no feasible route insertions are found.
+    Only checks capacity constraints.
+    """
+    best_cost, best_route, best_idx = None, None, None
+    for route in enumerate(state.routes):
+        for idx in range(1, len(route)):
+            # if can_insert(customer, route_number, idx, state):
+            if state.can_be_inserted_wang(customer, route, idx):
+                cost = insert_cost(customer.item(), route.customers_list, idx)
+
+                if best_cost is None or cost < best_cost:
+                    best_cost, best_route, best_idx = cost, route, idx
+
+    return best_route, best_idx
+
+
 def best_insert(customer, state: CvrptwState):
     """
     Finds the best feasible route and insertion idx for the customer.
@@ -82,12 +121,10 @@ def best_insert(customer, state: CvrptwState):
     """
     best_cost, best_route, best_idx = None, None, None
 
-    # for route_number, route in enumerate(state.routes):
-    for route in enumerate(state.routes):
+    for route_number, route in enumerate(state.routes):
         for idx in range(1, len(route)):
-            # if can_insert(customer, route_number, idx, state):
-            if state.can_be_inserted_wang(customer, route, idx):
-                cost = insert_cost(customer.item(), route.customers_list, idx)
+            if can_insert(customer, route_number, idx, state):
+                cost = insert_cost(customer, route.customers_list, idx)
 
                 if best_cost is None or cost < best_cost:
                     best_cost, best_route, best_idx = cost, route, idx
@@ -188,5 +225,3 @@ def insert_cost(customer, route, idx):
 
     # Increase in cost of adding customer, minus cost of removing old edge
     return dist[pred][customer] + dist[customer][succ] - dist[pred][succ]
-
-

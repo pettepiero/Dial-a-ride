@@ -1,4 +1,4 @@
 alns==7.0.0
 matplotlib==3.8.4
-numpy==2.1.3
+numpy==2.2.0
 vrplib==1.5.1
