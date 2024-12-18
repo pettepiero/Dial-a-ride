@@ -179,9 +179,7 @@ def cost_reducing_removal(state, rng):
             len(customers) <= 2
         ):  # route has only depot and customer :TODO: what to do in this case?
             break
-        change_route = False
         v = rng.choice(customers[1:-1])
-        finished_v = False
         i1 = customers[customers.index(v) - 1]  # previous customer
         j1 = customers[customers.index(v) + 1]  # next customer
 
@@ -202,46 +200,91 @@ def cost_reducing_removal(state, rng):
                     di2v = data["edge_weight"][i2][v]
                     dvj2 = data["edge_weight"][v][j2]
                     if di1v + dvj1 + di2j2 > di1j1 + di2v + dvj2:
-                        logger.debug(
-                            f"\nBEFORE:\nfirst_route_index: {first_route_index}, second_route_index: {second_route_index}"
-                        )
-                        logger.debug(
-                            f"len(first_route): {len(state.routes[first_route_index])}, len(second_route): {len(state.routes[second_route_index])}"
-                        )
-                        logger.debug(f"Customers: {i1} -> {v} -> {j1} | {i2} -> {j2}")
-                        logger.debug(
-                            f"first_route customers: {state.routes[first_route_index].customers_list}"
-                        )
-                        logger.debug(f"customers = {customers}")
-                        logger.debug(
-                            f"second_route customers: {state.routes[second_route_index].customers_list}"
-                        )
-                        logger.debug(f"customers2 = {customers2}")
-
+                        # Remove v from first route and insert into second
                         state.routes[first_route_index].remove(v)
                         state.routes[second_route_index].insert(
                             customers2.index(j2), v.item()
                         )
-                        # customers2.insert(customers2.index(i2), v)
-                        logger.debug(
-                            f"\nAFTER:\nfirst_route customers: {state.routes[first_route_index].customers_list}"
-                        )
-                        logger.debug(f"customers = {customers}")
-                        logger.debug(
-                            f"second_route customers: {state.routes[second_route_index].customers_list}"
-                        )
-                        logger.debug(f"customers2 = {customers2}")
-
-                        logger.debug(
-                            f"len(first_route): {len(state.routes[first_route_index])}, len(second_route): {len(state.routes[second_route_index])}\n"
-                        )
                         destroyed.update_times()
-                        finished_v = True
-                        change_route = True
-                        break
-            if finished_v:
-                break
-        if change_route:
-            break
+                        return remove_empty_routes(destroyed)
 
+    return remove_empty_routes(destroyed)
+
+
+def worst_removal_cost_function(distances: np.ndarray) -> float:
+    """
+    Cost function for the worst removal operator.
+    """
+
+    return
+
+def worst_removal(state: CvrptwState, rng: np.random.Generator) -> CvrptwState:
+    """
+    Removes customers in decreasing order of service cost.
+    """
+    destroyed = state.copy()
+
+    max_service_cost = 0
+
+    for route in destroyed.routes:
+        for i in route.customers_list[1:-1]:
+            j = route.customers_list.index(i) - 1
+            k = route.customers_list.index(i) + 1
+            service_cost = (data["edge_weight"][j][i] +
+                            data["edge_weight"][i][k] -
+                            data["edge_weight"][j][k]
+                            )
+            
+            if service_cost > max_service_cost:
+                max_service_cost = service_cost
+                worst_customer = i
+                worst_route = route
+            
+    # Removes the worst customer
+    worst_route.remove(worst_customer)
+    destroyed.unassigned.append(worst_customer)
+    destroyed.update_times()
+
+    return state
+
+
+def exchange_reducing_removal(state: CvrptwState, rng: np.random.Generator) -> CvrptwState:
+    """
+    Variation of the cost-reducing removal based on Wang et al (2024)
+    """
+
+    destroyed = state.copy()
+
+    route1 = rng.choice(destroyed.routes, 1).item()
+    for v1 in route1.customers_list:
+        idx1 = route1.customers_list.index(v1)
+        i1 = idx1 - 1    #previous node
+        j1 = idx1 + 1    #next node
+
+        for route2 in destroyed.routes:
+            for v2 in route2.customers_list:
+                if route2 == route1 and v2 == v1:
+                    continue
+                idx2 = route2.customers_list.index(v2)
+                i2 = idx2 - 1  # previous node
+                j2 = idx2 + 1  # next node
+                # Check Time Window Compatibility
+                if destroyed.twc[v1][i2] != -np.inf and destroyed.twc[v2][i1] != np.inf:
+                    di1v1 = data["edge_weight"][i1][v1]
+                    dv1j1 = data["edge_weight"][v1][j1]
+                    di2v2 = data["edge_weight"][i2][v2]
+                    dv2j2 = data["edge_weight"][v2][j2]
+
+                    di1v2 = data["edge_weight"][i1][v2]
+                    dv2j1 = data["edge_weight"][v2][j1]
+                    di2v1 = data["edge_weight"][i2][v1]
+                    dv1j2 = data["edge_weight"][v1][j2]
+
+                    if di1v1 + dv1j1 + di2v2 + dv2j2 > di1v2 + dv2j1 + di2v1 + dv1j2:
+                        # swap v1 and v2
+                        route1.customers_list[idx1] = v2
+                        route2.customers_list[idx2] = v1
+                        destroyed.update_times()
+                        return remove_empty_routes(destroyed)
+    
     return remove_empty_routes(destroyed)

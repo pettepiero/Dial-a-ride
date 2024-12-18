@@ -28,8 +28,6 @@ class CvrptwState:
         self.times = times  # planned arrival times for each customer
         self.dataset = dataset
         self.unassigned = unassigned if unassigned is not None else []
-        # DEBUG
-        print(f"type(dataset) = {type(dataset)}")
 
         self.twc = self.generate_twc_matrix(dataset["time_window"], dataset["edge_weight"])
         self.qmax = self.get_qmax()
@@ -129,7 +127,7 @@ class CvrptwState:
 
     def generate_twc_matrix(self, time_windows: list, distances: list) -> list:
         """
-        Generate the time window constraints matrix.
+        Generate the time window compatability matrix matrix.
         """
         twc = np.zeros_like(distances)
         for i in range(distances.shape[0]):
