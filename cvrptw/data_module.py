@@ -151,3 +151,4 @@ def calculate_depots(data):
 
 
 data = read_cordeau_data("./data/c-mdvrptw/pr02", print_data=True)
+test_data = read_cordeau_data("./data/c-mdvrptw/pr02", print_data=True)

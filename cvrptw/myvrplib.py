@@ -10,7 +10,6 @@ from alns import ALNS
 from alns.accept import RecordToRecordTravel
 from alns.select import RouletteWheel
 from alns.stop import MaxIterations
-
 from data_module import data, END_OF_DAY
 
 def plot_data(data, name="VRPTW Data"):

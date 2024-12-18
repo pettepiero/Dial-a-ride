@@ -188,3 +188,5 @@ def insert_cost(customer, route, idx):
 
     # Increase in cost of adding customer, minus cost of removing old edge
     return dist[pred][customer] + dist[customer][succ] - dist[pred][succ]
+
+

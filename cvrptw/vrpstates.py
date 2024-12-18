@@ -5,13 +5,12 @@ from route import Route
 import numpy as np
 
 
-
 class CvrptwState:
     """
     Solution state for CVRPTW. It has two data members, routes and unassigned.
     Routes is a list of list of integers, where each inner list corresponds to
     a single route denoting the sequence of customers to be visited. A route
-    does not contain the start and end depot. Times is a list of list, containing
+    does not contain the start and end depot. Times is a list of lists, containing
     the planned arrival times for each customer in the routes. The outer list
     corresponds to the routes, and the inner list corresponds to the customers of
     the route. Unassigned is a list of integers, each integer representing an
@@ -22,15 +21,17 @@ class CvrptwState:
         self,
         routes: list[Route],
         times: list,
+        dataset: dict = data,
         unassigned: list = None,
-        twc: np.ndarray = None,
-        dmax: float = None,
-        qmax: float = None,
     ):
         self.routes = routes
         self.times = times  # planned arrival times for each customer
+        self.dataset = dataset
         self.unassigned = unassigned if unassigned is not None else []
-        self.twc = self.generate_twc_matrix(data["time_window"], data["edge_weight"])
+        # DEBUG
+        print(f"type(dataset) = {type(dataset)}")
+
+        self.twc = self.generate_twc_matrix(dataset["time_window"], dataset["edge_weight"])
         self.qmax = self.get_qmax()
         self.dmax = self.get_dmax()
         self.norm_tw = (
@@ -44,10 +45,8 @@ class CvrptwState:
         return CvrptwState(
             [route.copy() for route in self.routes],  # Deep copy each Route
             self.times.copy(),
+            self.dataset.copy(),
             self.unassigned.copy(),
-            self.twc.copy(),
-            self.dmax.copy(),
-            self.qmax.copy(),
         )
 
     def objective(self):
@@ -115,12 +114,12 @@ class CvrptwState:
         i_mu = route.customers_list[mu]
         i_mu_plus_1 = route.customers_list[mu + 1]
         est_mu = route.earliest_start_times[mu]
-        tic = data["edge_weight"][i_mu][customer]
-        a_c = data["time_window"][customer][0]
+        tic = self.dataset["edge_weight"][i_mu][customer]
+        a_c = self.dataset["time_window"][customer][0]
 
         lst_mu_plus_1 = route.latest_start_times[mu + 1]
-        tci = data["edge_weight"][customer][i_mu_plus_1]
-        b_c = data["time_window"][customer][1]
+        tci = self.dataset["edge_weight"][customer][i_mu_plus_1]
+        b_c = self.dataset["time_window"][customer][1]
         # NOTE: service time?
 
         if max(est_mu + tic, a_c) <= min(lst_mu_plus_1 - tci, b_c):
@@ -158,21 +157,21 @@ class CvrptwState:
         """
         Get the maximum distance between any two customers.
         """
-        return np.max(data["edge_weight"])
+        return np.max(self.dataset["edge_weight"])
 
     def get_qmax(self):
         """
         Get the maximum demand of any customer.
         """
-        return np.max(data["demand"])
+        return np.max(self.dataset["demand"])
 
 
 # NOTE: maybe add time influence on cost of solution ?
-def route_cost(route):
-    distances = data["edge_weight"]
-    tour = [0] + route.customers_list + [0]
+# def route_cost(route):
+#     distances = dataset["edge_weight"]
+#     tour = [0] + route.customers_list + [0]
 
-    return sum(distances[tour[idx]][tour[idx + 1]] for idx in range(len(tour) - 1))
+#     return sum(distances[tour[idx]][tour[idx + 1]] for idx in range(len(tour) - 1))
 
 
 def time_window_compatibility(tij, twi: tuple, twj: tuple):

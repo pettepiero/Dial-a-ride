@@ -105,7 +105,10 @@ def shaw_removal(state: CvrptwState, rng) -> CvrptwState:
     Based on [1], formula (4).
     """
 
+
     destroyed: CvrptwState = state.copy()
+    #DEBUG
+    print(f"Starting Shaw removal with routes: {[route.customers_list for route in destroyed.routes]}")
 
     min_value = np.inf
     j_star = None
@@ -120,7 +123,7 @@ def shaw_removal(state: CvrptwState, rng) -> CvrptwState:
         print(f"DEBUG: route_i.customers_list: {route_i.customers_list}")
     first_customer = rng.choice(route_i.customers_list[1:-1], 1, replace=False).item()
     i_selection = [first_customer]
-
+    print(f"i_selection = {i_selection}")
     while len(i_selection) < customers_to_remove:
         i = rng.choice(i_selection, 1, replace=False).item()
 
@@ -130,13 +133,18 @@ def shaw_removal(state: CvrptwState, rng) -> CvrptwState:
                     continue
                 if i == j and route_i == route:
                     continue
-                value = relatedness_function(state, i, j)
+                value = relatedness_function(state, i, j)   #NOTE: maybe use dynamic programming to store values
+                #DEBUG
+                print(f"Checking i: {i}, j: {j}, value: {value}")
                 if value < min_value:
+                    print(f"New min_value: {value}")
                     min_value = value
                     j_star = j
                     route_star_idx = route_idx
 
         if j_star is None:
+            print(f"\nFinished checking all customers and no j_star found")
+            print(f"Left routes: {[route.customers_list for route in destroyed.routes]}")
             continue
         # DEBUG
         # print(f"Selected j_star: {j_star}")
@@ -145,6 +153,7 @@ def shaw_removal(state: CvrptwState, rng) -> CvrptwState:
         # print(f"i_selection {i_selection}")
         destroyed.routes[route_star_idx].remove(j_star)
         i_selection.append(j_star)
+        print("Now i_selection: ", i_selection)
         destroyed.unassigned.append(j_star)
         j_star = None
         min_value = np.inf
