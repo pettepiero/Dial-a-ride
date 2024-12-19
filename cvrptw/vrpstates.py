@@ -67,7 +67,6 @@ class CvrptwState:
         for route in self.routes:
             if customer in route.customers_list:
                 return route
-        print(f"Solution does not contain customer {customer}.")
 
     def find_index_in_route(self, customer, route: Route):
         """

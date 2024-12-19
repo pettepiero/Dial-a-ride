@@ -247,17 +247,18 @@ def worst_removal(state: CvrptwState, rng: np.random.Generator) -> CvrptwState:
 
     return state
 
-
 def exchange_reducing_removal(state: CvrptwState, rng: np.random.Generator) -> CvrptwState:
     """
     Variation of the cost-reducing removal based on Wang et al (2024)
     """
-
     destroyed = state.copy()
 
     route1 = rng.choice(destroyed.routes, 1).item()
-    for v1 in route1.customers_list:
-        idx1 = route1.customers_list.index(v1)
+
+    for idx1 in range(1, len(route1.customers_list)-1):
+        v1 = route1.customers_list[idx1]
+    # for v1 in route1.customers_list:
+    #     idx1 = route1.customers_list.index(v1)
         i1 = idx1 - 1    #previous node
         j1 = idx1 + 1    #next node
 

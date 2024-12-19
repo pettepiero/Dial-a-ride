@@ -70,7 +70,4 @@ def nearest_neighbor_tw():
     if vehicle < data["vehicles"]:
         print(f"Vehicles left: {data['vehicles'] - vehicle}")
 
-
-    print(f"Full schedule: {full_schedule}")
-
     return CvrptwState(routes, full_schedule)
