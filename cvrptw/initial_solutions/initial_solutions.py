@@ -14,7 +14,7 @@ def neighbors(customer, depots: list = []):
     return [loc for loc in locations if loc not in depots]
 
 
-def nearest_neighbor_tw():
+def nearest_neighbor_tw(cordeau:bool = True) -> CvrptwState:
     """
     Build a solution by iteratively constructing routes, where the nearest
     time-window compatible customer is added until the route has met the
@@ -22,13 +22,12 @@ def nearest_neighbor_tw():
     """
     routes: list[Route] = []
     full_schedule = []
-    unvisited = set(range(data["dimension"]))
+    start_idx = 1 if cordeau else 0
+    unvisited = set(range(start_idx, data["dimension"]))
     vehicle = 0
 
-    while unvisited and vehicle < data["vehicles"]:
-        # Mapping vehicle i to depot i
-        calculate_depots(data)
-
+    # while unvisited and vehicle < data["vehicles"]:
+    while unvisited:    
         initial_depot = data["vehicle_to_depot"][vehicle]
         route = [initial_depot]  # Start at the depot
         route_schedule = [0]
@@ -59,15 +58,20 @@ def nearest_neighbor_tw():
             route_demands += data["demand"][nearest]
 
         route.append(route[0])  # Return to the depot
-        route = Route(route)
+        route = Route(route, vehicle)
         routes.append(route)
         full_schedule.append(route_schedule)
         # Consider new vehicle
+        print(f"vehicle: {vehicle}")
         vehicle += 1
+        if vehicle == data["vehicles"]:
+            vehicle = 0
+
+
 
     if unvisited:
-        print(f"Unvisited customers: {unvisited}")
+        print(f"Unvisited customers after nearest neighbor solution: {unvisited}")
     if vehicle < data["vehicles"]:
         print(f"Vehicles left: {data['vehicles'] - vehicle}")
 
-    return CvrptwState(routes, full_schedule)
+    return CvrptwState(routes, full_schedule, unassigned=list(unvisited))

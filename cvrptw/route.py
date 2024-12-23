@@ -10,18 +10,19 @@ class Route:
     routing problem with time windows - Wang et al (2024)
     """
 
-    def __init__(self, customers_list: list):
+    def __init__(self, customers_list: list, vehicle=None):
         self.customers_list = customers_list
-        self.cost = self.calculate_cost()
         self.earliest_start_times = self.get_earliest_times()
         self.latest_start_times = self.get_latest_times()
+        self.vehicle = vehicle
+        self.cost = self.calculate_cost()
         self.times = list(zip(self.earliest_start_times, self.latest_start_times))
 
     def __len__(self):
         return len(self.customers_list)
 
     def copy(self):
-        return Route(copy.deepcopy(self.customers_list))
+        return Route(copy.deepcopy(self.customers_list), vehicle=self.vehicle)
 
     def calculate_cost(self):
         cost = 0

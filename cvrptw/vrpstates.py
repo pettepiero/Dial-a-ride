@@ -1,5 +1,5 @@
 from data_module import data
-from myvrplib import END_OF_DAY
+from myvrplib import END_OF_DAY, UNASSIGNED_PENALTY
 from route import Route
 
 import numpy as np
@@ -51,7 +51,8 @@ class CvrptwState:
         """
         Computes the total route costs.
         """
-        return sum(route.cost for route in self.routes)
+        unassigned_penalty = UNASSIGNED_PENALTY * len(self.unassigned)
+        return sum(route.cost for route in self.routes) + unassigned_penalty
 
     @property
     def cost(self):
@@ -94,49 +95,25 @@ class CvrptwState:
         route.latest_start_times = route.get_latest_times()
         route.times = list(zip(route.earliest_start_times, route.latest_start_times))
 
-    def can_be_inserted_wang(self, customer, route: Route, mu: int) -> bool:
+    def generate_twc_matrix(self, time_windows: list, distances: list, cordeau: bool = True) -> list:
         """
-        Check if the customer can be inserted at the given position in the route. Based on formula (15)
-        of Wang et al (2024).
-        Parameters:
-            customer: int, the customer to be inserted. (c in the paper)
-            route: Route, the route where the customer is to be inserted.
-            mu: int, the position where the customer is to be inserted (i_mu, i_mu+1).
-
+        Generate the time window compatability matrix matrix. If cordeau is True,
+        the first row and column are set to -inf, as customer 0 is not considered
         """
-        # NOTE: should we insert the service time too?
-        if mu < 0 or mu >= len(route) - 1:
-            # print("Error Trying to insert at the start or end of the route.")
-            return False
-        i_mu = route.customers_list[mu]
-        i_mu_plus_1 = route.customers_list[mu + 1]
-        est_mu = route.earliest_start_times[mu]
-        tic = self.dataset["edge_weight"][i_mu][customer]
-        a_c = self.dataset["time_window"][customer][0]
-
-        lst_mu_plus_1 = route.latest_start_times[mu + 1]
-        tci = self.dataset["edge_weight"][customer][i_mu_plus_1]
-        b_c = self.dataset["time_window"][customer][1]
-        # NOTE: service time?
-
-        if max(est_mu + tic, a_c) <= min(lst_mu_plus_1 - tci, b_c):
-            return True
-        else:
-            return False
-
-    def generate_twc_matrix(self, time_windows: list, distances: list) -> list:
-        """
-        Generate the time window compatability matrix matrix.
-        """
+        start_idx = 1 if cordeau else 0
         twc = np.zeros_like(distances)
-        for i in range(distances.shape[0]):
-            for j in range(distances.shape[0]):
+        for i in range(start_idx, distances.shape[0]):
+            for j in range(start_idx, distances.shape[0]):
                 if i != j:
                     twc[i][j] = time_window_compatibility(
                         distances[i, j], time_windows[i], time_windows[j]
                     )
                 else:
                     twc[i][j] = -np.inf
+        if cordeau:
+            for i in range(distances.shape[0]):
+                twc[i][0] = -np.inf
+                twc[0][i] = -np.inf
         return twc
 
     def print_state_dimensions(self):
@@ -161,6 +138,18 @@ class CvrptwState:
         Get the maximum demand of any customer.
         """
         return np.max(self.dataset["demand"])
+    
+    def n_served_customers(self):
+        """
+        Return the number of served customers.
+        """
+        return sum(len(route.customers_list[1:-1]) for route in self.routes)
+    
+    def served_customers(self):
+        """
+        Return the list of served customers.
+        """
+        return [customer for route in self.routes for customer in route.customers_list[1:-1]]
 
 
 # NOTE: maybe add time influence on cost of solution ?
