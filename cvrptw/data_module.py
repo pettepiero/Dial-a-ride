@@ -61,29 +61,36 @@ def read_cordeau_data(file: str, print_data: bool = False) -> dict:
     # Save in dict structure
     data_dict = {}
     data_dict["name"] = filename
-    data_dict["vehicles"] = m
+    data_dict["vehicles"] = m   # maximum number of vehicles
     data_dict["capacity"] = int(depots_info[0][1])
     data_dict["dimension"] = n  # Number of customers only, not depots
     data_dict["n_depots"] = t
     data_dict["depot_to_vehicles"] = {}  # {depot: [vehicles]}
     data_dict["vehicle_to_depot"] = {}  # {vehicle: depot}
     data_dict["depots"] = [i for i in range(n, n + t)]
-    data_dict["node_coord"] = np.array([rows[1:3] for rows in customers])
-    data_dict["node_coord"] = np.append(
-        data_dict["node_coord"], np.array([rows[1:3] for rows in depots]), axis=0
-    )
-    data_dict["demand"] = [int(row[4]) for row in customers]
-    data_dict["demand"] = np.array(data_dict["demand"] + [0 for row in depots])
+
+    data_dict["node_coord"] = np.array((None, None))
+    coords = np.array([rows[1:3] for rows in customers])
+    data_dict["node_coord"] = np.vstack((data_dict["node_coord"], coords))
+    coords = np.array([rows[1:3] for rows in depots])
+    data_dict["node_coord"] = np.vstack((data_dict["node_coord"], coords))
+
+    data_dict["demand"] = np.array([0], dtype=np.int64)
+    demands = np.array([int(row[4]) for row in customers])
+    data_dict["demand"] = np.concatenate((data_dict["demand"], demands))
+    data_dict["demand"] = np.concatenate((data_dict["demand"], [0 for row in depots]))
+
     begin_times = [row[11] for row in customers]
     end_times = [row[12] for row in customers]
-    data_dict["time_window"] = [[a, b] for a, b in zip(begin_times, end_times)]
+    data_dict["time_window"] = [[None, None]]
+    data_dict["time_window"] += [[a, b] for a, b in zip(begin_times, end_times)]
     data_dict["time_window"] += [[0, END_OF_DAY] for row in depots]
 
-    data_dict["service_time"] = [row[3] for row in customers]
+    data_dict["service_time"] = [None]
+    data_dict["service_time"] += [row[3] for row in customers]
     data_dict["service_time"] += [row[3] for row in depots]
     data_dict["edge_weight"] = cost_matrix_from_coords(data_dict["node_coord"])
     calculate_depots(data_dict)
-
 
     if print_data:
         print("Problem type: ", problem_type)
@@ -93,19 +100,94 @@ def read_cordeau_data(file: str, print_data: bool = False) -> dict:
 
     return data_dict
 
+def read_solution_format(file: str, print_data: bool = False) -> dict:
+    """
+    Read a solution file with the described format.
 
-def cost_matrix_from_coords(coords: list) -> list:
+    Args:
+        file (str): Path to the file to be read.
+        print_data (bool): If True, print parsed data.
+
+    Returns:
+        dict: Parsed data structured as a dictionary.
     """
-    Create a cost matrix from a list of coordinates. Uses the Euclidean distance as cost.
+    with open(file, "r") as f:
+        lines = f.readlines()
+
+    # First line contains the cost of the solution
+    solution_cost = float(lines[0].strip())
+
+    # Parse the remaining lines for route details
+    routes = []
+    for line in lines[1:]:
+        parts = line.split()
+        if len(parts) < 4:
+            continue  # Skip malformed lines
+
+        # Extract route details
+        day = int(parts[0])
+        vehicle = int(parts[1])
+        duration = float(parts[2])
+        load = float(parts[3])
+
+        # Extract the sequence of customers
+        customers = []
+        for segment in parts[4:]:
+            if '(' in segment and ')' in segment:
+                customer, start_time = segment.split('(')
+                start_time = float(start_time.strip(')'))
+                customers.append((int(customer), start_time))
+
+        # Append route information to the list
+        routes.append({
+            "day": day,
+            "vehicle": vehicle,
+            "duration": duration,
+            "load": load,
+            "customers": customers
+        })
+
+    # Compile all data into a dictionary
+    data = {
+        "solution_cost": solution_cost,
+        "routes": routes
+    }
+
+    if print_data:
+        print("Solution Cost:", solution_cost)
+        for route in routes:
+            print(f"Day {route['day']}, Vehicle {route['vehicle']}:")
+            print(f"  Duration: {route['duration']}, Load: {route['load']}")
+            print(f"  Customers: {route['customers']}")
+
+    return data
+
+# Example usage
+# data = read_solution_format("path_to_file.txt", print_data=True)
+
+
+def cost_matrix_from_coords(coords: list, cordeau: bool=True) -> list:
     """
+    Create a cost matrix from a list of coordinates. Uses the Euclidean distance as cost. 
+    If Cordeau notation is used, the first row and column are set to None.
+    """
+
     n = len(coords)
     cost_matrix = np.zeros((n, n))
-    for i in range(n):
-        for j in range(n):
-            cost_matrix[i, j] = np.linalg.norm(coords[i] - coords[j])
-    return cost_matrix
-
-
+    if cordeau:
+        for i in range(1, n):
+            for j in range(1, n):
+                cost_matrix[i, j] = np.linalg.norm(coords[i] - coords[j])
+        for i in range(n):
+            cost_matrix[i, 0] = None
+            cost_matrix[0, i] = None
+        return cost_matrix
+    else:
+        for i in range(n):
+            for j in range(n):
+                cost_matrix[i, j] = np.linalg.norm(coords[i] - coords[j])
+        return cost_matrix
+    
 def calculate_depots(data):
     """
     Calculate the depot index for the vehicles. If the number of vehicles is equal to the number of depots,
@@ -151,4 +233,5 @@ def calculate_depots(data):
 
 
 data = read_cordeau_data("./data/c-mdvrptw/pr02", print_data=True)
-test_data = read_cordeau_data("./data/c-mdvrptw/pr02", print_data=True)
+# bks = read_solution_format("./data/c-mdvrptw-sol/pr02.res", print_data=True)
+# test_data = read_cordeau_data("./data/c-mdvrptw/pr02", print_data=True)

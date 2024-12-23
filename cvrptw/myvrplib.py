@@ -12,6 +12,8 @@ from alns.select import RouletteWheel
 from alns.stop import MaxIterations
 from data_module import data, END_OF_DAY
 
+UNASSIGNED_PENALTY = 10
+
 def plot_data(data, name="VRPTW Data"):
     """
     Plot the routes of the passed-in solution.
@@ -38,13 +40,14 @@ def plot_data(data, name="VRPTW Data"):
 
 
 def plot_solution(
-    data, solution, name="CVRP solution", idx_annotations=False, figsize=(12, 10), save=False
+    data, solution, name="CVRP solution", idx_annotations=False, figsize=(12, 10), save=False, cordeau: bool = True
 ):
     """
-    Plot the routes of the passed-in solution.
+    Plot the routes of the passed-in solution. If cordeau is True, the first customer is ignored.
     """
+    start_idx = 1 if cordeau else 0
     fig, ax = plt.subplots(figsize=figsize)
-    cmap = plt.get_cmap("Set2", data["vehicles"])
+    cmap = plt.get_cmap("Set2", len(solution.routes))
     cmap
 
     for idx, route in enumerate(solution.routes):
@@ -53,10 +56,10 @@ def plot_solution(
             [data["node_coord"][loc][1] for loc in route.customers_list],
             color=cmap(idx),
             marker=".",
-            label=f"Vehicle {idx}",
+            label=f"Vehicle {route.vehicle}",
         )
 
-    for i in range(data["dimension"]):
+    for i in range(start_idx, data["dimension"]):
         customer = data["node_coord"][i]
         ax.plot(customer[0], customer[1], "o", c="tab:blue")
         if idx_annotations:
@@ -75,11 +78,7 @@ def plot_solution(
         if idx_annotations:
             ax.annotate(i, (depot[0], depot[1]))
 
-    # for idx, depot in enumerate(data["depots"]):
-    #     ax.scatter(*data["node_coord"][depot], label=f"Depot {depot}", c=cmap(idx), **kwargs)
-    #     ax.annotate(idx, (data["node_coord"][depot][0], data["node_coord"][depot][1]))
-
-    ax.scatter(*data["node_coord"][0], c="tab:red", label="Depot 0", **kwargs)
+    # ax.scatter(*data["node_coord"][0], c="tab:red", label="Depot 0", **kwargs)
 
     ax.set_title(f"{name}\n Total distance: {solution.cost}")
     ax.set_xlabel("X-coordinate")
@@ -89,6 +88,9 @@ def plot_solution(
     if save:
         plt.savefig(f"./plots/{name}.png")
         plt.close()
+
+
+
 
 
 def verify_time_windows(data, state):

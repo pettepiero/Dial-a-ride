@@ -5,7 +5,7 @@ from vrpstates import CvrptwState
 import logging
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.ERROR)
+logging.basicConfig(level=logging.DEBUG)
 degree_of_destruction = 0.05
 customers_to_remove = int((data["dimension"] - 1) * degree_of_destruction)
 
@@ -13,16 +13,24 @@ customers_to_remove = int((data["dimension"] - 1) * degree_of_destruction)
 def random_removal(state: CvrptwState, rng) -> CvrptwState:
     """
     Removes a number of randomly selected customers from the passed-in solution.
+    Ignores first customer following cordeau dataset notation.
     """
     destroyed: CvrptwState = state.copy()
 
+    # list of customers in solution
+    solution_customers = state.served_customers()
+
     for customer in rng.choice(
-        range(data["dimension"]), customers_to_remove, replace=False
+        solution_customers, customers_to_remove, replace=False
     ):
-        destroyed.unassigned.append(customer)
-        route = destroyed.find_route(customer)
+        destroyed.unassigned.append(customer.item())
+        route = destroyed.find_route(customer.item())
         if route is not None:
-            route.remove(customer)
+            route.remove(customer.item())
+        else:
+            logger.debug(
+                f"Error: customer {customer.item()} not found in any route but picked from served customers."
+            )
 
     # NOTE: now evaluate the time of the modified routes and return them
     destroyed.update_times()
@@ -62,7 +70,8 @@ def random_route_removal(state: CvrptwState, rng) -> CvrptwState:
     """
 
     destroyed: CvrptwState = state.copy()
-
+    #debug
+    print(f"len(destroyed.routes): {len(destroyed.routes)}")
     for route in rng.choice(destroyed.routes, customers_to_remove, replace=True):
         if len(route.customers_list[1:-1]) != 0:
             customer = rng.choice(route.customers_list[1:-1], 1, replace=False)
@@ -223,23 +232,21 @@ def worst_removal(state: CvrptwState, rng: np.random.Generator) -> CvrptwState:
     Removes customers in decreasing order of service cost.
     """
     destroyed = state.copy()
-
     max_service_cost = 0
 
     for route in destroyed.routes:
         for i in route.customers_list[1:-1]:
-            j = route.customers_list.index(i) - 1
-            k = route.customers_list.index(i) + 1
+            j = route.customers_list[route.customers_list.index(i) - 1]
+            k = route.customers_list[route.customers_list.index(i) + 1]
             service_cost = (data["edge_weight"][j][i] +
                             data["edge_weight"][i][k] -
                             data["edge_weight"][j][k]
                             )
-            
             if service_cost > max_service_cost:
                 max_service_cost = service_cost
                 worst_customer = i
                 worst_route = route
-            
+
     # Removes the worst customer
     worst_route.remove(worst_customer)
     destroyed.unassigned.append(worst_customer)
@@ -259,16 +266,17 @@ def exchange_reducing_removal(state: CvrptwState, rng: np.random.Generator) -> C
         v1 = route1.customers_list[idx1]
     # for v1 in route1.customers_list:
     #     idx1 = route1.customers_list.index(v1)
-        i1 = idx1 - 1    #previous node
-        j1 = idx1 + 1    #next node
+        i1 = route1.customers_list[idx1 - 1]    #previous node
+        j1 = route1.customers_list[idx1 + 1]    #next node
 
         for route2 in destroyed.routes:
-            for v2 in route2.customers_list:
+            for v2 in route2.customers_list[1:-1]:
                 if route2 == route1 and v2 == v1:
                     continue
+
                 idx2 = route2.customers_list.index(v2)
-                i2 = idx2 - 1  # previous node
-                j2 = idx2 + 1  # next node
+                i2 = route2.customers_list[idx2 - 1]  # previous node
+                j2 = route2.customers_list[idx2 + 1]  # next node
                 # Check Time Window Compatibility
                 if destroyed.twc[v1][i2] != -np.inf and destroyed.twc[v2][i1] != np.inf:
                     di1v1 = data["edge_weight"][i1][v1]
