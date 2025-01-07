@@ -209,10 +209,10 @@ def cost_reducing_removal(state, rng):
                     dvj2 = data["edge_weight"][v][j2]
                     if di1v + dvj1 + di2j2 > di1j1 + di2v + dvj2:
                         # Remove v from first route and insert into second
-                        state.routes[first_route_index].remove(v)
-                        state.routes[second_route_index].insert(
-                            customers2.index(j2), v.item()
-                        )
+                        destroyed.routes[first_route_index].remove(v)
+                        # state.routes[second_route_index].insert(
+                        #     customers2.index(j2), v.item()
+                        # )
                         destroyed.update_times()
                         return remove_empty_routes(destroyed)
 
@@ -233,7 +233,7 @@ def worst_removal(state: CvrptwState, rng: np.random.Generator) -> CvrptwState:
     destroyed = state.copy()
     max_service_cost = 0
 
-    for route in destroyed.routes:
+    for route_idx, route in enumerate(destroyed.routes):
         for i in route.customers_list[1:-1]:
             j = route.customers_list[route.customers_list.index(i) - 1]
             k = route.customers_list[route.customers_list.index(i) + 1]
@@ -244,14 +244,14 @@ def worst_removal(state: CvrptwState, rng: np.random.Generator) -> CvrptwState:
             if service_cost > max_service_cost:
                 max_service_cost = service_cost
                 worst_customer = i
-                worst_route = route
-
+                worst_route = route_idx
+    logger.debug(f"Worst customer: {worst_customer} from route {worst_route} \n {destroyed.routes[worst_route].customers_list}")
     # Removes the worst customer
-    worst_route.remove(worst_customer)
+    destroyed.routes[worst_route].remove(worst_customer)
     destroyed.unassigned.append(worst_customer)
     destroyed.update_times()
 
-    return state
+    return destroyed
 
 def exchange_reducing_removal(state: CvrptwState, rng: np.random.Generator) -> CvrptwState:
     """
