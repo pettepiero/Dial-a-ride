@@ -232,6 +232,6 @@ def calculate_depots(data):
             data["vehicle_to_depot"][vehicle] = int(depot)
 
 
-data = read_cordeau_data("./data/c-mdvrptw/pr02", print_data=True)
+data = read_cordeau_data("./data/c-mdvrptw/pr01", print_data=True)
 # bks = read_solution_format("./data/c-mdvrptw-sol/pr02.res", print_data=True)
 # test_data = read_cordeau_data("./data/c-mdvrptw/pr02", print_data=True)

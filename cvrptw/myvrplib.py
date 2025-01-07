@@ -12,7 +12,7 @@ from alns.select import RouletteWheel
 from alns.stop import MaxIterations
 from data_module import data, END_OF_DAY
 
-UNASSIGNED_PENALTY = 10
+UNASSIGNED_PENALTY = 20
 
 def plot_data(data, name="VRPTW Data"):
     """
@@ -80,7 +80,7 @@ def plot_solution(
 
     # ax.scatter(*data["node_coord"][0], c="tab:red", label="Depot 0", **kwargs)
 
-    ax.set_title(f"{name}\n Total distance: {solution.cost}")
+    ax.set_title(f"{name}\n Total distance: {solution.cost}\n Total unassigned: {len(solution.unassigned)}")
     ax.set_xlabel("X-coordinate")
     ax.set_ylabel("Y-coordinate")
     ax.legend(frameon=False, ncol=3)

@@ -1,4 +1,5 @@
 from data_module import data
+from copy import deepcopy
 import numpy as np
 from myvrplib import END_OF_DAY
 from vrpstates import CvrptwState
@@ -11,6 +12,7 @@ def greedy_repair(state, rng):
     Inserts the unassigned customers in the best route. If there are no
     feasible insertions, then a new route is created. Only checks capacity constraints.
     """
+    state = deepcopy(state)
     rng.shuffle(state.unassigned)
 
     while len(state.unassigned) != 0:
@@ -40,6 +42,7 @@ def greedy_repair_tw(state, rng):
     Inserts the unassigned customers in the best route. If there are no
     feasible insertions, then a new route is created. Check capacity and time window constraints.
     """
+    state = deepcopy(state)
     rng.shuffle(state.unassigned)
 
     while len(state.unassigned) != 0:

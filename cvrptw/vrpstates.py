@@ -7,6 +7,7 @@ import numpy as np
 
 class CvrptwState:
     """
+    UPDATE DESCRIPTION:
     Solution state for CVRPTW. It has two data members, routes and unassigned.
     Routes is a list of list of integers, where each inner list corresponds to
     a single route denoting the sequence of customers to be visited. A route
@@ -65,9 +66,14 @@ class CvrptwState:
         """
         Return the route that contains the passed-in customer.
         """
+        found = False
         for route in self.routes:
             if customer in route.customers_list:
+                found = True
                 return route
+        if not found:
+            # raise ValueError(f"Customer {customer} not found in any route.")
+            print(f"Customer {customer} not found in any route.")
 
     def find_index_in_route(self, customer, route: Route):
         """
@@ -138,13 +144,13 @@ class CvrptwState:
         Get the maximum demand of any customer.
         """
         return np.max(self.dataset["demand"])
-    
+
     def n_served_customers(self):
         """
         Return the number of served customers.
         """
         return sum(len(route.customers_list[1:-1]) for route in self.routes)
-    
+
     def served_customers(self):
         """
         Return the list of served customers.

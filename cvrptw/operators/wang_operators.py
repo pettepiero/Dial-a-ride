@@ -8,7 +8,7 @@ from operators.repair import insert_cost
 
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.ERROR)
 
 def wang_greedy_repair(state, rng):
     """

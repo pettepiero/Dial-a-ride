@@ -70,8 +70,7 @@ def random_route_removal(state: CvrptwState, rng) -> CvrptwState:
     """
 
     destroyed: CvrptwState = state.copy()
-    #debug
-    print(f"len(destroyed.routes): {len(destroyed.routes)}")
+
     for route in rng.choice(destroyed.routes, customers_to_remove, replace=True):
         if len(route.customers_list[1:-1]) != 0:
             customer = rng.choice(route.customers_list[1:-1], 1, replace=False)
