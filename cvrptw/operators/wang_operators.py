@@ -1,20 +1,28 @@
 import logging
 import numpy as np
 from data_module import data
-from myvrplib import END_OF_DAY
+from myvrplib import END_OF_DAY, LOGGING_LEVEL
 from vrpstates import CvrptwState
 from route import Route
 from operators.repair import insert_cost
 
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.ERROR)
+logger.setLevel(LOGGING_LEVEL)
 
-def wang_greedy_repair(state, rng):
+def wang_greedy_repair(state: CvrptwState, rng: np.random) -> CvrptwState:
     """
     Inserts the unassigned customers in the best route. If there are no
     feasible insertions, then a new route is created. Uses the Wang et al (2024)
     insertion heuristics with time window compatibility checks.
+        Parameters:
+            state: CvrptwState
+                The current solution state.
+            rng: np.random
+                The random number generator.
+        Returns:
+            CvrptwState
+                The repaired solution state.
     """
     rng.shuffle(state.unassigned)
 
@@ -28,31 +36,25 @@ def wang_greedy_repair(state, rng):
         if route is not None:
             route.insert(idx, customer)
             state.update_times()
-            # logger.debug(f"WGR: Customer {customer} inserted.")
         else:
             state.unassigned.insert(0, customer)
-            # logger.debug(f"WGR: Customer {customer} not inserted.")
-        #     if len(state.routes) < data["vehicles"]:
-        #         vehicle_number = len(state.routes)
-        #         state.routes.append(
-        #             Route(
-        #                 [
-        #                     data["vehicle_to_depot"][vehicle_number],
-        #                     customer,
-        #                     data["vehicle_to_depot"][vehicle_number],
-        #                 ]
-        #             )
-        #         )
-        #         state.update_times()  # NOTE: maybe not needed
-    logger.debug(f"Finished Wang greedy repair.")
     return state
 
 
-def wang_best_insert(customer, state: CvrptwState):
+def wang_best_insert(customer: int, state: CvrptwState) -> tuple:
     """
     Finds the best feasible route and insertion idx for the customer.
     Return (None, None) if no feasible route insertions are found.
-    Only checks capacity constraints.
+    Only checks capacity constraints. Uses the Wang et al (2024) 
+    insertion heuristics.
+        Parameters:
+            customer: int
+                The customer to be inserted.
+            state: CvrptwState
+                The current solution state.
+        Returns:
+            tuple
+                The best route and insertion idx for the customer.
     """
     best_cost, best_route, best_idx = None, None, None
     for route in state.routes:
@@ -66,14 +68,20 @@ def wang_best_insert(customer, state: CvrptwState):
 
     return best_route, best_idx
 
-def wang_can_insert(customer, route: Route, mu: int) -> bool:
+def wang_can_insert(customer: int, route: Route, mu: int) -> bool:
     """
     Check if the customer can be inserted at the given position in the route. Based on formula (15)
     of Wang et al (2024).
-    Parameters:
-        customer: int, the customer to be inserted. (c in the paper)
-        route: Route, the route where the customer is to be inserted.
-        mu: int, the position where the customer is to be inserted (i_mu, i_mu+1).
+        Parameters:
+            customer: int
+                The customer to be inserted. (c in the paper)
+            route: Route
+                The route where the customer is to be inserted.
+            mu: int 
+                The position where the customer is to be inserted (i_mu, i_mu+1).
+        Returns:
+            bool
+                True if the customer can be inserted, False otherwise.
     """
     # NOTE: should we insert the service time too?
     if mu < 0 or mu >= len(route) - 2:

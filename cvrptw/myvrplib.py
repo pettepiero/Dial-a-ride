@@ -9,12 +9,12 @@ import numpy as np
 import numpy.random as rnd
 from alns import ALNS
 from alns.accept import RecordToRecordTravel
-from alns.select import RouletteWheel
+from alns.select import RouletteWheel, RandomSelect
 from alns.stop import MaxIterations
 from data_module import data, END_OF_DAY
 
 UNASSIGNED_PENALTY = 20
-LOGGING_LEVEL = logging.ERROR
+LOGGING_LEVEL = logging.DEBUG
 
 def plot_data(data, name="VRPTW Data"):
     """
