@@ -62,7 +62,6 @@ def nearest_neighbor_tw(cordeau:bool = True) -> CvrptwState:
         routes.append(route)
         full_schedule.append(route_schedule)
         # Consider new vehicle
-        print(f"vehicle: {vehicle}")
         vehicle += 1
         if vehicle == data["vehicles"]:
             vehicle = 0

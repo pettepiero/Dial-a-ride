@@ -1,7 +1,7 @@
 # Dial-a-ride
 
 
-Python educational implementation of [*An adaptive large neighborhood search for the multi-depot dynamic vehicle routing problem with time windows*](https://www.sciencedirect.com/science/article/abs/pii/S0360835224002432) by Wang et. al [2024].
+Python educational implementation of [*An adaptive large neighborhood search for the multi-depot dynamic vehicle routing problem with time windows*](https://www.sciencedirect.com/science/article/abs/pii/S0360835224002432) by Wang et al., 2024. 
 
 ## Introduction
 The Vehicle Routing Problem (VRP) is a classic combinatorial optimization problem where the objective is to determine optimal routes for a fleet of vehicles to serve a set of customers, subject to various constraints. VRP has numerous real-world applications, including logistics, transportation, and delivery services.
@@ -23,3 +23,16 @@ This project extends the standard VRP to include additional complexities, addres
 
 
 This project uses **Adaptive Large Neighborhood Search (ALNS)**, a metaheuristic approach that combines global and local search strategies, to efficiently solve the MDVRPTW problem. The well-known [ALNS](https://alns.readthedocs.io/en/latest/) Python library is used for the algorithms.
+
+## How to set up environment
+This code has been implemented using Python 3.12.2 and a **modified version of ALNS library**, which can be obtained with 'requirements.txt' file. First, create a new conda environment with Python 3.12.2
+```
+conda create -n myenv python=3.12.2
+``` 
+To install requirements, run 
+```
+pip install -r requirements.txt
+```
+
+## How to execute the code
+Currently, the newest implementation of the article [(Wang et al., 2024)](https://www.sciencedirect.com/science/article/abs/pii/S0360835224002432) is in `cvrptw/wang-2024.ipynb`. This should be ready to run with the mentioned requirements.

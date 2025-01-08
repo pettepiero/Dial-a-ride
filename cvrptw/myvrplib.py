@@ -1,5 +1,6 @@
 import copy
 import random
+import logging
 from types import SimpleNamespace
 import vrplib
 import matplotlib
@@ -13,6 +14,7 @@ from alns.stop import MaxIterations
 from data_module import data, END_OF_DAY
 
 UNASSIGNED_PENALTY = 20
+LOGGING_LEVEL = logging.ERROR
 
 def plot_data(data, name="VRPTW Data"):
     """

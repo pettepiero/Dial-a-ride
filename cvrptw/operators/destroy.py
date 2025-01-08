@@ -1,11 +1,11 @@
 from data_module import data
 import numpy as np
-from myvrplib import END_OF_DAY
+from myvrplib import END_OF_DAY, LOGGING_LEVEL
 from vrpstates import CvrptwState
 import logging
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=LOGGING_LEVEL)
 degree_of_destruction = 0.05
 customers_to_remove = int((data["dimension"] - 1) * degree_of_destruction)
 
@@ -112,8 +112,6 @@ def shaw_removal(state: CvrptwState, rng) -> CvrptwState:
     """
     Based on [1], formula (4).
     """
-
-
     destroyed: CvrptwState = state.copy()
     #DEBUG
     print(f"Starting Shaw removal with routes: {[route.customers_list for route in destroyed.routes]}")
