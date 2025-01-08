@@ -37,5 +37,12 @@ pip install -r requirements.txt
 ## How to execute the code
 Currently, the newest implementation of the article [(Wang et al., 2024)](https://www.sciencedirect.com/science/article/abs/pii/S0360835224002432) is in `cvrptw/wang-2024.ipynb`. This should be ready to run with the mentioned requirements.#
 
-## Plots folder
+## Plots and videos
 Running `cvrptw/wang-2024.ipynb` will save plots inside `cvrptw/plots/[foldername]` where `foldername` is given by the year, month, day, hour, minute and seconds of execution. Therefore, **it is recommended to remove these folders to save space after some executions**.
+
+To generate a video of the solution, copy the video output folder that is printed after the `iterate` method. Then execute 
+
+```
+python cvrptw/generate_video.py --image_folder=<copied-path> 
+```
+and optionally specify a video output name with argument `--video_name`. The video will be saved in `cvrptw/videos` folder.
