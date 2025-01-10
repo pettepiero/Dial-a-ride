@@ -348,5 +348,5 @@ def exchange_reducing_removal(state: CvrptwState, rng: np.random.Generator) -> C
                         route2.customers_list[idx2] = v1
                         destroyed.update_times()
                         return remove_empty_routes(destroyed)
-    
+            
     return remove_empty_routes(destroyed)

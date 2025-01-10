@@ -82,8 +82,8 @@ def read_cordeau_data(file: str, print_data: bool = False) -> dict:
 
     begin_times = [row[11] for row in customers]
     end_times = [row[12] for row in customers]
-    data_dict["time_window"] = [[None, None]]
-    data_dict["time_window"] += [[a, b] for a, b in zip(begin_times, end_times)]
+    data_dict["time_window"] = [[-1, -1]]
+    data_dict["time_window"] += [[float(a), float(b)] for a, b in zip(begin_times, end_times)]
     data_dict["time_window"] += [[0, END_OF_DAY] for row in depots]
 
     data_dict["service_time"] = [None]
@@ -177,7 +177,7 @@ def cost_matrix_from_coords(coords: list, cordeau: bool=True) -> list:
     if cordeau:
         for i in range(1, n):
             for j in range(1, n):
-                cost_matrix[i, j] = np.linalg.norm(coords[i] - coords[j])
+                cost_matrix[i, j] = round(np.linalg.norm(coords[i] - coords[j]), 2)
         for i in range(n):
             cost_matrix[i, 0] = None
             cost_matrix[0, i] = None
@@ -185,9 +185,9 @@ def cost_matrix_from_coords(coords: list, cordeau: bool=True) -> list:
     else:
         for i in range(n):
             for j in range(n):
-                cost_matrix[i, j] = np.linalg.norm(coords[i] - coords[j])
+                cost_matrix[i, j] = round(np.linalg.norm(coords[i] - coords[j]), 2)
         return cost_matrix
-    
+
 def calculate_depots(data):
     """
     Calculate the depot index for the vehicles. If the number of vehicles is equal to the number of depots,
@@ -232,6 +232,8 @@ def calculate_depots(data):
             data["vehicle_to_depot"][vehicle] = int(depot)
 
 
-data = read_cordeau_data("./data/c-mdvrptw/pr01", print_data=True)
+data = read_cordeau_data(
+    "/home/pettepiero/tirocinio/dial-a-ride/cvrptw/data/c-mdvrptw/pr01", print_data=False
+)
 # bks = read_solution_format("./data/c-mdvrptw-sol/pr02.res", print_data=True)
 # test_data = read_cordeau_data("./data/c-mdvrptw/pr02", print_data=True)

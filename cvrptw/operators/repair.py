@@ -1,7 +1,7 @@
 from data_module import data
 from copy import deepcopy
 import numpy as np
-from myvrplib import END_OF_DAY
+from myvrplib import END_OF_DAY, time_window_check, route_time_window_check
 from vrpstates import CvrptwState
 import logging
 from route import Route
@@ -29,11 +29,10 @@ def greedy_repair(state: CvrptwState, rng: np.random) -> CvrptwState:
 
         if route is not None:
             route.insert(idx, customer)
-            new_state.update_times()
-        else:
-            if len(new_state.routes) < data["vehicles"]:
-                vehicle_number = len(new_state.routes)
-                new_state.routes.append(
+        # If possible, create a new route
+        elif len(new_state.routes) < data["vehicles"]:
+            vehicle_number = len(new_state.routes)
+            new_state.routes.append(
                     Route(
                         [
                             data["vehicle_to_depot"][vehicle_number],
@@ -42,7 +41,10 @@ def greedy_repair(state: CvrptwState, rng: np.random) -> CvrptwState:
                         ]
                     )
                 )
-                new_state.update_times()  # NOTE: maybe not needed
+            new_state.times.append([0])
+            # evaluate times of new route
+            new_state.update_times_attributes_routes()
+    
     return new_state
 
 
@@ -68,17 +70,26 @@ def greedy_repair_tw(state: CvrptwState, rng: np.random) -> CvrptwState:
         route, idx = best_insert_tw(customer, new_state)
 
         if route is not None:
-            route.insert(idx, customer.item())
+            route.insert(idx, customer)
             new_state.update_times()
         else:
             # Initialize a new route and corresponding timings
             # Check if the number of routes is less than the number of vehicles
-            if len(new_state.routes) < data["vehicles"]:
-                new_state.routes.append([customer.item()])
-                new_state.times.append([0])
-                new_state.update_times()  # NOTE: maybe not needed
-            # else:
-            # print(f"Customer {customer} could not be inserted in any route. Maximum number of routes/vehicles reached.")
+            depot = data["vehicle_to_depot"][len(new_state.routes)]
+            new_state.routes.append(
+                Route(
+                    [
+                        depot(new_state.routes[-1], customer),
+                        customer,
+                        depot(new_state.routes[-1], customer),
+                    ],
+                    vehicle=len(new_state.routes),
+                )
+            )
+            # new_state.routes.append([customer])
+            new_state.update_times()  # NOTE: maybe not needed
+        # else:
+        # print(f"Customer {customer} could not be inserted in any route. Maximum number of routes/vehicles reached.")
     return new_state
 
 
@@ -99,7 +110,7 @@ def best_insert(customer: int, state: CvrptwState) -> tuple:
     best_cost, best_route, best_idx = None, None, None
 
     for route_number, route in enumerate(state.routes):
-        for idx in range(1, len(route)):
+        for idx in range(1, len(route)-1):
             if can_insert(customer, route_number, idx, state):
                 cost = insert_cost(customer, route.customers_list, idx)
 
@@ -128,7 +139,7 @@ def best_insert_tw(customer: int, state: CvrptwState) -> tuple:
 
     for route_number, route in enumerate(state.routes):
         # for idx in range(1, len(route) + 1):
-        for idx in range(1, len(route)):
+        for idx in range(1, len(route)-1):
 
             # DEBUG
             # print(f"In best_insert: route_number = {route_number}, idx = {idx}")
@@ -191,62 +202,13 @@ def can_insert_tw(
 
     route = state.routes[route_number]
     # Capacity check
-    total = data["demand"][route].sum() + data["demand"][customer]
+    total = data["demand"][route.customers_list].sum() + data["demand"][customer]
     if total > data["capacity"]:
         return False
     # Time window check
-    if time_window_check(state.times[route_number][idx - 1], route[idx - 1], customer):
+    if time_window_check(state.times[route_number][idx - 1], route.customers_list[idx - 1], customer):
         return route_time_window_check(route, state.times[route_number])
-
-
-def route_time_window_check(route: Route, times: list) -> bool:
-    """
-    Check if the route satisfies time-window constraints. Ignores the depots as
-    they are considered available 24h. Depots are first and last elements
-    according to Cordeau notation.
-        Parameters:
-            route: Route
-                The route to be checked.
-            times: list
-                The arrival times of the customers in the route.
-        Returns:
-            bool
-                True if the route satisfies time-window constraints, False otherwise.
-    """
-    route = route[1:-1]  # Ignore the depot
-    for idx, customer in enumerate(route):
-        if times[idx] > data["time_window"][customer][1]:
-            return False
-
-    return True
-
-
-# NOTE: this is a terrible check.
-# It will accept any customer whose time window is after the calculated arrival time,
-# even if the vehicle is early.
-# Is the vehicle allowed to be early?
-def time_window_check(prev_customer_time: float, prev_customer: int, candidate_customer: int):
-    """
-    Check if the candidate customer satisfies time-window constraints. Ignores the depots as
-    they are considered available 24h.
-        Parameters:
-            prev_customer_time: float
-                The arrival time of the previous customer.
-            prev_customer: int
-                The previous customer.
-            candidate_customer: int
-                The candidate customer.
-        Returns:
-            bool
-                True if the candidate customer satisfies time-window constraints, False otherwise.
-    """
-    return (
-        prev_customer_time
-        + data["service_time"][prev_customer]
-        + data["edge_weight"][prev_customer][candidate_customer]
-        <= data["time_window"][candidate_customer][1]
-    )
-
+    return False
 
 def insert_cost(customer: int, route: list, idx: int) -> float:
     """

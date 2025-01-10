@@ -14,14 +14,27 @@ from alns.stop import MaxIterations
 from data_module import data, END_OF_DAY
 
 UNASSIGNED_PENALTY = 20
-LOGGING_LEVEL = logging.DEBUG
+LOGGING_LEVEL = logging.ERROR
 
-def plot_data(data, name="VRPTW Data"):
+
+def plot_data(data: dict, idx_annotations=False, name: str = "VRPTW Data", cordeau: bool = True):
     """
     Plot the routes of the passed-in solution.
+        Parameters:
+            data: dict
+                The data to be plotted.
+            idx_annotations: bool
+                If True, the customer indices are plotted.
+            name: str
+                The name of the plot.
+            cordeau: bool
+                If True, the first customer is ignored.
+        Returns:
+            None
     """
     fig, ax = plt.subplots(figsize=(12, 10))
     n = data["dimension"]
+    start_idx = 1 if cordeau else 0
 
     ax.plot(
         data["node_coord"][: n - 1, 0],
@@ -35,6 +48,11 @@ def plot_data(data, name="VRPTW Data"):
         "X",
         label="Depot",
     )
+    if idx_annotations:
+        for i in range(start_idx, n):
+            customer = data["node_coord"][i]
+            ax.annotate(i, (customer[0], customer[1]))
+
     ax.set_title(f"{name}")
     ax.set_xlabel("X-coordinate")
     ax.set_ylabel("Y-coordinate")
@@ -42,16 +60,32 @@ def plot_data(data, name="VRPTW Data"):
 
 
 def plot_solution(
-    data, solution, name="CVRP solution", idx_annotations=False, figsize=(12, 10), save=False, cordeau: bool = True
+    data: dict, solution, name="CVRP solution", idx_annotations=False, figsize=(12, 10), save=False, cordeau: bool = True
 ):
     """
     Plot the routes of the passed-in solution. If cordeau is True, the first customer is ignored.
+        Parameters:
+            data: dict
+                The data to be plotted.
+            solution: CvrptwState
+                The solution to be plotted.
+            name: str
+                The name of the plot.
+            idx_annotations: bool
+                If True, the customer indices are plotted.
+            figsize: tuple
+                The size of the plot.
+            save: bool
+                If True, the plot is saved in "./plots".
+            cordeau: bool
+                If True, the first customer is ignored.
+    
     """
     start_idx = 1 if cordeau else 0
     fig, ax = plt.subplots(figsize=figsize)
     cmap = plt.get_cmap("Set2", len(solution.routes))
     cmap
-
+    # Plot the routes
     for idx, route in enumerate(solution.routes):
         ax.plot(
             [data["node_coord"][loc][0] for loc in route.customers_list],
@@ -60,7 +94,8 @@ def plot_solution(
             marker=".",
             label=f"Vehicle {route.vehicle}",
         )
-
+    
+    # Plot the customers
     for i in range(start_idx, data["dimension"]):
         customer = data["node_coord"][i]
         ax.plot(customer[0], customer[1], "o", c="tab:blue")
@@ -91,69 +126,118 @@ def plot_solution(
         plt.savefig(f"./plots/{name}.png")
         plt.close()
 
-
-
-
-
-def verify_time_windows(data, state):
+def solution_times_statistics(data: dict, state) -> dict:
     """
     Counts the number of customers that are served late or early in the solution.
+        Parameters:
+            data: dict
+                The data to be used.
+            state: CvrptwState
+                The solution to be verified.
+        Returns:
+            dict
+                A dictionary containing the number of customers served late, early, on-time, left-out customers, and the sum of late and early minutes.
     """
+    #debug
+    print("Inside solution_times_statistics")
     late, early, ontime = 0, 0, 0
-    planned_customers = [customer for route in state.routes for customer in route.customers_list]
-    planned_customers = [
-        customer for customer in planned_customers if customer not in data["depots"]
-    ]
+    # Get customers that are planned or absent in the solution
+    planned_customers = [customer for route in state.routes for customer in route.customers_list[1:-1]]
     left_out_customers = [
         customer
         for customer in range(data["dimension"])
         if customer not in planned_customers
     ]
+    late_minutes_sum = 0
+    early_minutes_sum = 0
+    # Check time windows for planned customers
     for customer in planned_customers:
         route = state.find_route(customer)
         idx = state.find_index_in_route(customer, route)
-        arrival_time = state.times[state.routes.index(route)][idx]
+        # Use planned arrival times
+        arrival_time = route.planned_windows[idx][0]
         due_time = data["time_window"][customer][1]
         ready_time = data["time_window"][customer][0]
         if arrival_time > due_time:
             late += 1
+            late_minutes_sum += arrival_time - due_time
         elif arrival_time < ready_time:
             early += 1
+            early_minutes_sum += ready_time - arrival_time
+            #debug
+            print(f"Customer {customer} planned {arrival_time} ready {ready_time}")
         elif arrival_time >= ready_time and arrival_time <= due_time:
             ontime += 1
-    return late, early, ontime, len(left_out_customers)
+    dict = {
+        "late": late,
+        "early": early,
+        "ontime": ontime,
+        "left_out_customers": len(left_out_customers),
+        "late_minutes_sum": round(late_minutes_sum, 2),
+        "early_minutes_sum": float(round(early_minutes_sum, 2)),
+    }
+    return dict
 
 
-def close_route(route):
+def close_route(route: list) -> list:
     """
-    Close the routes in the solution.
+    Append to end of route the depot.
+        Parameters:
+            route: list
+                The route to be closed.
+        Returns:
+            list
+                The closed route.
     """
     return route + [route[0]]
+
+
+def route_time_window_check(route: list, times: list) -> bool:
+    """
+    Check if the route satisfies time-window constraints. Ignores the depots as
+    they are considered available 24h. Depots are first and last elements
+    according to Cordeau notation.
+        Parameters:
+            route: list
+                The route to be checked.
+            times: list
+                The arrival times of the customers in the route.
+        Returns:
+            bool
+                True if the route satisfies time-window constraints, False otherwise.
+    """
+    for idx, customer in enumerate(route[1:-1]):
+        if times[idx] > data["time_window"][customer][1]:
+            return False
+
+    return True
 
 
 # NOTE: this is a terrible check.
 # It will accept any customer whose time window is after the calculated arrival time,
 # even if the vehicle is early.
-# Is the vehicle allowd to be early?
-def time_window_check(prev_customer_time, prev_customer, candidate_customer):
+# Is the vehicle allowed to be early?
+# For now, yes. It will stay at the customer until the time window opens.
+def time_window_check(
+    prev_customer_time: float, prev_customer: int, candidate_customer: int
+):
     """
-    Check if the candidate customer satisfies time-window constraints.
+    Check if the candidate customer satisfies time-window constraints. Returns true if the
+    candidate customer is not served late. Note that the vehicle can be early.
+        Parameters:
+            prev_customer_time: float
+                The arrival time of the previous customer.
+            prev_customer: int
+                The previous customer.
+            candidate_customer: int
+                The candidate customer.
+        Returns:
+            bool
+                True if the candidate customer satisfies time-window constraints, False otherwise.
     """
-
     return (
         prev_customer_time
         + data["service_time"][prev_customer]
         + data["edge_weight"][prev_customer][candidate_customer]
         <= data["time_window"][candidate_customer][1]
     )
-
-
-def route_time_window_check(route, times):
-    """
-    Check if the route satisfies time-window constraints.
-    """
-    for idx, customer in enumerate(route):
-        if times[idx] > data["time_window"][customer][1]:
-            return False
-
-    return True

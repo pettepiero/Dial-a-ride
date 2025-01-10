@@ -91,8 +91,6 @@ def wang_can_insert(customer: int, route: Route, mu: int) -> bool:
     est_mu = route.earliest_start_times[mu]
     tic = data["edge_weight"][i_mu][customer]
     a_c = data["time_window"][customer][0]
-    logger.debug(f"mu = {mu}, i_mu = {i_mu}, i_mu_plus_1 = {i_mu_plus_1}, est_mu = {est_mu}, tic = {tic}, a_c = {a_c}")
-    logger.debug(f"len(route.latest_start_times) = {len(route.latest_start_times)}, len(route) = {len(route)}\n")
     lst_mu_plus_1 = route.latest_start_times[mu + 1]
     tci = data["edge_weight"][customer][i_mu_plus_1]
     b_c = data["time_window"][customer][1]

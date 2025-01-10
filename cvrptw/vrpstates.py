@@ -21,12 +21,11 @@ class CvrptwState:
     def __init__(
         self,
         routes: list[Route],
-        times: list,
         dataset: dict = data,
         unassigned: list = None,
     ):
         self.routes = routes
-        self.times = times  # planned arrival times for each customer
+        # self.times = times  # planned arrival times for each customer
         self.dataset = dataset
         self.unassigned = unassigned if unassigned is not None else []
 
@@ -38,12 +37,11 @@ class CvrptwState:
         )  # Note: maybe use only norm_tw in the future?
 
     def __str__(self):
-        return f"Routes: {[route.customers_list for route in self.routes]},\nUnassigned: {self.unassigned},\nTimes: {self.times}"
+        return f"Routes: {[route.customers_list for route in self.routes]}, \nUnassigned: {self.unassigned}, \nTimes: {self.times}"
 
     def copy(self):
         return CvrptwState(
             [route.copy() for route in self.routes],  # Deep copy each Route
-            self.times.copy(),
             self.dataset.copy(),
             self.unassigned.copy(),
         )
@@ -62,9 +60,15 @@ class CvrptwState:
         """
         return self.objective()
 
-    def find_route(self, customer):
+    def find_route(self, customer: int) -> Route:
         """
         Return the route that contains the passed-in customer.
+            Parameters:
+                customer: int
+                    The customer to find.
+            Returns:
+                Route
+                    The route that contains the customer.
         """
         found = False
         for route in self.routes:
@@ -84,27 +88,32 @@ class CvrptwState:
 
         raise ValueError(f"Given route does not contain customer {customer}.")
 
-    def update_times(self):
+    def update_times_attributes_routes(self):
         """
-        Update the arrival times of each customer in the routes.
-        """
-        for route in self.routes:
-            route.times = self.evaluate_times_of_route(route)
-            route.latest_start_times = route.get_latest_times()
-            route.earliest_start_times = route.get_earliest_times()
 
-    def evaluate_times_of_route(self, route: Route):
-        """
-        Update the tuples of times of each customer in a given route.
-        """
-        route.earliest_start_times = route.get_earliest_times()
-        route.latest_start_times = route.get_latest_times()
-        route.times = list(zip(route.earliest_start_times, route.latest_start_times))
+        """        
+        for route in self.routes:
+            est = route.get_earliest_times()
+            lst = route.get_latest_times()
+            route.start_times = list(zip(est, lst))
+            # TODO udpate planned windows
+            # route.calculate_planned_times()
 
     def generate_twc_matrix(self, time_windows: list, distances: list, cordeau: bool = True) -> list:
         """
         Generate the time window compatability matrix matrix. If cordeau is True,
         the first row and column are set to -inf, as customer 0 is not considered
+        in the matrix.
+            Parameters:
+                time_windows: list
+                    List of time windows for each customer.
+                distances: list
+                    List of distances between each pair of customers.
+                cordeau: bool
+                    If True, the first row and column are set to -inf.
+            Returns:
+                list
+                    Time window compatibility matrix.
         """
         start_idx = 1 if cordeau else 0
         twc = np.zeros_like(distances)
@@ -166,11 +175,21 @@ class CvrptwState:
 #     return sum(distances[tour[idx]][tour[idx + 1]] for idx in range(len(tour) - 1))
 
 
-def time_window_compatibility(tij, twi: tuple, twj: tuple):
+def time_window_compatibility(tij: float, twi: tuple, twj: tuple) -> float:
     """
     Time Window Compatibility (TWC) between a pair of vertices i and j. Based on
-    'An adaptive large neighborhood search for the multi-depot dynamic vehicle
-    routing problem with time windows' by Wang et al. (2024)
+    Wang et al. (2024). Returns the time window compatibility between two customers
+    i and j, given their time windows and the travel time between them.
+        Parameters:
+            tij: float
+                Travel time between the two customers.
+            twi: tuple
+                Time window of customer i.
+            twj: tuple
+                Time window of customer j.
+        Returns:
+            float
+                Time window compatibility between the two customers.
     """
     (ai, bi) = twi
     (aj, bj) = twj
@@ -178,4 +197,4 @@ def time_window_compatibility(tij, twi: tuple, twj: tuple):
     if bj > ai + tij:
         return -np.inf  # Incompatible time windows
     else:
-        return min([bi + tij, bj]) - max([ai + tij, aj])
+        return round(min([bi + tij, bj]) - max([ai + tij, aj]), 2)
