@@ -206,8 +206,8 @@ def can_insert_tw(
     if total > data["capacity"]:
         return False
     # Time window check
-    if time_window_check(state.times[route_number][idx - 1], route.customers_list[idx - 1], customer):
-        return route_time_window_check(route, state.times[route_number])
+    if time_window_check(state.routes[route_number].planned_windows[idx - 1][0], route.customers_list[idx - 1], customer):
+        return route_time_window_check(route)
     return False
 
 def insert_cost(customer: int, route: list, idx: int) -> float:

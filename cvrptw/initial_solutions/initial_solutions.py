@@ -94,8 +94,8 @@ def nearest_neighbor_tw(cordeau:bool = True) -> CvrptwState:
                 break
             if not time_window_check(route_schedule[-1], current, nearest):
                 break
-            if not route_time_window_check(route, route_schedule):
-                break
+            # if not route_time_window_check(route, route_schedule):
+            #     break
 
             route.append(nearest)
             route_schedule.append(

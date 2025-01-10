@@ -192,22 +192,21 @@ def close_route(route: list) -> list:
     return route + [route[0]]
 
 
-def route_time_window_check(route: list, times: list) -> bool:
+def route_time_window_check(route) -> bool:
     """
     Check if the route satisfies time-window constraints. Ignores the depots as
     they are considered available 24h. Depots are first and last elements
     according to Cordeau notation.
         Parameters:
-            route: list
+            route: Route
                 The route to be checked.
-            times: list
-                The arrival times of the customers in the route.
         Returns:
             bool
                 True if the route satisfies time-window constraints, False otherwise.
     """
-    for idx, customer in enumerate(route[1:-1]):
-        if times[idx] > data["time_window"][customer][1]:
+    # check if planned arrival time is later than the due time
+    for idx, customer in enumerate(route.customers_list[1:-1]):
+        if route.planned_windows[idx][0] > data["time_window"][customer][1]:
             return False
 
     return True
@@ -223,7 +222,7 @@ def time_window_check(
 ):
     """
     Check if the candidate customer satisfies time-window constraints. Returns true if the
-    candidate customer is not served late. Note that the vehicle can be early.
+    candidate customer is not served late. Notice that the vehicle can be early.
         Parameters:
             prev_customer_time: float
                 The arrival time of the previous customer.

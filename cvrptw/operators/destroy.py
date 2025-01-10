@@ -35,13 +35,11 @@ def random_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
         route = destroyed.find_route(customer.item())
         if route is not None:
             route.remove(customer.item())
+            route.calculate_planned_times()
         else:
             logger.debug(
                 f"Error: customer {customer.item()} not found in any route but picked from served customers."
             )
-
-    # NOTE: now evaluate the time of the modified routes and return them
-    destroyed.update_times()
 
     return remove_empty_routes(destroyed)
 
@@ -64,14 +62,6 @@ def remove_empty_routes(state: CvrptwState) -> CvrptwState:
         route
         for idx, route in enumerate(state.routes)
         if idx not in routes_idx_to_remove
-    ]
-    state.times = [
-        timing
-        for idx, timing in enumerate(state.times)
-        if idx not in routes_idx_to_remove
-    ]
-    state.times = [
-        timing for idx, timing in enumerate(state.times) if len(state.routes[idx]) != 2
     ]
     return state
 
@@ -97,7 +87,7 @@ def random_route_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
             customer = rng.choice(route.customers_list[1:-1], 1, replace=False)
             destroyed.unassigned.append(customer.item())
             route.remove(customer)
-            destroyed.update_times()
+            route.calculate_planned_times()
 
     return remove_empty_routes(destroyed)
 
@@ -222,8 +212,7 @@ def cost_reducing_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
                 The solution after applying the destroy operator.
     """
 
-
-    #TODO: Implement the limit on the iterations for this operator
+    # TODO: Implement the limit on the iterations for this operator
 
     destroyed = state.copy()
 
@@ -256,10 +245,10 @@ def cost_reducing_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
                     if di1v + dvj1 + di2j2 > di1j1 + di2v + dvj2:
                         # Remove v from first route and insert into second
                         destroyed.routes[first_route_index].remove(v)
+                        destroyed.routes[first_route_index].calculate_planned_times()
                         # state.routes[second_route_index].insert(
                         #     customers2.index(j2), v.item()
                         # )
-                        destroyed.update_times()
                         return remove_empty_routes(destroyed)
 
     return remove_empty_routes(destroyed)
@@ -293,8 +282,8 @@ def worst_removal(state: CvrptwState, rng: np.random.Generator) -> CvrptwState:
                 worst_route = route_idx
     # Removes the worst customer
     destroyed.routes[worst_route].remove(worst_customer)
+    destroyed.routes[worst_route].calculate_planned_times()
     destroyed.unassigned.append(worst_customer)
-    destroyed.update_times()
 
     return destroyed
 

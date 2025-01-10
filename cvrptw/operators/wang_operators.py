@@ -31,11 +31,11 @@ def wang_greedy_repair(state: CvrptwState, rng: np.random) -> CvrptwState:
     while counter < n_unassigned:
         counter += 1
         customer = state.unassigned.pop()
-        route, idx = wang_best_insert(customer, state)
+        route_idx, idx = wang_best_insert(customer, state)
 
-        if route is not None:
-            route.insert(idx, customer)
-            state.update_times()
+        if route_idx is not None:
+            state.routes[route_idx].insert(idx, customer)
+            state.routes[route_idx].calculate_planned_times()
         else:
             state.unassigned.insert(0, customer)
     return state
@@ -54,19 +54,19 @@ def wang_best_insert(customer: int, state: CvrptwState) -> tuple:
                 The current solution state.
         Returns:
             tuple
-                The best route and insertion idx for the customer.
+                The best route and insertion indices for the customer.
     """
-    best_cost, best_route, best_idx = None, None, None
-    for route in state.routes:
+    best_cost, best_route_idx, best_idx = None, None, None
+    for route_idx, route in enumerate(state.routes):
         for idx in range(1, len(route)):
             # if can_insert(customer, route_number, idx, state):
             if wang_can_insert(customer, route, idx):
                 cost = insert_cost(customer, route.customers_list, idx)
 
                 if best_cost is None or cost < best_cost:
-                    best_cost, best_route, best_idx = cost, route, idx
+                    best_cost, best_route_idx, best_idx = cost, route_idx, idx
 
-    return best_route, best_idx
+    return best_route_idx, best_idx
 
 def wang_can_insert(customer: int, route: Route, mu: int) -> bool:
     """
@@ -88,14 +88,14 @@ def wang_can_insert(customer: int, route: Route, mu: int) -> bool:
         return False
     i_mu = route.customers_list[mu]
     i_mu_plus_1 = route.customers_list[mu + 1]
-    est_mu = route.earliest_start_times[mu]
+    est_mu = route.start_times[mu][0]
     tic = data["edge_weight"][i_mu][customer]
     a_c = data["time_window"][customer][0]
-    lst_mu_plus_1 = route.latest_start_times[mu + 1]
+    lst_mu_plus_1 = route.start_times[mu+1][1]
     tci = data["edge_weight"][customer][i_mu_plus_1]
     b_c = data["time_window"][customer][1]
     # NOTE: service time?
-    #DEBUG
+    # DEBUG
     # print(f"Customer = {customer}")
     # print(f"est_mu = {est_mu}, tic = {tic}, a_c = {a_c}, lst_mu_plus_1 = {lst_mu_plus_1}, tci = {tci}, b_c = {b_c}")
     if max(est_mu + tic, a_c) <= min(lst_mu_plus_1 - tci, b_c):
