@@ -1,7 +1,11 @@
 import copy
+import logging
 
-from data_module import data
-from myvrplib import END_OF_DAY
+from cvrptw.data_module import data
+from cvrptw.myvrplib import END_OF_DAY, LOGGING_LEVEL
+
+logger = logging.getLogger(__name__)
+logger.setLevel(LOGGING_LEVEL)
 
 class Route:
     """
@@ -81,7 +85,8 @@ class Route:
 
     def insert(self, position: int, customer: int) -> None:
         """
-        Inserts a customer in a given position in the route and recalculates the cost.
+        Inserts a customer in a given position in the route and recalculates the cost and
+        the planned times.
             Parameters:
                 - position: int
                     Position where the customer will be inserted.
@@ -92,6 +97,10 @@ class Route:
         """
         self.customers_list.insert(position, customer)
         self.cost = self.calculate_cost()
+        self.calculate_planned_times()
+        est = self.get_earliest_times()
+        lst = self.get_latest_times()
+        self.start_times = list(zip(est, lst))
 
     def get_earliest_times(self) -> list:
         """
@@ -115,12 +124,12 @@ class Route:
         for i in range(1, len(self.customers_list)-1):
             current = self.customers_list[i]
             prev = self.customers_list[i-1]
-            time = round(max(
+            time = float(round(max(
                 est[i - 1]
                 + data["service_time"][prev]
                 + data["edge_weight"][current][prev],
                 data["time_window"][current][0],
-            ), 2)
+            ), 2))
             est.append(time)
 
         if len(est) != len(self):
@@ -158,14 +167,23 @@ class Route:
         """
         Calculate the planned arrival and departure times for each customer in the route.
         """
-        first_customer = self.customers_list[1]
-        self.planned_windows.append([0, data["time_window"][first_customer][0] - data["edge_weight"][self.customers_list[0]][first_customer]])
 
-        last_departure = self.planned_windows[0][1] + data["service_time"][first_customer]
-        last_customer = first_customer
+        self.planned_windows = []
+        first_customer = self.customers_list[1]
+        self.planned_windows.append(
+            [0, float(round(max(0, data["time_window"][first_customer][0] -
+              data["edge_weight"][self.customers_list[0]][first_customer]), 2))])
+
+        last_departure = self.planned_windows[0][1]
+        last_customer = self.customers_list[0]
         for customer in self.customers_list[1:]:
             # Planned arrival time at customer idx
             # Planned departure time is the planned arrival time + service time
             arr = last_departure + data["edge_weight"][last_customer][customer]
-            dep = self.planned_windows[-1][0] + data["service_time"][last_customer]
-            self.planned_windows.append([arr, dep])
+            dep = arr + data["service_time"][customer]
+            self.planned_windows.append([float(round(arr, 2)), float(round(dep, 2))])
+            #debug
+            # logger.debug(f"In calculate_planned_times: last_departure: {last_departure}")
+            # logger.debug(f"data['edge_weight'][{last_customer}][{customer}]: {data['edge_weight'][last_customer][customer]}")
+            last_departure = dep
+            last_customer = customer

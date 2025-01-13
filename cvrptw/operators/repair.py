@@ -1,11 +1,14 @@
 from data_module import data
 from copy import deepcopy
 import numpy as np
-from myvrplib import END_OF_DAY, time_window_check, route_time_window_check
+from myvrplib import END_OF_DAY, time_window_check, route_time_window_check, LOGGING_LEVEL
 from vrpstates import CvrptwState
 import logging
 from route import Route
 
+
+logger = logging.getLogger(__name__)
+logger.setLevel(LOGGING_LEVEL)
 
 def greedy_repair(state: CvrptwState, rng: np.random) -> CvrptwState:
     """
@@ -40,10 +43,7 @@ def greedy_repair(state: CvrptwState, rng: np.random) -> CvrptwState:
                             data["vehicle_to_depot"][vehicle_number],
                         ]
                     )
-                )
-            new_state.times.append([0])
-            # evaluate times of new route
-            new_state.update_times_attributes_routes()
+            )
     
     return new_state
 
@@ -63,6 +63,12 @@ def greedy_repair_tw(state: CvrptwState, rng: np.random) -> CvrptwState:
                 The repaired solution state.
     """
     new_state = deepcopy(state)
+
+    #debug
+    # for route in new_state.routes:
+    #     logger.debug(f"planned_windows = {route.planned_windows}")
+    #     logger.debug(f"len(route) = {len(route)}\n")
+
     rng.shuffle(new_state.unassigned)
 
     while len(new_state.unassigned) != 0:
@@ -86,10 +92,7 @@ def greedy_repair_tw(state: CvrptwState, rng: np.random) -> CvrptwState:
                     vehicle=len(new_state.routes),
                 )
             )
-            # new_state.routes.append([customer])
-            new_state.update_times()  # NOTE: maybe not needed
-        # else:
-        # print(f"Customer {customer} could not be inserted in any route. Maximum number of routes/vehicles reached.")
+            new_state.update_times_attributes_routes()
     return new_state
 
 
@@ -205,9 +208,17 @@ def can_insert_tw(
     total = data["demand"][route.customers_list].sum() + data["demand"][customer]
     if total > data["capacity"]:
         return False
+    
+    #debug
+    # print(f"route_number = {route_number}, idx = {idx}")
+    # print(f"len(route) = {len(route)}, len(route.planned_windows) = {len(route.planned_windows)}")
+    # print(f"len(route.customers_list) = {len(route.customers_list)}")
+    # print(f"route.planned_windows[idx - 1]= {route.planned_windows[idx - 1]}")
+
+
     # Time window check
-    if time_window_check(state.routes[route_number].planned_windows[idx - 1][0], route.customers_list[idx - 1], customer):
-        return route_time_window_check(route)
+    if time_window_check(route.planned_windows[idx - 1][0], route.customers_list[idx - 1], customer):
+        return route_time_window_check(route, idx)
     return False
 
 def insert_cost(customer: int, route: list, idx: int) -> float:

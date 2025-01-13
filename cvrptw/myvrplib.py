@@ -11,10 +11,10 @@ from alns import ALNS
 from alns.accept import RecordToRecordTravel
 from alns.select import RouletteWheel, RandomSelect
 from alns.stop import MaxIterations
-from data_module import data, END_OF_DAY
+from cvrptw.data_module import data, END_OF_DAY
 
 UNASSIGNED_PENALTY = 20
-LOGGING_LEVEL = logging.ERROR
+LOGGING_LEVEL = logging.DEBUG
 
 
 def plot_data(data: dict, idx_annotations=False, name: str = "VRPTW Data", cordeau: bool = True):
@@ -192,7 +192,7 @@ def close_route(route: list) -> list:
     return route + [route[0]]
 
 
-def route_time_window_check(route) -> bool:
+def route_time_window_check(route, start_index: int = 1) -> bool:
     """
     Check if the route satisfies time-window constraints. Ignores the depots as
     they are considered available 24h. Depots are first and last elements
@@ -200,15 +200,17 @@ def route_time_window_check(route) -> bool:
         Parameters:
             route: Route
                 The route to be checked.
+            start_index: int
+                The index to start checking from.
         Returns:
             bool
                 True if the route satisfies time-window constraints, False otherwise.
     """
     # check if planned arrival time is later than the due time
-    for idx, customer in enumerate(route.customers_list[1:-1]):
+    for idx, customer in enumerate(route.customers_list[start_index:-1]):
+        idx += start_index
         if route.planned_windows[idx][0] > data["time_window"][customer][1]:
             return False
-
     return True
 
 

@@ -182,6 +182,7 @@ def shaw_removal(state: CvrptwState, rng) -> CvrptwState:
         # print(f"Selected route: {destroyed.routes[route_star_idx].customers_list}")
         # print(f"i_selection {i_selection}")
         destroyed.routes[route_star_idx].remove(j_star)
+        destroyed.routes[route_star_idx].calculate_planned_times()
         i_selection.append(j_star)
         print("Now i_selection: ", i_selection)
         destroyed.unassigned.append(j_star)
@@ -190,6 +191,7 @@ def shaw_removal(state: CvrptwState, rng) -> CvrptwState:
         route_star_idx = None
 
     route_i.remove(first_customer)
+    route_i.calculate_planned_times()
     # destroyed.unassigned.append(first_customer)
     destroyed.update_times()
 
@@ -213,6 +215,9 @@ def cost_reducing_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
     """
 
     # TODO: Implement the limit on the iterations for this operator
+    #debug
+    logger.debug("At the beginning of cost reducing removal:")
+    [logger.debug(f"Route {idx}: {route.planned_windows}") for idx, route in enumerate(state.routes)]
 
     destroyed = state.copy()
 
@@ -249,6 +254,10 @@ def cost_reducing_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
                         # state.routes[second_route_index].insert(
                         #     customers2.index(j2), v.item()
                         # )
+                        #debug
+                        logger.debug("At the end of cost reducing removal:")
+                        [logger.debug(f"Route {idx}: {route.planned_windows}") for idx, route in enumerate(destroyed.routes)]
+
                         return remove_empty_routes(destroyed)
 
     return remove_empty_routes(destroyed)
@@ -265,6 +274,13 @@ def worst_removal(state: CvrptwState, rng: np.random.Generator) -> CvrptwState:
             CvrptwState
                 The solution after applying the destroy operator.
     """
+    # debug
+    logger.debug("At the beginning of worst removal:")
+    [
+        logger.debug(f"Route {idx}: {route.planned_windows}")
+        for idx, route in enumerate(state.routes)
+    ]
+
     destroyed = state.copy()
     max_service_cost = 0
 
@@ -282,8 +298,15 @@ def worst_removal(state: CvrptwState, rng: np.random.Generator) -> CvrptwState:
                 worst_route = route_idx
     # Removes the worst customer
     destroyed.routes[worst_route].remove(worst_customer)
-    destroyed.routes[worst_route].calculate_planned_times()
+    destroyed.update_times_attributes_routes()
     destroyed.unassigned.append(worst_customer)
+
+    # debug
+    logger.debug("At the end of worst removal:")
+    [
+        logger.debug(f"Route {idx}: {route.planned_windows}")
+        for idx, route in enumerate(destroyed.routes)
+    ]
 
     return destroyed
 

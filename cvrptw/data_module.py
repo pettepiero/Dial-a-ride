@@ -3,6 +3,7 @@ import numpy.random as rnd
 
 
 END_OF_DAY = 1000
+SEED = 1234
 
 def read_cordeau_data(file: str, print_data: bool = False) -> dict:
     """
@@ -87,8 +88,8 @@ def read_cordeau_data(file: str, print_data: bool = False) -> dict:
     data_dict["time_window"] += [[0, END_OF_DAY] for row in depots]
 
     data_dict["service_time"] = [None]
-    data_dict["service_time"] += [row[3] for row in customers]
-    data_dict["service_time"] += [row[3] for row in depots]
+    data_dict["service_time"] += [float(row[3]) for row in customers]
+    data_dict["service_time"] += [float(row[3]) for row in depots]
     data_dict["edge_weight"] = cost_matrix_from_coords(data_dict["node_coord"])
     calculate_depots(data_dict)
 
@@ -188,7 +189,10 @@ def cost_matrix_from_coords(coords: list, cordeau: bool=True) -> list:
                 cost_matrix[i, j] = round(np.linalg.norm(coords[i] - coords[j]), 2)
         return cost_matrix
 
-def calculate_depots(data):
+
+def calculate_depots(
+    data, rng: np.random.Generator = rnd.default_rng(SEED)
+):
     """
     Calculate the depot index for the vehicles. If the number of vehicles is equal to the number of depots,
     then vehicle i is mapped to depot i. If the number of vehicles is greater than the number of depots, then
@@ -225,7 +229,7 @@ def calculate_depots(data):
             data["vehicle_to_depot"][vehicle] = n_customers + depot
     else:
         # Random assignment
-        depots = rnd.choice(depots, size=n_vehicles, replace=False)
+        depots = rng.choice(depots, size=n_vehicles, replace=False)
         for vehicle in range(n_vehicles):
             depot = depots[vehicle]
             data["depot_to_vehicles"][depot].append(vehicle)
@@ -236,4 +240,7 @@ data = read_cordeau_data(
     "/home/pettepiero/tirocinio/dial-a-ride/cvrptw/data/c-mdvrptw/pr01", print_data=False
 )
 # bks = read_solution_format("./data/c-mdvrptw-sol/pr02.res", print_data=True)
-# test_data = read_cordeau_data("./data/c-mdvrptw/pr02", print_data=True)
+test_data = read_cordeau_data(
+    "/home/pettepiero/tirocinio/dial-a-ride/cvrptw/data/c-mdvrptw/pr02",
+    print_data=False,
+)

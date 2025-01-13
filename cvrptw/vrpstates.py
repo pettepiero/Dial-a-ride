@@ -1,6 +1,6 @@
-from data_module import data
-from myvrplib import END_OF_DAY, UNASSIGNED_PENALTY
-from route import Route
+from cvrptw.data_module import data
+from cvrptw.myvrplib import END_OF_DAY, UNASSIGNED_PENALTY
+from cvrptw.route import Route
 
 import numpy as np
 
@@ -97,7 +97,7 @@ class CvrptwState:
             lst = route.get_latest_times()
             route.start_times = list(zip(est, lst))
             # TODO udpate planned windows
-            # route.calculate_planned_times()
+            route.calculate_planned_times()
 
     def generate_twc_matrix(self, time_windows: list, distances: list, cordeau: bool = True) -> list:
         """
