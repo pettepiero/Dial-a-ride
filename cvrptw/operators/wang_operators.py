@@ -5,6 +5,7 @@ from myvrplib import END_OF_DAY, LOGGING_LEVEL
 from vrpstates import CvrptwState
 from route import Route
 from operators.repair import insert_cost
+from copy import deepcopy
 
 
 logger = logging.getLogger(__name__)
@@ -24,21 +25,38 @@ def wang_greedy_repair(state: CvrptwState, rng: np.random) -> CvrptwState:
             CvrptwState
                 The repaired solution state.
     """
-    rng.shuffle(state.unassigned)
+    new_state = state.copy()
+    rng.shuffle(new_state.unassigned)
 
     counter = 0
-    n_unassigned = len(state.unassigned)
+    n_unassigned = len(new_state.unassigned)
     while counter < n_unassigned:
         counter += 1
-        customer = state.unassigned.pop()
-        route_idx, idx = wang_best_insert(customer, state)
+        customer = new_state.unassigned.pop()
+        route_idx, idx = wang_best_insert(customer, new_state)
 
         if route_idx is not None:
-            state.routes[route_idx].insert(idx, customer)
-            state.routes[route_idx].calculate_planned_times()
-        else:
-            state.unassigned.insert(0, customer)
-    return state
+            new_state.routes[route_idx].insert(idx, customer)
+            new_state.update_times_attributes_routes()
+        elif len(new_state.routes) < data["vehicles"]:
+            depot = data["vehicle_to_depot"][len(new_state.routes)]
+            new_state.routes.append(
+                Route(
+                    [
+                        depot,
+                        customer,
+                        depot,
+                    ],
+                    vehicle=len(new_state.routes),
+                    planned_windows=deepcopy(
+                        state.planned_windows.append([0, END_OF_DAY])
+                    ),
+                )
+            )
+            new_state.update_times_attributes_routes()
+        else:    
+            new_state.unassigned.insert(0, customer)
+    return new_state
 
 
 def wang_best_insert(customer: int, state: CvrptwState) -> tuple:

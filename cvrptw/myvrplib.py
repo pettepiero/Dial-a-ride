@@ -11,9 +11,9 @@ from alns import ALNS
 from alns.accept import RecordToRecordTravel
 from alns.select import RouletteWheel, RandomSelect
 from alns.stop import MaxIterations
-from cvrptw.data_module import data, END_OF_DAY
+from data_module import data, END_OF_DAY
 
-UNASSIGNED_PENALTY = 20
+UNASSIGNED_PENALTY = 100
 LOGGING_LEVEL = logging.DEBUG
 
 
@@ -152,7 +152,7 @@ def solution_times_statistics(data: dict, state) -> dict:
     early_minutes_sum = 0
     # Check time windows for planned customers
     for customer in planned_customers:
-        route = state.find_route(customer)
+        route, _ = state.find_route(customer)
         idx = state.find_index_in_route(customer, route)
         # Use planned arrival times
         arrival_time = route.planned_windows[idx][0]

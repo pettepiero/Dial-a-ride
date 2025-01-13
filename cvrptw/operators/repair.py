@@ -1,10 +1,10 @@
 from data_module import data
-from copy import deepcopy
 import numpy as np
 from myvrplib import END_OF_DAY, time_window_check, route_time_window_check, LOGGING_LEVEL
 from vrpstates import CvrptwState
 import logging
 from route import Route
+from copy import deepcopy
 
 
 logger = logging.getLogger(__name__)
@@ -23,15 +23,23 @@ def greedy_repair(state: CvrptwState, rng: np.random) -> CvrptwState:
             CvrptwState
                 The repaired solution state.
     """
-    new_state = deepcopy(state)
+    # debug
+    logger.debug("At the beginning of greedy repair:")
+    [
+        logger.debug(f"Route {idx}: {route.planned_windows}")
+        for idx, route in enumerate(state.routes)
+    ]
+
+    new_state = state.copy()
     rng.shuffle(new_state.unassigned)
 
     while len(new_state.unassigned) != 0:
         customer = new_state.unassigned.pop()
-        route, idx = best_insert(customer, new_state)
+        route_idx, idx = best_insert(customer, new_state)
 
-        if route is not None:
-            route.insert(idx, customer)
+        if route_idx is not None:
+            new_state.routes[route_idx].insert(idx, customer)
+            new_state.routes[route_idx].calculate_planned_times()
         # If possible, create a new route
         elif len(new_state.routes) < data["vehicles"]:
             vehicle_number = len(new_state.routes)
@@ -44,7 +52,13 @@ def greedy_repair(state: CvrptwState, rng: np.random) -> CvrptwState:
                         ]
                     )
             )
-    
+        # debug
+    logger.debug("At the end of greedy repair:")
+    [
+        logger.debug(f"Route {idx}: {route.planned_windows}")
+        for idx, route in enumerate(new_state.routes)
+    ]
+
     return new_state
 
 
@@ -62,35 +76,34 @@ def greedy_repair_tw(state: CvrptwState, rng: np.random) -> CvrptwState:
             CvrptwState
                 The repaired solution state.
     """
-    new_state = deepcopy(state)
-
-    #debug
-    # for route in new_state.routes:
-    #     logger.debug(f"planned_windows = {route.planned_windows}")
-    #     logger.debug(f"len(route) = {len(route)}\n")
-
+    new_state = state.copy()
     rng.shuffle(new_state.unassigned)
 
-    while len(new_state.unassigned) != 0:
+    counter = 0
+    n_unassigned = len(new_state.unassigned)
+    while counter < n_unassigned:
+        counter += 1
         customer = new_state.unassigned.pop()
-        route, idx = best_insert_tw(customer, new_state)
+        route_idx, idx = best_insert_tw(customer, new_state)
 
-        if route is not None:
-            route.insert(idx, customer)
-            new_state.update_times()
-        else:
-            # Initialize a new route and corresponding timings
+        if route_idx is not None:
+            new_state.routes[route_idx].insert(idx, customer)
+            new_state.update_times_attributes_routes()
+            
             # Check if the number of routes is less than the number of vehicles
+        elif len(new_state.routes) < data["vehicles"]:
+            # Initialize a new route and corresponding timings
             depot = data["vehicle_to_depot"][len(new_state.routes)]
             new_state.routes.append(
                 Route(
-                    [
-                        depot(new_state.routes[-1], customer),
-                        customer,
-                        depot(new_state.routes[-1], customer),
-                    ],
+                    [depot, customer, depot],
+                        # depot(new_state.routes[-1], customer),
+                        # customer,
+                        # depot(new_state.routes[-1], customer),
+                    # ],
                     vehicle=len(new_state.routes),
-                )
+                    planned_windows=deepcopy(state.planned_windows.append([0, END_OF_DAY]))
+                    )
             )
             new_state.update_times_attributes_routes()
     return new_state
@@ -108,9 +121,9 @@ def best_insert(customer: int, state: CvrptwState) -> tuple:
                 The current solution state.
         Returns:
             tuple
-                The best route (Route) and insertion idx (int).
+                The best route and insertion indices for the customer.
     """
-    best_cost, best_route, best_idx = None, None, None
+    best_cost, best_route_idx, best_idx = None, None, None
 
     for route_number, route in enumerate(state.routes):
         for idx in range(1, len(route)-1):
@@ -118,9 +131,9 @@ def best_insert(customer: int, state: CvrptwState) -> tuple:
                 cost = insert_cost(customer, route.customers_list, idx)
 
                 if best_cost is None or cost < best_cost:
-                    best_cost, best_route, best_idx = cost, route, idx
+                    best_cost, best_route_idx, best_idx = cost, route_number, idx
 
-    return best_route, best_idx
+    return best_route_idx, best_idx
 
 
 def best_insert_tw(customer: int, state: CvrptwState) -> tuple:
@@ -136,23 +149,19 @@ def best_insert_tw(customer: int, state: CvrptwState) -> tuple:
                 The current solution state.
         Returns:
             tuple
-                The best route (Route) and insertion idx (int).
+                The best route and insertion indices for the customer.
     """
-    best_cost, best_route, best_idx = None, None, None
+    best_cost, best_route_idx, best_idx = None, None, None
 
     for route_number, route in enumerate(state.routes):
-        # for idx in range(1, len(route) + 1):
-        for idx in range(1, len(route)-1):
-
-            # DEBUG
-            # print(f"In best_insert: route_number = {route_number}, idx = {idx}")
+        for idx in range(1, len(route) - 1):
             if can_insert_tw(customer, route_number, idx, state):
                 cost = insert_cost(customer, route.customers_list, idx)
 
                 if best_cost is None or cost < best_cost:
-                    best_cost, best_route, best_idx = cost, route, idx
+                    best_cost, best_route_idx, best_idx = cost, route_number, idx
 
-    return best_route, best_idx
+    return best_route_idx, best_idx
 
 
 # NOTE: I think performance can be improved by changing this function

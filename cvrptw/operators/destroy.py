@@ -32,10 +32,12 @@ def random_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
         solution_customers, customers_to_remove, replace=False
     ):
         destroyed.unassigned.append(customer.item())
-        route = destroyed.find_route(customer.item())
+        route, idx = destroyed.find_route(customer.item())
         if route is not None:
-            route.remove(customer.item())
-            route.calculate_planned_times()
+            destroyed.routes[idx].remove(customer.item())
+            destroyed.update_times_attributes_routes()
+            # route.remove(customer.item())
+            # route.calculate_planned_times()
         else:
             logger.debug(
                 f"Error: customer {customer.item()} not found in any route but picked from served customers."
@@ -81,13 +83,16 @@ def random_route_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
     """
 
     destroyed: CvrptwState = state.copy()
-
-    for route in rng.choice(destroyed.routes, customers_to_remove, replace=True):
+    for route_idx in rng.choice(range(len(destroyed.routes)), customers_to_remove, replace=False):
+        route = destroyed.routes[route_idx]
+        # for route in rng.choice(destroyed.routes, customers_to_remove, replace=True):
         if len(route.customers_list[1:-1]) != 0:
             customer = rng.choice(route.customers_list[1:-1], 1, replace=False)
             destroyed.unassigned.append(customer.item())
-            route.remove(customer)
-            route.calculate_planned_times()
+            destroyed.routes[route_idx].remove(customer)
+            destroyed.routes[route_idx].calculate_planned_times()
+
+    destroyed.update_times_attributes_routes()
 
     return remove_empty_routes(destroyed)
 
@@ -215,9 +220,6 @@ def cost_reducing_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
     """
 
     # TODO: Implement the limit on the iterations for this operator
-    #debug
-    logger.debug("At the beginning of cost reducing removal:")
-    [logger.debug(f"Route {idx}: {route.planned_windows}") for idx, route in enumerate(state.routes)]
 
     destroyed = state.copy()
 
@@ -254,12 +256,11 @@ def cost_reducing_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
                         # state.routes[second_route_index].insert(
                         #     customers2.index(j2), v.item()
                         # )
-                        #debug
-                        logger.debug("At the end of cost reducing removal:")
-                        [logger.debug(f"Route {idx}: {route.planned_windows}") for idx, route in enumerate(destroyed.routes)]
-
+                        destroyed.update_times_attributes_routes()
+                    
                         return remove_empty_routes(destroyed)
-
+    
+    destroyed.update_times_attributes_routes()
     return remove_empty_routes(destroyed)
 
 def worst_removal(state: CvrptwState, rng: np.random.Generator) -> CvrptwState:
@@ -274,13 +275,6 @@ def worst_removal(state: CvrptwState, rng: np.random.Generator) -> CvrptwState:
             CvrptwState
                 The solution after applying the destroy operator.
     """
-    # debug
-    logger.debug("At the beginning of worst removal:")
-    [
-        logger.debug(f"Route {idx}: {route.planned_windows}")
-        for idx, route in enumerate(state.routes)
-    ]
-
     destroyed = state.copy()
     max_service_cost = 0
 
@@ -301,13 +295,6 @@ def worst_removal(state: CvrptwState, rng: np.random.Generator) -> CvrptwState:
     destroyed.update_times_attributes_routes()
     destroyed.unassigned.append(worst_customer)
 
-    # debug
-    logger.debug("At the end of worst removal:")
-    [
-        logger.debug(f"Route {idx}: {route.planned_windows}")
-        for idx, route in enumerate(destroyed.routes)
-    ]
-
     return destroyed
 
 def exchange_reducing_removal(state: CvrptwState, rng: np.random.Generator) -> CvrptwState:
@@ -323,14 +310,15 @@ def exchange_reducing_removal(state: CvrptwState, rng: np.random.Generator) -> C
             CvrptwState
                 The solution after applying the destroy operator.
     """
+
     destroyed = state.copy()
 
     route1 = rng.choice(destroyed.routes, 1).item()
 
     for idx1 in range(1, len(route1.customers_list)-1):
         v1 = route1.customers_list[idx1]
-    # for v1 in route1.customers_list:
-    #     idx1 = route1.customers_list.index(v1)
+        # for v1 in route1.customers_list:
+        #     idx1 = route1.customers_list.index(v1)
         i1 = route1.customers_list[idx1 - 1]    #previous node
         j1 = route1.customers_list[idx1 + 1]    #next node
 
@@ -358,7 +346,10 @@ def exchange_reducing_removal(state: CvrptwState, rng: np.random.Generator) -> C
                         # swap v1 and v2
                         route1.customers_list[idx1] = v2
                         route2.customers_list[idx2] = v1
-                        destroyed.update_times()
+                        destroyed.update_times_attributes_routes()
+
                         return remove_empty_routes(destroyed)
-            
+
+    destroyed.update_times_attributes_routes()
+
     return remove_empty_routes(destroyed)

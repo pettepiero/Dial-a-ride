@@ -1,6 +1,6 @@
-from cvrptw.data_module import data
-from cvrptw.myvrplib import END_OF_DAY, UNASSIGNED_PENALTY
-from cvrptw.route import Route
+from data_module import data
+from myvrplib import END_OF_DAY, UNASSIGNED_PENALTY
+from route import Route
 
 import numpy as np
 
@@ -60,21 +60,21 @@ class CvrptwState:
         """
         return self.objective()
 
-    def find_route(self, customer: int) -> Route:
+    def find_route(self, customer: int) -> tuple:
         """
         Return the route that contains the passed-in customer.
             Parameters:
                 customer: int
                     The customer to find.
             Returns:
-                Route
-                    The route that contains the customer.
+                tuple
+                    The route that contains the customer and its index.
         """
         found = False
-        for route in self.routes:
+        for idx, route in enumerate(self.routes):
             if customer in route.customers_list:
                 found = True
-                return route
+                return route, idx
         if not found:
             # raise ValueError(f"Customer {customer} not found in any route.")
             print(f"Customer {customer} not found in any route.")
@@ -90,7 +90,7 @@ class CvrptwState:
 
     def update_times_attributes_routes(self):
         """
-
+        Update the start, end and planned times for each customer in the routes.
         """        
         for route in self.routes:
             est = route.get_earliest_times()

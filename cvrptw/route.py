@@ -1,8 +1,8 @@
 import copy
 import logging
 
-from cvrptw.data_module import data
-from cvrptw.myvrplib import END_OF_DAY, LOGGING_LEVEL
+from data_module import data
+from myvrplib import END_OF_DAY, LOGGING_LEVEL
 
 logger = logging.getLogger(__name__)
 logger.setLevel(LOGGING_LEVEL)
@@ -25,12 +25,12 @@ class Route:
                 including the depot.
     """
 
-    def __init__(self, customers_list: list, vehicle=None, cost=None, start_times=None, planned_windows=None, vehicle_start_time=None):
+    def __init__(self, customers_list: list, vehicle: int=None, cost: float=None, start_times: list = None, planned_windows: list = [], vehicle_start_time:float = None):
         self.customers_list = customers_list
         self.vehicle = vehicle
         self.cost = self.calculate_cost()
         self.start_times = list(zip(self.get_earliest_times(), self.get_latest_times()))
-        self.planned_windows = []   # List of tuples for each customer in route
+        self.planned_windows = planned_windows   # List of tuples for each customer in route
         # first value is the planned arrival time
         # second value is the planned departure time
         # NOTE: maybe only planned arrival time is sufficient
@@ -51,8 +51,8 @@ class Route:
             ), 
             vehicle=self.vehicle, 
             cost=self.cost, 
-            start_times=self.start_times,
-            planned_windows=self.planned_windows)
+            start_times=copy.deepcopy(self.start_times),
+            planned_windows=copy.deepcopy(self.planned_windows))
 
     def calculate_cost(self) -> float:
         """
