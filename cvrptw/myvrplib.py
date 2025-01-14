@@ -13,8 +13,8 @@ from alns.select import RouletteWheel, RandomSelect
 from alns.stop import MaxIterations
 from data_module import data, END_OF_DAY
 
-UNASSIGNED_PENALTY = 100
-LOGGING_LEVEL = logging.DEBUG
+UNASSIGNED_PENALTY = 200
+LOGGING_LEVEL = logging.ERROR
 
 
 def plot_data(data: dict, idx_annotations=False, name: str = "VRPTW Data", cordeau: bool = True):
@@ -123,7 +123,7 @@ def plot_solution(
     ax.legend(frameon=False, ncol=3)
 
     if save:
-        plt.savefig(f"./plots/{name}.png")
+        plt.savefig(f"/home/pettepiero/tirocinio/dial-a-ride/outputs/plots/{name}.png")
         plt.close()
 
 def solution_times_statistics(data: dict, state) -> dict:

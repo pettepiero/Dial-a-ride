@@ -80,10 +80,9 @@ def random_route_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
         Returns:
             CvrptwState
                 The solution after applying the destroy operator.
-    """
-
+    """    
     destroyed: CvrptwState = state.copy()
-    for route_idx in rng.choice(range(len(destroyed.routes)), customers_to_remove, replace=False):
+    for route_idx in rng.choice(range(len(destroyed.routes)), min(customers_to_remove, state.n_served_customers()), replace=True):
         route = destroyed.routes[route_idx]
         # for route in rng.choice(destroyed.routes, customers_to_remove, replace=True):
         if len(route.customers_list[1:-1]) != 0:

@@ -302,10 +302,10 @@ def read_solution_format(file: str, print_data: bool = False) -> dict:
 
 
 data = read_cordeau_data(
-    "/home/pettepiero/tirocinio/dial-a-ride/cvrptw/data/c-mdvrptw/pr01", print_data=False
+    "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr01", print_data=False
 )
 # bks = read_solution_format("./data/c-mdvrptw-sol/pr02.res", print_data=True)
 test_data = read_cordeau_data(
-    "/home/pettepiero/tirocinio/dial-a-ride/cvrptw/data/c-mdvrptw/pr02",
+    "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr02",
     print_data=False,
 )

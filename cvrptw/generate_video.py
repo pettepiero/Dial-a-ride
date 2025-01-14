@@ -2,7 +2,7 @@ import cv2
 import os
 import argparse
 
-default_output_folder = "./videos"
+default_output_folder = "/home/pettepiero/tirocinio/dial-a-ride/outputs/videos"
 desidered_fps = 12
 
 parser = argparse.ArgumentParser(description="Generate video from images")
