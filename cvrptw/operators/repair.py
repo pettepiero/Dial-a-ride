@@ -102,7 +102,7 @@ def greedy_repair_tw(state: CvrptwState, rng: np.random) -> CvrptwState:
                         # depot(new_state.routes[-1], customer),
                     # ],
                     vehicle=len(new_state.routes),
-                    planned_windows=deepcopy(state.planned_windows.append([0, END_OF_DAY]))
+                    planned_windows=deepcopy(state.routes[-1].planned_windows.append([0, END_OF_DAY]))
                     )
             )
             new_state.update_times_attributes_routes()

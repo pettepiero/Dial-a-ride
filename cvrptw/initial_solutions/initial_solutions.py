@@ -41,6 +41,7 @@ def time_neighbours(customer: int, depots: list = []) -> list:
     """
     # assert customer not in depots, "Customer cannot be a depot"
     locations = [(loc, data["time_window"][loc][0]) for loc in range(len(data["time_window"]))]
+    locations = [loc for loc in locations if loc not in depots]
     #order by soonest start time after current customer
     current_start_time = locations[customer][1]
     # Filter customers from the past

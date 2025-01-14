@@ -49,7 +49,7 @@ def wang_greedy_repair(state: CvrptwState, rng: np.random) -> CvrptwState:
                     ],
                     vehicle=len(new_state.routes),
                     planned_windows=deepcopy(
-                        state.planned_windows.append([0, END_OF_DAY])
+                        state.routes[-1].planned_windows.append([0, END_OF_DAY])
                     ),
                 )
             )

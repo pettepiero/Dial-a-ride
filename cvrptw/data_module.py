@@ -236,6 +236,71 @@ def calculate_depots(
             data["vehicle_to_depot"][vehicle] = int(depot)
 
 
+def read_solution_format(file: str, print_data: bool = False) -> dict:
+    """
+    Read a solution file with the described format.
+
+    Args:
+        file (str): Path to the file to be read.
+        print_data (bool): If True, print parsed data.
+
+    Returns:
+        dict: Parsed data structured as a dictionary.
+    """
+    with open(file, "r") as f:
+        lines = f.readlines()
+
+    # First line contains the cost of the solution
+    solution_cost = float(lines[0].strip())
+
+    # Parse the remaining lines for route details
+    routes = []
+    for line in lines[1:]:
+        parts = line.split()
+        if len(parts) < 4:
+            continue  # Skip malformed lines
+
+        # Extract route details
+        day = int(parts[0])
+        vehicle = int(parts[1])
+        duration = float(parts[2])
+        load = float(parts[3])
+        # Extract the sequence of customers
+        customers = []
+        start_times = []
+        for segment in parts[4:]:
+            if "(" not in segment and ")" not in segment:
+                customers.append(int(segment))
+            if "(" in segment and ")" in segment:
+                _, start_time = segment.split("(")
+                start_time = float(start_time.strip(")"))
+                start_times.append(start_time)
+
+        # Append route information to the list
+        routes.append(
+            {
+                "day": day,
+                "vehicle": vehicle,
+                "duration": duration,
+                "load": load,
+                "customers": customers,
+                "star_times": start_times,
+            }
+        )
+
+    # Compile all data into a dictionary
+    data = {"solution_cost": solution_cost, "routes": routes, "n_vehicles": len(routes)}
+
+    if print_data:
+        print("Solution Cost:", solution_cost)
+        for route in routes:
+            print(f"Day {route['day']}, Vehicle {route['vehicle']}:")
+            print(f"  Duration: {route['duration']}, Load: {route['load']}")
+            print(f"  Customers: {route['customers']}")
+
+    return data
+
+
 data = read_cordeau_data(
     "/home/pettepiero/tirocinio/dial-a-ride/cvrptw/data/c-mdvrptw/pr01", print_data=False
 )
