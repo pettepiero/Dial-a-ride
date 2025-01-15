@@ -28,6 +28,7 @@ This project uses **Adaptive Large Neighborhood Search (ALNS)**, a metaheuristic
 This code has been implemented using Python 3.12.2 and a **modified version of ALNS library**, which can be obtained with 'requirements.txt' file. First, create a new conda environment with Python 3.12.2
 ```
 conda create -n myenv python=3.12.2
+conda activate myenv
 ``` 
 To install requirements, run 
 ```
@@ -35,7 +36,7 @@ pip install -r requirements.txt
 ```
 
 ## How to execute the code
-Currently, the newest implementation of the article [(Wang et al., 2024)](https://www.sciencedirect.com/science/article/abs/pii/S0360835224002432) is in `cvrptw/wang-2024.ipynb`. This should be ready to run with the mentioned requirements.#
+Currently, the newest implementation of the article [(Wang et al., 2024)](https://www.sciencedirect.com/science/article/abs/pii/S0360835224002432) is in `cvrptw/wang-2024.ipynb`. This should be ready to run with the mentioned requirements.
 
 ## Plots and videos
 Running `cvrptw/wang-2024.ipynb` will save plots inside `outputs/plots/[foldername]` where `foldername` is given by the year, month, day, hour, minute and seconds of execution. Therefore, **it is recommended to remove these folders to save space after some executions**.
