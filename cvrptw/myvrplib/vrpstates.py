@@ -1,6 +1,6 @@
-from data_module import data
-from myvrplib import END_OF_DAY, UNASSIGNED_PENALTY
-from route import Route
+from cvrptw.myvrplib.data_module import data
+from cvrptw.myvrplib.myvrplib import END_OF_DAY, UNASSIGNED_PENALTY
+from cvrptw.myvrplib.route import Route
 
 import numpy as np
 

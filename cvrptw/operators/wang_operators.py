@@ -1,10 +1,10 @@
 import logging
 import numpy as np
-from data_module import data
-from myvrplib import END_OF_DAY, LOGGING_LEVEL
-from vrpstates import CvrptwState
-from route import Route
-from operators.repair import insert_cost
+from cvrptw.myvrplib.data_module import data
+from cvrptw.myvrplib.myvrplib import END_OF_DAY, LOGGING_LEVEL
+from cvrptw.myvrplib.vrpstates import CvrptwState
+from cvrptw.myvrplib.route import Route
+from cvrptw.operators.repair import insert_cost
 from copy import deepcopy
 
 
