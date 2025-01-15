@@ -1,4 +1,4 @@
--e git+https://github.com/pettepiero/ALNS-VRP.git@master#egg=alns
+alns @ git+https://github.com/pettepiero/ALNS-VRP.git@master
 matplotlib==3.8.4
 numpy==2.2.1
 vrplib==1.5.1
