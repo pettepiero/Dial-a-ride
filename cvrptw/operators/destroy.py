@@ -31,13 +31,14 @@ def random_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
     for customer in rng.choice(
         solution_customers, customers_to_remove, replace=False
     ):
-        destroyed.unassigned.append(customer.item())
         route, idx = destroyed.find_route(customer.item())
         if route is not None:
             destroyed.routes[idx].remove(customer.item())
+            destroyed.unassigned.append(customer.item())
             destroyed.update_times_attributes_routes()
             # route.remove(customer.item())
             # route.calculate_planned_times()
+            logger.debug(f"Customer {customer.item()} removed from route {idx}.")
         else:
             logger.debug(
                 f"Error: customer {customer.item()} not found in any route but picked from served customers."
@@ -255,6 +256,7 @@ def cost_reducing_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
                         # state.routes[second_route_index].insert(
                         #     customers2.index(j2), v.item()
                         # )
+                        destroyed.unassigned.append(v)
                         destroyed.update_times_attributes_routes()
                     
                         return remove_empty_routes(destroyed)

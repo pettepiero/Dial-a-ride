@@ -37,7 +37,7 @@ class CvrptwState:
         )  # Note: maybe use only norm_tw in the future?
 
     def __str__(self):
-        return f"Routes: {[route.customers_list for route in self.routes]}, \nUnassigned: {self.unassigned}, \nTimes: {self.times}"
+        return f"Routes: {[route.customers_list for route in self.routes]}, \nUnassigned: {self.unassigned}"
 
     def copy(self):
         return CvrptwState(

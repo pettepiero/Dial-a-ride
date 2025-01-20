@@ -301,11 +301,32 @@ def read_solution_format(file: str, print_data: bool = False) -> dict:
     return data
 
 
+def convert_to_dynamic_data(file: str, print_data: bool = False, n_steps = 20, seed = 0) -> dict:
+    """
+    Convert a static CVRPTW instance to a dynamic instance with a single day.
+    Call in time for each customer is sampled from a gamma distribution.
+    """
+    np.random.seed(seed)
+    data = read_cordeau_data(file, print_data=print_data)
+    data["call_in_time_slot"] = np.zeros(data["dimension"], dtype=np.int64)
+
+    # Parameters of gamma  distribution
+    k = 0.5  # Shape parameter
+    mean = n_steps/4  # Desired mean    
+    theta = mean / k  # Scale parameter
+    samples = np.random.gamma(k, scale=theta, size=data["dimension"])
+    
+    for i in range(1, data["dimension"]):
+        call_in_time = int(samples[i])
+        data["call_in_time_slot"][i] = call_in_time
+
+    return data
+
 data = read_cordeau_data(
-    "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr01", print_data=False
+    "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr11", print_data=False
 )
 # bks = read_solution_format("./data/c-mdvrptw-sol/pr02.res", print_data=True)
 test_data = read_cordeau_data(
-    "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr02",
+    "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr11",
     print_data=False,
 )
