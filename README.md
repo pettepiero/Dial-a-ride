@@ -30,6 +30,13 @@ This code has been implemented using Python 3.12.2 and a **modified version of A
 conda create -n myenv python=3.12.2
 conda activate myenv
 ``` 
+
+Clone this repository and enter it
+```
+git clone git@github.com:pettepiero/Dial-a-ride.git
+cd Dial-a-ride
+```
+
 To install requirements, run 
 ```
 pip install -r requirements.txt

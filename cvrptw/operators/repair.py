@@ -1,9 +1,14 @@
-from data_module import data
+from cvrptw.myvrplib.data_module import data
 import numpy as np
-from myvrplib import END_OF_DAY, time_window_check, route_time_window_check, LOGGING_LEVEL
-from vrpstates import CvrptwState
+from cvrptw.myvrplib.myvrplib import (
+    END_OF_DAY,
+    time_window_check,
+    route_time_window_check,
+    LOGGING_LEVEL,
+)
+from cvrptw.myvrplib.vrpstates import CvrptwState
 import logging
-from route import Route
+from cvrptw.myvrplib.route import Route
 from copy import deepcopy
 
 
@@ -89,6 +94,7 @@ def greedy_repair_tw(state: CvrptwState, rng: np.random) -> CvrptwState:
         if route_idx is not None:
             new_state.routes[route_idx].insert(idx, customer)
             new_state.update_times_attributes_routes()
+            logger.debug(f"Inserted customer {customer} in route {route_idx}")
             
             # Check if the number of routes is less than the number of vehicles
         elif len(new_state.routes) < data["vehicles"]:
@@ -106,6 +112,10 @@ def greedy_repair_tw(state: CvrptwState, rng: np.random) -> CvrptwState:
                     )
             )
             new_state.update_times_attributes_routes()
+            logger.debug(f"Created new route for customer {customer}")
+
+        else:
+            new_state.unassigned.append(customer)
     return new_state
 
 

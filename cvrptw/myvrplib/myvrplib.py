@@ -11,10 +11,10 @@ from alns import ALNS
 from alns.accept import RecordToRecordTravel
 from alns.select import RouletteWheel, RandomSelect
 from alns.stop import MaxIterations
-from data_module import data, END_OF_DAY
+from .data_module import data, END_OF_DAY
 
-UNASSIGNED_PENALTY = 200
-LOGGING_LEVEL = logging.ERROR
+UNASSIGNED_PENALTY = 50
+LOGGING_LEVEL = logging.DEBUG
 
 
 def plot_data(data: dict, idx_annotations=False, name: str = "VRPTW Data", cordeau: bool = True):
