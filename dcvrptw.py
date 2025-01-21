@@ -1,7 +1,8 @@
 from cvrptw.myvrplib.vrpstates import CvrptwState
-from cvrptw.myvrplib.data_module import data, END_OF_DAY, convert_to_dynamic_data
+from cvrptw.myvrplib.data_module import data, END_OF_DAY, convert_to_dynamic_data, get_initial_data
 import pandas as pd
 import numpy as np
+import copy
 
 class Customer():
     def __init__(self, id: int, x: float, y: float, demand: float, ready_time: float, due_time: float, service_time: float):
@@ -29,6 +30,8 @@ class DynamicVRP():
         self.new_customers = []
         self.end_of_day = END_OF_DAY
 
+        print(f"Data: {self.data}")
+
     def initial_requests(self):
         """
         Returns the initial requests for the first step.
@@ -36,16 +39,12 @@ class DynamicVRP():
         initial_cust_idxs = np.where(self.data["call_in_time_slot"] == 0)
 
 
-
-
-
-
-
 if __name__ == "__main__":
     vrp = DynamicVRP()
     print(vrp.data)
-    print(vrp.data["dimension"])
 
-    ci_times = vrp.data["call_in_time_slot"]
-    print(ci_times)
-    print(np.where(ci_times == 0))
+    initial_data = get_initial_data(vrp.data)
+    # print(f"Initial data: {initial_data}")
+
+    # Initial solution for call_in_time_slot = 0
+

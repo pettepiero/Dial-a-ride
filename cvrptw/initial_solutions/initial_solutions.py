@@ -1,10 +1,9 @@
 from typing import List
 import numpy as np
-from cvrptw.myvrplib.data_module import data, calculate_depots, get_initial_data, get_customers_in_time_slot
+from cvrptw.myvrplib.data_module import data, d_data, calculate_depots, get_initial_data, get_customers_in_time_slot
 from cvrptw.myvrplib.vrpstates import CvrptwState
 from cvrptw.myvrplib.route import Route
 from cvrptw.myvrplib.myvrplib import time_window_check, route_time_window_check
-
 
 def neighbours(customer: int, depots: list = []) -> list:
     """

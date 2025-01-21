@@ -1,6 +1,7 @@
 import numpy as np
 import numpy.random as rnd
-
+import copy
+import pandas as pd
 
 END_OF_DAY = 1000
 SEED = 1234
@@ -84,12 +85,12 @@ def read_cordeau_data(file: str, print_data: bool = False) -> dict:
     begin_times = [row[11] for row in customers]
     end_times = [row[12] for row in customers]
     data_dict["time_window"] = [[-1, -1]]
-    data_dict["time_window"] += [[float(a), float(b)] for a, b in zip(begin_times, end_times)]
+    data_dict["time_window"] += [[int(a), int(b)] for a, b in zip(begin_times, end_times)]
     data_dict["time_window"] += [[0, END_OF_DAY] for row in depots]
 
     data_dict["service_time"] = [None]
-    data_dict["service_time"] += [float(row[3]) for row in customers]
-    data_dict["service_time"] += [float(row[3]) for row in depots]
+    data_dict["service_time"] += [int(row[3]) for row in customers]
+    data_dict["service_time"] += [int(row[3]) for row in depots]
     data_dict["edge_weight"] = cost_matrix_from_coords(data_dict["node_coord"])
     calculate_depots(data_dict)
 
@@ -308,25 +309,97 @@ def convert_to_dynamic_data(file: str, print_data: bool = False, n_steps = 20, s
     """
     np.random.seed(seed)
     data = read_cordeau_data(file, print_data=print_data)
-    data["call_in_time_slot"] = np.zeros(data["dimension"], dtype=np.int64)
+    data["call_in_time_slot"] = np.zeros(data["dimension"], dtype=int)
 
     # Parameters of gamma  distribution
     k = 0.5  # Shape parameter
     mean = n_steps/4  # Desired mean    
     theta = mean / k  # Scale parameter
     samples = np.random.gamma(k, scale=theta, size=data["dimension"])
-    
+
     for i in range(1, data["dimension"]):
         call_in_time = int(samples[i])
         data["call_in_time_slot"][i] = call_in_time
 
+    # convert to list
+    data["call_in_time_slot"] = data["call_in_time_slot"].tolist()
+
     return data
 
+def get_customers_in_time_slot(data: dict, time_slot: int) -> list:
+    """
+    Get the indices of customers that call in the given time slot.
+    """
+    indices = [i for i, t in enumerate(data["call_in_time_slot"]) if t == time_slot]
+    return indices
+
+def get_initial_data(full_data: dict) -> dict:
+    """
+        Returns the initial data for the first step.
+        """
+    # Get indices of initial customers
+    initial_cust_idxs = get_customers_in_time_slot(full_data, 0)
+    # Remove all but the first customers from full_data
+    initial_data = copy.deepcopy(full_data)
+    initial_data["dimension"] = len(initial_cust_idxs)
+    initial_data["node_coord"] = [
+        initial_data["node_coord"][i] for i in initial_cust_idxs
+    ]
+    initial_data["demand"] = [initial_data["demand"][i] for i in initial_cust_idxs]
+    initial_data["time_window"] = [
+            initial_data["time_window"][i] for i in initial_cust_idxs
+        ]
+    initial_data["service_time"] = [
+            initial_data["service_time"][i] for i in initial_cust_idxs
+        ]
+    initial_data["call_in_time_slot"] = [
+            initial_data["call_in_time_slot"][i] for i in initial_cust_idxs
+        ]
+
+    return initial_data
+
+def create_customers_df(data: dict) -> pd.DataFrame:
+    """
+    Convert a data dictionary to a pandas DataFrame
+    for customer information.
+    """
+    n = data["dimension"]+1
+    
+    df = pd.DataFrame(
+        {
+            "customer_id": [i for i in range(1, n)],
+            "x": [coord[0] for coord in data["node_coord"][1:n]],
+            "y": [coord[1] for coord in data["node_coord"][1:n]],
+            "demand": data["demand"][1:n],
+            "start_time": [tw[0] for tw in data["time_window"][1:n]],
+            "end_time": [tw[1] for tw in data["time_window"][1:n]],
+            "service_time": data["service_time"][1:n],
+        }
+    )
+
+    return df
+
+def create_depots_dict(data: dict) -> dict:
+
+    depots_dict = {
+        "num_depots": data["n_depots"],
+        "depot_to_vehicles": data["depot_to_vehicles"],
+        "vehicle_to_depot": data["vehicle_to_depot"],
+        "coords": data["node_coord"][data["dimension"] + 1 :],
+    }
+
+    return depots_dict
+
 data = read_cordeau_data(
-    "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr11", print_data=False
+    "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr12", print_data=False
 )
 # bks = read_solution_format("./data/c-mdvrptw-sol/pr02.res", print_data=True)
 test_data = read_cordeau_data(
-    "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr11",
+    "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr12",
     print_data=False,
 )
+
+d_data = convert_to_dynamic_data(
+    "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr12", print_data=False
+)
+d_data = get_initial_data(d_data)
