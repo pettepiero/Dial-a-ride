@@ -25,7 +25,8 @@ This project extends the standard VRP to include additional complexities, addres
 This project uses **Adaptive Large Neighborhood Search (ALNS)**, a metaheuristic approach that combines global and local search strategies, to efficiently solve the MDVRPTW problem. The well-known [ALNS](https://alns.readthedocs.io/en/latest/) Python library is used for the algorithms.
 
 ## How to set up environment
-This code has been implemented using Python 3.12.2 and a **modified version of ALNS library**, which can be obtained with 'requirements.txt' file. First, create a new conda environment with Python 3.12.2
+This code has been implemented using Python 3.12.2 and a **modified version of ALNS library**, which can be obtained with 'requirements.txt' file. For set up, ```conda``` is recommended while ```git``` is necessary. If ```conda``` is not used, skip the next two commands.
+First, create a new conda environment with Python 3.12.2
 ```
 conda create -n myenv python=3.12.2
 conda activate myenv
