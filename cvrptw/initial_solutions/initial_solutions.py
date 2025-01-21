@@ -1,6 +1,6 @@
 from typing import List
 import numpy as np
-from cvrptw.myvrplib.data_module import data, calculate_depots
+from cvrptw.myvrplib.data_module import data, calculate_depots, get_initial_data, get_customers_in_time_slot
 from cvrptw.myvrplib.vrpstates import CvrptwState
 from cvrptw.myvrplib.route import Route
 from cvrptw.myvrplib.myvrplib import time_window_check, route_time_window_check
@@ -55,7 +55,7 @@ def time_neighbours(customer: int, depots: list = []) -> list:
     return [loc[0] for loc in locations]
 
 
-def nearest_neighbor_tw(cordeau:bool = True) -> CvrptwState:
+def nearest_neighbor_tw(cordeau:bool = True, initial_time_slot: bool = True) -> CvrptwState:
     """
     Build a solution by iteratively constructing routes, where the nearest
     time-window compatible customer is added until the route has met the
@@ -64,49 +64,62 @@ def nearest_neighbor_tw(cordeau:bool = True) -> CvrptwState:
             cordeau: bool
                 If True, the Cordeau dataset notation is used, else the
                 Solomon dataset notation is used.
+            intial_time_slot: bool
+                If True, only data related to customers that are called
+                in at the initial time step are considered.
         Returns:
             CvrptwState
                 The initial solution to the CVRPTW problem.
     """
+    if initial_time_slot:
+        full_data = get_initial_data(data)
+    else:
+        full_data = data
     routes: list[Route] = []
-    # full_schedule = []
+
     start_idx = 1 if cordeau else 0
-    unvisited = set(range(start_idx, data["dimension"]))
+    if initial_time_slot:
+        valid_customers = get_customers_in_time_slot(full_data, 0)
+        unvisited = valid_customers
+    else:
+        unvisited = set(range(start_idx, full_data["dimension"]))
+
     vehicle = 0
 
-    # while unvisited and vehicle < data["vehicles"]:
-    while unvisited:
-        initial_depot = data["vehicle_to_depot"][vehicle]
-        route = [initial_depot]  # Start at the depot
+    while vehicle < full_data["vehicles"]:
+        initial_depot = full_data["vehicle_to_depot"][vehicle]
+        route = [initial_depot]
         route_schedule = [0]
         route_demands = 0
         while unvisited:
             # Add the nearest compatible unvisited customer to the route till max capacity
             current = route[-1]
-            reachable = time_neighbours(current, depots=data["depots"])
+            reachable = time_neighbours(
+                current, depots=full_data["depots"]
+            )  # Customers reachable in time
             if len(reachable) == 0:
                 break
-            nearest = [nb for nb in reachable if nb in unvisited]
+            nearest = [
+                nb for nb in reachable if nb in unvisited
+            ]  # Keep only unvisited customers
             if len(nearest) == 0:
                 break
-            nearest = nearest[0]
-            nearest = int(nearest)
-            if route_demands + data["demand"][nearest] > data["capacity"]:
+            nearest = int(nearest[0])  # Nearest unvisited reachable customer
+            # Check vehicle capacity and time window constraints
+            if route_demands + full_data["demand"][nearest] > full_data["capacity"]:
                 break
             if not time_window_check(route_schedule[-1], current, nearest):
                 break
-            # if not route_time_window_check(route, route_schedule):
-            #     break
 
             route.append(nearest)
             route_schedule.append(
-                data["edge_weight"][current][nearest].item()
-                + data["service_time"][current]
+                full_data["edge_weight"][current][nearest].item()
+                + full_data["service_time"][current]
             )
 
             unvisited.remove(nearest)
-            route_demands += data["demand"][nearest]
-
+            route_demands += full_data["demand"][nearest]
+        
         route.append(route[0])  # Return to the depot
         route = Route(route, vehicle)
         route.calculate_planned_times()
@@ -114,15 +127,16 @@ def nearest_neighbor_tw(cordeau:bool = True) -> CvrptwState:
         # full_schedule.append(route_schedule)
         # Consider new vehicle
         vehicle += 1
-        if vehicle == data["vehicles"]:
-            vehicle = 0
+        # if vehicle == full_data["vehicles"]:
+        #     vehicle = 0
 
     if unvisited:
         print(f"Unvisited customers after nearest neighbor solution: {unvisited}")
-    if vehicle < data["vehicles"]:
-        print(f"Vehicles left: {data['vehicles'] - vehicle}")
+    if vehicle < full_data["vehicles"]:
+        print(f"Vehicles left: {full_data['vehicles'] - vehicle}")
 
     solution = CvrptwState(routes, unassigned=list(unvisited))
     solution.update_times_attributes_routes()
 
     return solution
+
