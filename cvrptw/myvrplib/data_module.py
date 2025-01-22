@@ -69,7 +69,7 @@ def read_cordeau_data(file: str, print_data: bool = False) -> dict:
     data_dict["n_depots"] = t
     data_dict["depot_to_vehicles"] = {}  # {depot: [vehicles]}
     data_dict["vehicle_to_depot"] = {}  # {vehicle: depot}
-    data_dict["depots"] = [i for i in range(n, n + t)]
+    data_dict["depots"] = [i for i in range(n+1, n+1 + t)]
 
     data_dict["node_coord"] = np.array((None, None))
     coords = np.array([rows[1:3] for rows in customers])
@@ -314,7 +314,7 @@ def dynamic_cust_df_from_dict(data: dict, static: bool = False, print_data: bool
     """
     np.random.seed(seed)
     data_df = create_customers_df(data)
-    data_df["call_in_time_slot"] = np.zeros(data["dimension"], dtype=int)
+    data_df["call_in_time_slot"] = np.zeros(data["dimension"]+1, dtype=int)
 
     if static:
         return data_df
@@ -323,7 +323,7 @@ def dynamic_cust_df_from_dict(data: dict, static: bool = False, print_data: bool
     k = 0.5  # Shape parameter
     mean = n_steps/4  # Desired mean    
     theta = mean / k  # Scale parameter
-    samples = np.random.gamma(k, scale=theta, size=data["dimension"])
+    samples = np.random.gamma(k, scale=theta, size=data["dimension"]+1)
 
     data_df["call_in_time_slot"] = samples.astype(int)
     return data_df
@@ -371,13 +371,13 @@ def create_customers_df(data: dict) -> pd.DataFrame:
     
     df = pd.DataFrame(
         {
-            "customer_id": [i for i in range(1, n)],
-            "x": [coord[0] for coord in data["node_coord"][1:n]],
-            "y": [coord[1] for coord in data["node_coord"][1:n]],
-            "demand": data["demand"][1:n],
-            "start_time": [tw[0] for tw in data["time_window"][1:n]],
-            "end_time": [tw[1] for tw in data["time_window"][1:n]],
-            "service_time": data["service_time"][1:n],
+            "customer_id": [i for i in range(n)],
+            "x": [coord[0] for coord in data["node_coord"][:n]],
+            "y": [coord[1] for coord in data["node_coord"][:n]],
+            "demand": data["demand"][:n],
+            "start_time": [tw[0] for tw in data["time_window"][:n]],
+            "end_time": [tw[1] for tw in data["time_window"][:n]],
+            "service_time": data["service_time"][:n],
         }
     )
 
@@ -404,5 +404,5 @@ test_data = read_cordeau_data(
 )
 
 d_data = generate_dynamic_cust_df(
-    "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr12", print_data=False
+    "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr12", print_data=False, seed=0
 )

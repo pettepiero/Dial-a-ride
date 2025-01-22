@@ -1,35 +1,50 @@
-from cvrptw.myvrplib.data_module import data
+from cvrptw.myvrplib.data_module import data, generate_dynamic_cust_df, dynamic_cust_df_from_dict, cost_matrix_from_coords
 from cvrptw.myvrplib.myvrplib import END_OF_DAY, UNASSIGNED_PENALTY
 from cvrptw.myvrplib.route import Route
-
 import numpy as np
+import pandas as pd
 
 
 class CvrptwState:
     """
-    UPDATE DESCRIPTION:
-    Solution state for CVRPTW. It has two data members, routes and unassigned.
-    Routes is a list of list of integers, where each inner list corresponds to
-    a single route denoting the sequence of customers to be visited. A route
-    does not contain the start and end depot. Times is a list of lists, containing
-    the planned arrival times for each customer in the routes. The outer list
-    corresponds to the routes, and the inner list corresponds to the customers of
-    the route. Unassigned is a list of integers, each integer representing an
-    unassigned customer.
+
     """
 
     def __init__(
         self,
-        routes: list[Route],
+        routes: list[Route] = None,
         dataset: dict = data,
         unassigned: list = None,
+        cust_df: pd.DataFrame = None,
+        seed: int = 0,
     ):
-        self.routes = routes
-        # self.times = times  # planned arrival times for each customer
-        self.dataset = dataset
-        self.unassigned = unassigned if unassigned is not None else []
 
-        self.twc = self.generate_twc_matrix(dataset["time_window"], dataset["edge_weight"])
+        self.dataset = dataset
+        self.seed = seed
+        self.routes = routes if routes is not None else []
+
+        if cust_df is not None:
+            self.cust_df = cust_df
+        else:
+            self.cust_df = dynamic_cust_df_from_dict(data, seed=seed)
+        self.unassigned = unassigned if unassigned is not None else []
+        # Initialize distances matrix
+        full_coordinates = self.cust_df[["x", "y"]].values
+        for depot in dataset["depots"]:
+            full_coordinates = np.append(
+                full_coordinates, [dataset["node_coord"][depot]], axis=0
+            )
+        self.distances = cost_matrix_from_coords(coords=full_coordinates)
+        # Initialize time window compatibility matrix
+        full_times = self.cust_df[["start_time", "end_time"]].values
+        for depot in dataset["depots"]:
+            full_times = np.append(full_times, [[0, END_OF_DAY]], axis=0)
+        full_times = full_times.tolist()
+        self.twc = self.generate_twc_matrix(
+            full_times,
+            self.distances,
+        )
+        
         self.qmax = self.get_qmax()
         self.dmax = self.get_dmax()
         self.norm_tw = (
@@ -44,6 +59,8 @@ class CvrptwState:
             [route.copy() for route in self.routes],  # Deep copy each Route
             self.dataset.copy(),
             self.unassigned.copy(),
+            self.cust_df.copy(deep=True),
+            seed=self.seed
         )
 
     def objective(self):
@@ -65,11 +82,14 @@ class CvrptwState:
         Return the route that contains the passed-in customer.
             Parameters:
                 customer: int
-                    The customer to find.
+                    The customer ID to find.
             Returns:
                 tuple
                     The route that contains the customer and its index.
         """
+        assert customer >= 0, f"Customer ID must be non-negative, got {customer}."
+        assert customer > len(self.cust_df), f"Customer ID must be less than the number of customers, got {customer}."
+
         found = False
         for idx, route in enumerate(self.routes):
             if customer in route.customers_list:
@@ -99,7 +119,7 @@ class CvrptwState:
             # TODO udpate planned windows
             route.calculate_planned_times()
 
-    def generate_twc_matrix(self, time_windows: list, distances: list, cordeau: bool = True) -> list:
+    def generate_twc_matrix(self, time_windows: list, distances: np.ndarray, cordeau: bool = True) -> list:
         """
         Generate the time window compatability matrix matrix. If cordeau is True,
         the first row and column are set to -inf, as customer 0 is not considered
@@ -115,6 +135,7 @@ class CvrptwState:
                 list
                     Time window compatibility matrix.
         """
+
         start_idx = 1 if cordeau else 0
         twc = np.zeros_like(distances)
         for i in range(start_idx, distances.shape[0]):
@@ -131,28 +152,18 @@ class CvrptwState:
                 twc[0][i] = -np.inf
         return twc
 
-    def print_state_dimensions(self):
-        print(f"Number of routes: {len(self.routes)}")
-        print(
-            f"Length of routes: {[len(route.customers_list) for route in self.routes]}"
-        )
-        print(f"Dimensions of times: {[len(route) for route in self.times]}")
-        print(f"Number of unassigned customers: {len(self.unassigned)}")
-        print(
-            f"Number of customers in routes: {sum(len(route.customers_list) for route in self.routes)}"
-        )
-
     def get_dmax(self):
         """
         Get the maximum distance between any two customers.
         """
-        return np.max(self.dataset["edge_weight"])
+        # return np.max(self.dataset["edge_weight"])
+        return np.max(self.distances)
 
     def get_qmax(self):
         """
         Get the maximum demand of any customer.
         """
-        return np.max(self.dataset["demand"])
+        return self.cust_df["demand"].max()
 
     def n_served_customers(self):
         """
