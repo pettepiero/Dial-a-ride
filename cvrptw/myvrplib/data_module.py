@@ -301,17 +301,25 @@ def read_solution_format(file: str, print_data: bool = False) -> dict:
 
     return data
 
-
-def convert_to_dynamic_data(file: str, print_data: bool = False, n_steps = 20, seed = 0) -> pd.DataFrame:
+def generate_dynamic_cust_df(file: str, static: bool = False, print_data: bool = False, n_steps = 20, seed = 0) -> pd.DataFrame:
     """
     Reads file and converts it to a dynamic customers dataframe.
-    Call in time for each customer is sampled from a gamma distribution.
+    Call in time for each customer is sampled from a gamma distribution, unless static is True.
+    Parameters:
+        file (str): Path to the file to be read.
+        static (bool): If True, all call in times are set to 0.
+        print_data (bool): If True, print parsed data.
+        n_steps (int): Number of time steps.
+        seed (int): Random seed.
     """
     np.random.seed(seed)
     data = read_cordeau_data(file, print_data=print_data)
     data_df = create_customers_df(data)
     data_df["call_in_time_slot"] = np.zeros(data["dimension"], dtype=int)
 
+    if static:
+        return data_df
+    
     # Parameters of gamma  distribution
     k = 0.5  # Shape parameter
     mean = n_steps/4  # Desired mean    
@@ -380,7 +388,6 @@ test_data = read_cordeau_data(
     print_data=False,
 )
 
-# d_data = convert_to_dynamic_data(
-#     "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr12", print_data=False
-# )
-# d_data = get_initial_data(d_data)
+d_data = generate_dynamic_cust_df(
+    "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr12", print_data=False
+)
