@@ -302,14 +302,15 @@ def read_solution_format(file: str, print_data: bool = False) -> dict:
     return data
 
 
-def convert_to_dynamic_data(file: str, print_data: bool = False, n_steps = 20, seed = 0) -> dict:
+def convert_to_dynamic_data(file: str, print_data: bool = False, n_steps = 20, seed = 0) -> pd.DataFrame:
     """
-    Convert a static CVRPTW instance to a dynamic instance with a single day.
+    Reads file and converts it to a dynamic customers dataframe.
     Call in time for each customer is sampled from a gamma distribution.
     """
     np.random.seed(seed)
     data = read_cordeau_data(file, print_data=print_data)
-    data["call_in_time_slot"] = np.zeros(data["dimension"], dtype=int)
+    data_df = create_customers_df(data)
+    data_df["call_in_time_slot"] = np.zeros(data["dimension"], dtype=int)
 
     # Parameters of gamma  distribution
     k = 0.5  # Shape parameter
@@ -317,46 +318,26 @@ def convert_to_dynamic_data(file: str, print_data: bool = False, n_steps = 20, s
     theta = mean / k  # Scale parameter
     samples = np.random.gamma(k, scale=theta, size=data["dimension"])
 
-    for i in range(1, data["dimension"]):
-        call_in_time = int(samples[i])
-        data["call_in_time_slot"][i] = call_in_time
+    data_df["call_in_time_slot"] = samples.astype(int)
+    return data_df
 
-    # convert to list
-    data["call_in_time_slot"] = data["call_in_time_slot"].tolist()
-
-    return data
-
-def get_customers_in_time_slot(data: dict, time_slot: int) -> list:
+def get_ids_of_time_slot(customer_df: pd.DataFrame, time_slot: int) -> list:
     """
-    Get the indices of customers that call in the given time slot.
+    Get the IDs of customers that call in the given time slot.
     """
-    indices = [i for i, t in enumerate(data["call_in_time_slot"]) if t == time_slot]
+    assert time_slot >= 0, "Time slot must be a non-negative integer."
+
+    indices = customer_df.loc[
+        customer_df["call_in_time_slot"] == time_slot, "customer_id"
+    ].tolist()
     return indices
 
-def get_initial_data(full_data: dict) -> dict:
+def get_initial_data(cust_df: pd.DataFrame) -> pd.DataFrame:
     """
-        Returns the initial data for the first step.
-        """
-    # Get indices of initial customers
-    initial_cust_idxs = get_customers_in_time_slot(full_data, 0)
-    # Remove all but the first customers from full_data
-    initial_data = copy.deepcopy(full_data)
-    initial_data["dimension"] = len(initial_cust_idxs)
-    initial_data["node_coord"] = [
-        initial_data["node_coord"][i] for i in initial_cust_idxs
-    ]
-    initial_data["demand"] = [initial_data["demand"][i] for i in initial_cust_idxs]
-    initial_data["time_window"] = [
-            initial_data["time_window"][i] for i in initial_cust_idxs
-        ]
-    initial_data["service_time"] = [
-            initial_data["service_time"][i] for i in initial_cust_idxs
-        ]
-    initial_data["call_in_time_slot"] = [
-            initial_data["call_in_time_slot"][i] for i in initial_cust_idxs
-        ]
-
-    return initial_data
+        Returns subset of initial df containing only customers
+        from the first time slot.
+    """
+    return cust_df.loc[cust_df["call_in_time_slot"] == 0]
 
 def create_customers_df(data: dict) -> pd.DataFrame:
     """
@@ -399,7 +380,7 @@ test_data = read_cordeau_data(
     print_data=False,
 )
 
-d_data = convert_to_dynamic_data(
-    "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr12", print_data=False
-)
-d_data = get_initial_data(d_data)
+# d_data = convert_to_dynamic_data(
+#     "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr12", print_data=False
+# )
+# d_data = get_initial_data(d_data)
