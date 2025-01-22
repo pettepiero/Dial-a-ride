@@ -301,19 +301,18 @@ def read_solution_format(file: str, print_data: bool = False) -> dict:
 
     return data
 
-def generate_dynamic_cust_df(file: str, static: bool = False, print_data: bool = False, n_steps = 20, seed = 0) -> pd.DataFrame:
+def dynamic_cust_df_from_dict(data: dict, static: bool = False, print_data: bool = False, n_steps:int = 20, seed: int = 0) -> pd.DataFrame:
     """
-    Reads file and converts it to a dynamic customers dataframe.
+    Convert a data dictionary to a pandas DataFrame for customer information.
     Call in time for each customer is sampled from a gamma distribution, unless static is True.
     Parameters:
-        file (str): Path to the file to be read.
+        data (dict): Data dictionary.
         static (bool): If True, all call in times are set to 0.
         print_data (bool): If True, print parsed data.
         n_steps (int): Number of time steps.
         seed (int): Random seed.
     """
     np.random.seed(seed)
-    data = read_cordeau_data(file, print_data=print_data)
     data_df = create_customers_df(data)
     data_df["call_in_time_slot"] = np.zeros(data["dimension"], dtype=int)
 
@@ -328,6 +327,22 @@ def generate_dynamic_cust_df(file: str, static: bool = False, print_data: bool =
 
     data_df["call_in_time_slot"] = samples.astype(int)
     return data_df
+    
+
+
+def generate_dynamic_cust_df(file: str, static: bool = False, print_data: bool = False, n_steps = 20, seed = 0) -> pd.DataFrame:
+    """
+    Reads file and converts it to a dynamic customers dataframe.
+    Call in time for each customer is sampled from a gamma distribution, unless static is True.
+    Parameters:
+        file (str): Path to the file to be read.
+        static (bool): If True, all call in times are set to 0.
+        print_data (bool): If True, print parsed data.
+        n_steps (int): Number of time steps.
+        seed (int): Random seed.
+    """
+    data = read_cordeau_data(file, print_data=print_data)
+    return dynamic_cust_df_from_dict(data, static=static, print_data=print_data, n_steps=n_steps, seed=seed)
 
 def get_ids_of_time_slot(customer_df: pd.DataFrame, time_slot: int) -> list:
     """
