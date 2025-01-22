@@ -1,4 +1,10 @@
-from cvrptw.myvrplib.data_module import data, generate_dynamic_cust_df, dynamic_cust_df_from_dict, cost_matrix_from_coords
+from cvrptw.myvrplib.data_module import (
+    data, 
+    generate_dynamic_cust_df, 
+    dynamic_cust_df_from_dict, 
+    cost_matrix_from_coords,
+    create_depots_dict
+)
 from cvrptw.myvrplib.myvrplib import END_OF_DAY, UNASSIGNED_PENALTY
 from cvrptw.myvrplib.route import Route
 import numpy as np
@@ -7,7 +13,36 @@ import pandas as pd
 
 class CvrptwState:
     """
-
+    Class representing the state of the CVRPTW problem.
+    Attributes:
+        routes: list
+            List of routes in the state.
+        dataset: dict
+            Dictionary containing the dataset.
+        unassigned: list
+            List of unassigned customers.
+        cust_df: pd.DataFrame
+            DataFrame containing the customers data.
+        seed: int
+            Seed for the random number generator.
+        distances: np.ndarray
+            Matrix of distances between each pair of customers.
+        twc: np.ndarray
+            Time window compatibility matrix.
+        qmax: float
+            Maximum demand of any customer.
+        dmax: float
+            Maximum distance between any two customers.
+        norm_tw: np.ndarray
+            Normalized time window compatibility matrix.
+        n_vehicles: int
+            Number of vehicles in the dataset.
+        depots: dict
+            Dictionary containing the depots information
+        n_customers: int
+            Number of customers in the dataset.
+        vehicle_capacity: int
+            Capacity of the vehicles in the dataset.
     """
 
     def __init__(
@@ -44,12 +79,16 @@ class CvrptwState:
             full_times,
             self.distances,
         )
-        
+
         self.qmax = self.get_qmax()
         self.dmax = self.get_dmax()
         self.norm_tw = (
             self.twc / self.dmax
         )  # Note: maybe use only norm_tw in the future?
+        self.n_vehicles = dataset["vehicles"]
+        self.depots = create_depots_dict(dataset)
+        self.n_customers = len(self.cust_df) -1     # first line is not a customer
+        self.vehicle_capacity = dataset["capacity"]
 
     def __str__(self):
         return f"Routes: {[route.customers_list for route in self.routes]}, \nUnassigned: {self.unassigned}"

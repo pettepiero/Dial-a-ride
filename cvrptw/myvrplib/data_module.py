@@ -390,6 +390,7 @@ def create_depots_dict(data: dict) -> dict:
         "depot_to_vehicles": data["depot_to_vehicles"],
         "vehicle_to_depot": data["vehicle_to_depot"],
         "coords": data["node_coord"][data["dimension"] + 1 :],
+        "depots_indices": data["depots"],
     }
 
     return depots_dict
