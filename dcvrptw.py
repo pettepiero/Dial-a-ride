@@ -1,5 +1,5 @@
 from cvrptw.myvrplib.vrpstates import CvrptwState
-from cvrptw.myvrplib.data_module import data, END_OF_DAY, convert_to_dynamic_data, get_initial_data
+from cvrptw.myvrplib.data_module import data, END_OF_DAY, generate_dynamic_cust_df, get_initial_data
 import pandas as pd
 import numpy as np
 import copy
@@ -22,7 +22,7 @@ class DynamicVRP():
     def __init__(self, num_steps: int = 20, data: dict = data):
         self.state = CvrptwState(data)
         self.num_steps = num_steps
-        self.data = convert_to_dynamic_data(
+        self.data = generate_dynamic_cust_df(
             "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr11",
             n_steps=self.num_steps,
         )

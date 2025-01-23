@@ -39,6 +39,5 @@ class NeighbourhoodTests(unittest.TestCase):
     def test_nn_sol(self):
         sol = nearest_neighbor_tw(self.state)
 
-
 if __name__ == "__main__":
     unittest.main()
