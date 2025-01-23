@@ -6,6 +6,8 @@ import vrplib
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+from typing import Union
 import numpy.random as rnd
 from alns import ALNS
 from alns.accept import RecordToRecordTravel
@@ -17,11 +19,11 @@ UNASSIGNED_PENALTY = 50
 LOGGING_LEVEL = logging.ERROR
 
 
-def plot_data(data: dict, idx_annotations=False, name: str = "VRPTW Data", cordeau: bool = True):
+def plot_data(data: Union[dict, pd.DataFrame], idx_annotations=False, name: str = "VRPTW Data", cordeau: bool = True, time_step: int = None):
     """
     Plot the routes of the passed-in solution.
         Parameters:
-            data: dict
+            data: dict or pd.DataFrame
                 The data to be plotted.
             idx_annotations: bool
                 If True, the customer indices are plotted.
@@ -29,30 +31,72 @@ def plot_data(data: dict, idx_annotations=False, name: str = "VRPTW Data", corde
                 The name of the plot.
             cordeau: bool
                 If True, the first customer is ignored.
+            time_step: int
+                If not None, only the customers that are active at the given time step are plotted.
         Returns:
             None
     """
-    fig, ax = plt.subplots(figsize=(12, 10))
-    n = data["dimension"]
-    start_idx = 1 if cordeau else 0
+    if isinstance(data, dict):
+        n = data["dimension"]
+        start_idx = 1 if cordeau else 0
 
-    ax.plot(
-        data["node_coord"][: n - 1, 0],
-        data["node_coord"][: n - 1, 1],
-        "o",
-        label="Customers",
-    )
-    ax.plot(
-        data["node_coord"][n:, 0],
-        data["node_coord"][n:, 1],
-        "X",
-        label="Depot",
-    )
-    if idx_annotations:
-        for i in range(start_idx, n):
-            customer = data["node_coord"][i]
-            ax.annotate(i, (customer[0], customer[1]))
+        fig, ax = plt.subplots(figsize=(12, 10))
+        ax.plot(
+            data["node_coord"][: n - 1, 0],
+            data["node_coord"][: n - 1, 1],
+            "o",
+            label="Customers",
+        )
+        ax.plot(
+            data["node_coord"][n:, 0],
+            data["node_coord"][n:, 1],
+            "X",
+            label="Depot",
+        )
+        if idx_annotations:
+            for i in range(start_idx, n):
+                customer = data["node_coord"][i]
+                ax.annotate(i, (customer[0], customer[1]))
+    elif isinstance(data, pd.DataFrame):
+        fig, ax = plt.subplots(figsize=(12, 10))
 
+        if time_step is not None:
+            active_custs = data.loc[data["call_in_time_slot"] <= time_step]
+            non_active_custs = data.loc[data["call_in_time_slot"] > time_step]
+            ax.plot(
+                active_custs.loc[data["demand"] != 0, "x"],
+                active_custs.loc[data["demand"] != 0, "y"],
+                "o",
+                color="tab:blue",
+                label="Customers at this time step",
+            )
+            ax.plot(
+                non_active_custs.loc[data["demand"] != 0, "x"],
+                non_active_custs.loc[data["demand"] != 0, "y"],
+                "o",
+                color="tab:gray",
+                label="Customers at future time step",
+            )
+        else:
+            ax.plot(
+                data.loc[data["demand"] != 0, "x"],
+                data.loc[data["demand"] != 0, "y"],
+                "o",
+                label="Customers",
+            )
+
+        ax.plot(
+            data.loc[data["demand"] == 0, "x"],
+            data.loc[data["demand"] == 0, "y"],
+            "X",
+            label="Depots",
+        )
+        if idx_annotations:
+            for i in range(data.shape[0]):
+                ax.annotate(i, (data["x"].iloc[i], data["y"].iloc[i]))
+    else:
+        raise ValueError("Data must be a dict or a pandas DataFrame.")
+    
     ax.set_title(f"{name}")
     ax.set_xlabel("X-coordinate")
     ax.set_ylabel("Y-coordinate")
@@ -60,13 +104,11 @@ def plot_data(data: dict, idx_annotations=False, name: str = "VRPTW Data", corde
 
 
 def plot_solution(
-    data: dict, solution, name="CVRP solution", idx_annotations=False, figsize=(12, 10), save=False, cordeau: bool = True
+    solution, name="CVRP solution", idx_annotations=False, figsize=(12, 10), save=False, cordeau: bool = True
 ):
     """
     Plot the routes of the passed-in solution. If cordeau is True, the first customer is ignored.
         Parameters:
-            data: dict
-                The data to be plotted.
             solution: CvrptwState
                 The solution to be plotted.
             name: str
@@ -81,6 +123,7 @@ def plot_solution(
                 If True, the first customer is ignored.
     
     """
+    df = solution.cust_df
     start_idx = 1 if cordeau else 0
     fig, ax = plt.subplots(figsize=figsize)
     cmap = plt.get_cmap("Set2", len(solution.routes))
@@ -88,34 +131,36 @@ def plot_solution(
     # Plot the routes
     for idx, route in enumerate(solution.routes):
         ax.plot(
-            [data["node_coord"][loc][0] for loc in route.customers_list],
-            [data["node_coord"][loc][1] for loc in route.customers_list],
+            [
+                df.loc[df["id"] == loc, "x"].item()
+                for loc in route.customers_list
+            ],
+            [
+                df.loc[df["id"] == loc, "y"].item()
+                for loc in route.customers_list
+            ],
             color=cmap(idx),
             marker=".",
             label=f"Vehicle {route.vehicle}",
         )
-    
+
     # Plot the customers
-    for i in range(start_idx, data["dimension"]):
-        customer = data["node_coord"][i]
+    for i in range(start_idx, solution.n_customers +1):
+        customer = df.loc[df["id"] == i, ['x', 'y']]
+        customer = customer.values[0]
+        print(customer)
         ax.plot(customer[0], customer[1], "o", c="tab:blue")
         if idx_annotations:
             ax.annotate(i, (customer[0], customer[1]))
 
-    # for idx, customer in enumerate(data["node_coord"][:data["dimension"]]):
-    #     ax.plot(customer[0], customer[1], "o", c="tab:blue")
-    #     ax.annotate(idx, (customer[0], customer[1]))
-
     # Plot the depot
     kwargs = dict(zorder=3, marker="X")
 
-    for i in range(data["dimension"], data["dimension"] + data["n_depots"]):
-        depot = data["node_coord"][i]
-        ax.plot(depot[0], depot[1], c="tab:red", **kwargs, label=f"Depot {i}")
+    for i, dep in enumerate(solution.depots["depots_indices"]):
+        coords = solution.depots["coords"][i]
+        ax.plot(coords[0], coords[1], c="tab:red", **kwargs, label=f"Depot {dep}")
         if idx_annotations:
-            ax.annotate(i, (depot[0], depot[1]))
-
-    # ax.scatter(*data["node_coord"][0], c="tab:red", label="Depot 0", **kwargs)
+            ax.annotate(dep, (coords[0], coords[1]))
 
     ax.set_title(f"{name}\n Total distance: {solution.cost}\n Total unassigned: {len(solution.unassigned)}")
     ax.set_xlabel("X-coordinate")
