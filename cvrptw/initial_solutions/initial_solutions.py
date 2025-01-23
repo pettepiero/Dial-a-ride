@@ -47,16 +47,18 @@ def time_neighbours(state: CvrptwState, customer: int) -> list:
                 The list of customers in order of increasing time from the
                 given customer, excluding the depots.
     """
-    current_start_time = state.cust_df.loc[state.cust_df['customer_id'] == customer, "start_time"].item()
-    locations = state.cust_df[state.cust_df['start_time'] > current_start_time][["customer_id", "start_time"]].values.tolist()
-    locations = [[loc, time] for loc, time in locations if state.distances[customer][loc] + current_start_time <= state.cust_df.loc[state.cust_df['customer_id'] == loc, "end_time"].item()]
+    current_start_time = state.cust_df.loc[state.cust_df['id'] == customer, "start_time"]
+    current_start_time = current_start_time.item()
+
+    locations = state.cust_df[state.cust_df['start_time'] > current_start_time][["id", "start_time"]].values.tolist()
+    locations = [[loc, time] for loc, time in locations if state.distances[customer][loc] + current_start_time <= state.cust_df.loc[state.cust_df['id'] == loc, "end_time"].item()]
     locations = sorted(locations, key=lambda x: x[1])
     locations = [loc for loc in locations if loc != customer]
 
     return [loc[0] for loc in locations]
 
     # # assert customer not in depots, "Customer cannot be a depot"
-    # locations = [(loc, state.cust_df.loc[state.cust_df['customer_id'] == loc, "start_time"]) for loc in range(state.n_customers)]
+    # locations = [(loc, state.cust_df.loc[state.cust_df['id'] == loc, "start_time"]) for loc in range(state.n_customers)]
     # locations = [loc for loc in locations if loc[0] not in state.depots["depots_indices"]]
     # #order by soonest start time after current customer
     # current_start_time = locations[customer][1]
@@ -122,7 +124,7 @@ def nearest_neighbor_tw(state: CvrptwState, cordeau:bool = True, initial_time_sl
                 break
             nearest = int(nearest[0])  # Nearest unvisited reachable customer
             # Check vehicle capacity and time window constraints
-            if route_demands + state.cust_df[state.cust_df["customer_id"] == nearest]["demand"].item() > state.vehicle_capacity:
+            if route_demands + state.cust_df[state.cust_df["id"] == nearest]["demand"].item() > state.vehicle_capacity:
                 break
             if not time_window_check(route_schedule[-1], current, nearest):
                 break
@@ -130,11 +132,11 @@ def nearest_neighbor_tw(state: CvrptwState, cordeau:bool = True, initial_time_sl
             route.append(nearest)
             route_schedule.append(
                 state.distances[current][nearest].item()
-                + state.cust_df[state.cust_df['customer_id'] == current]["service_time"].item()
+                + state.cust_df[state.cust_df['id'] == current]["service_time"].item()
             )
 
             unvisited.remove(nearest)
-            route_demands += state.cust_df[state.cust_df["customer_id"] == nearest][
+            route_demands += state.cust_df[state.cust_df["id"] == nearest][
                 "demand"
             ].item()
 

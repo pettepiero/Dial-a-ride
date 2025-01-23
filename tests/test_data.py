@@ -4,42 +4,85 @@ from cvrptw.myvrplib.data_module import *
 
 class TestDFConversion(unittest.TestCase):
     def setUp(self):
-        data = read_cordeau_data(
+        self.data = read_cordeau_data(
             "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr12"
         )
 
     def test_create_customers_df(self):
-        data = read_cordeau_data(
-            "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr12"
-        )
-        customers_df = create_customers_df(data)
+        customers_df = create_customers_df(self.data)
+        # test dimensions
+        self.assertEqual(customers_df.shape[0], self.data["dimension"] + self.data["n_depots"] +1)
         # some hand picked customers checks
-        self.assertEqual(customers_df['x'].loc[customers_df["customer_id"] == 1].item(), 33.588)
-        self.assertEqual(customers_df['service_time'].loc[customers_df["customer_id"] == 23].item(), 18)
-        self.assertEqual(customers_df['start_time'].loc[customers_df["customer_id"] == 36].item(), 269)
+        self.assertEqual(customers_df['x'].loc[customers_df["id"] == 1].item(), 33.588)
+        self.assertEqual(customers_df['service_time'].loc[customers_df["id"] == 23].item(), 18)
+        self.assertEqual(customers_df['start_time'].loc[customers_df["id"] == 36].item(), 269)
+        # testing depots
+        self.assertEqual(customers_df['x'].loc[customers_df["id"] == 97].item(), 6.229)
+        self.assertEqual(customers_df['service_time'].loc[customers_df["id"] == 97].item(), 0)
+        self.assertEqual(
+            customers_df["start_time"].loc[customers_df["id"] == 99].item(),
+            0,
+        )
+        self.assertEqual(
+            customers_df["end_time"].loc[customers_df["id"] == 97].item(),
+            END_OF_DAY,
+        )
 
     def test_get_ids_of_time_slot(self):
-        data = generate_dynamic_cust_df(
+        dynamic_data = generate_dynamic_cust_df(
             "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr12", seed=0
         )
-        ids = get_ids_of_time_slot(data, 0)
+
+        ids = get_ids_of_time_slot(dynamic_data, 0)
         # known indices for seed = 0 and time_slot = 0
-        known_ids = [7, 8, 12, 13, 15, 17, 23, 24, 26, 29, 31, 35, 36, 38, 42, 43, 47, 49, 58, 61, 68, 70, 71, 72, 77, 81, 87, 89, 90, 91, 93]
+        known_ids = [
+            6,
+            7,
+            11,
+            12,
+            14,
+            16,
+            22,
+            23,
+            25,
+            28,
+            30,
+            34,
+            35,
+            37,
+            41,
+            42,
+            46,
+            48,
+            57,
+            60,
+            67,
+            69,
+            70,
+            71,
+            76,
+            80,
+            86,
+            88,
+            89,
+            90,
+            92,
+            96
+        ]
         self.assertEqual(ids, known_ids)
 
     def test_get_initial_data(self):
-        data = generate_dynamic_cust_df(
-            "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr12",
-            seed=0
+        dynamic_data = generate_dynamic_cust_df(
+            "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr12", seed=0
         )
-        initial_data = get_initial_data(data)
+        initial_data = get_initial_data(dynamic_data)
         # some hand picked customers checks for seed = 0
-        self.assertEqual(initial_data['x'].loc[initial_data["customer_id"] == 8].item(), -57.703)
+        self.assertEqual(initial_data.loc[initial_data["id"] == 11, 'x'].item(), 37.085)
         self.assertEqual(
-            initial_data["end_time"].loc[initial_data["customer_id"] == 47].item(), 601
+            initial_data.loc[initial_data["id"] == 37, 'end_time'].item(), 496
         )
         self.assertEqual(
-            initial_data["demand"].loc[initial_data["customer_id"] == 89].item(), 4
+            initial_data.loc[initial_data["id"] == 89, 'demand'].item(), 4
         )
 
     def test_generate_dynamic_cust_df(self):
@@ -49,15 +92,15 @@ class TestDFConversion(unittest.TestCase):
             seed=0
         )
         # some hand picked customers checks for seed = 0
-        print(f"\nDynamic data:\n")
-        self.assertEqual(dynamic_data.loc[dynamic_data["customer_id"] == 1, 'call_in_time_slot'].item(), 3)
+
+        self.assertEqual(dynamic_data.loc[dynamic_data["id"] == 1, 'call_in_time_slot'].item(), 3)
         self.assertEqual(
             dynamic_data.loc[
-                dynamic_data["customer_id"] == 2, "call_in_time_slot"
+                dynamic_data["id"] == 2, "call_in_time_slot"
             ].item(),
-            3,
+            1,
         )
-        self.assertEqual(dynamic_data.loc[dynamic_data["customer_id"] == 93, 'call_in_time_slot'].item(), 0)
+        self.assertEqual(dynamic_data.loc[dynamic_data["id"] == 93, 'call_in_time_slot'].item(), 5)
 
         # Test the static case (all call in times are 0)
         dynamic_data = generate_dynamic_cust_df(
@@ -68,7 +111,6 @@ class TestDFConversion(unittest.TestCase):
 
         num_custs = len(dynamic_data)
         zeros = np.zeros(num_custs).astype(int).tolist()
-        print(dynamic_data["call_in_time_slot"].to_list())
         self.assertEqual(
             dynamic_data["call_in_time_slot"].to_list(), zeros
         )

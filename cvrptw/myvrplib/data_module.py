@@ -314,8 +314,8 @@ def dynamic_cust_df_from_dict(data: dict, static: bool = False, print_data: bool
     """
     np.random.seed(seed)
     data_df = create_customers_df(data)
-    data_df["call_in_time_slot"] = np.zeros(data["dimension"]+1, dtype=int)
-
+    data_df["call_in_time_slot"] = np.zeros(data["dimension"]+data["n_depots"] +1, dtype=int)
+    
     if static:
         return data_df
     
@@ -323,9 +323,10 @@ def dynamic_cust_df_from_dict(data: dict, static: bool = False, print_data: bool
     k = 0.5  # Shape parameter
     mean = n_steps/4  # Desired mean    
     theta = mean / k  # Scale parameter
-    samples = np.random.gamma(k, scale=theta, size=data["dimension"]+1)
+    samples = np.random.gamma(k, scale=theta, size=data["dimension"]+data["n_depots"]+1)
 
     data_df["call_in_time_slot"] = samples.astype(int)
+    data_df.iloc[-data["n_depots"]:, data_df.columns.get_loc("call_in_time_slot")] = 0
     return data_df
     
 
@@ -351,8 +352,11 @@ def get_ids_of_time_slot(customer_df: pd.DataFrame, time_slot: int) -> list:
     assert time_slot >= 0, "Time slot must be a non-negative integer."
 
     indices = customer_df.loc[
-        customer_df["call_in_time_slot"] == time_slot, "customer_id"
+        customer_df["call_in_time_slot"] == time_slot, "id"
     ].tolist()
+    # depots ids are the elements that have demand = 0 and we need to remove them from the list
+    depots = customer_df.loc[customer_df["demand"] == 0, "id"].tolist()
+    indices = [i for i in indices if i not in depots]
     return indices
 
 def get_initial_data(cust_df: pd.DataFrame) -> pd.DataFrame:
@@ -365,13 +369,21 @@ def get_initial_data(cust_df: pd.DataFrame) -> pd.DataFrame:
 def create_customers_df(data: dict) -> pd.DataFrame:
     """
     Convert a data dictionary to a pandas DataFrame
-    for customer information.
+    for customer and depot information.
+    Columns:
+        id: int
+        x: float
+        y: float
+        demand: int
+        start_time: int
+        end_time: int
+        service_time: int
     """
-    n = data["dimension"]+1
+    n = data["dimension"] + data["n_depots"]+1
     
     df = pd.DataFrame(
         {
-            "customer_id": [i for i in range(n)],
+            "id": [i for i in range(n)],
             "x": [coord[0] for coord in data["node_coord"][:n]],
             "y": [coord[1] for coord in data["node_coord"][:n]],
             "demand": data["demand"][:n],
