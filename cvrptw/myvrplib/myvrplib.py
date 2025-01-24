@@ -123,7 +123,7 @@ def plot_solution(
                 If True, the first customer is ignored.
     
     """
-    df = solution.cust_df
+    df = solution.nodes_df
     start_idx = 1 if cordeau else 0
     fig, ax = plt.subplots(figsize=figsize)
     cmap = plt.get_cmap("Set2", len(solution.routes))
@@ -148,7 +148,6 @@ def plot_solution(
     for i in range(start_idx, solution.n_customers +1):
         customer = df.loc[df["id"] == i, ['x', 'y']]
         customer = customer.values[0]
-        print(customer)
         ax.plot(customer[0], customer[1], "o", c="tab:blue")
         if idx_annotations:
             ax.annotate(i, (customer[0], customer[1]))
@@ -171,48 +170,61 @@ def plot_solution(
         plt.savefig(f"/home/pettepiero/tirocinio/dial-a-ride/outputs/plots/{name}.png")
         plt.close()
 
-def solution_times_statistics(data: dict, state) -> dict:
+def solution_times_statistics(state) -> dict:
     """
     Counts the number of customers that are served late or early in the solution.
+    The considered time step is current_time attribute of state.
         Parameters:
-            data: dict
-                The data to be used.
             state: CvrptwState
                 The solution to be verified.
         Returns:
             dict
-                A dictionary containing the number of customers served late, early, on-time, left-out customers, and the sum of late and early minutes.
+                A dictionary containing the number of customers served late, early,
+                 on-time, left-out customers, and the sum of late and early minutes.
     """
-    #debug
-    print("Inside solution_times_statistics")
+    data = state.nodes_df
+
     late, early, ontime = 0, 0, 0
-    # Get customers that are planned or absent in the solution
-    planned_customers = [customer for route in state.routes for customer in route.customers_list[1:-1]]
-    left_out_customers = [
-        customer
-        for customer in range(data["dimension"])
-        if customer not in planned_customers
+    # To get customers in the solution, first remove all the depots
+    # then get all the customers that were seen by the system
+    # until current time step
+
+    available_customers = data.loc[data["demand"] != 0]
+    available_customers = available_customers.loc[
+        available_customers["call_in_time_slot"] <= state.current_time
     ]
+    # remove the already satisfied customers
+    available_customers = available_customers.loc[available_customers["done"] == False]
+
+    # Then get the customers that are in the solution, aka planned_customers
+    planned_customers = available_customers.loc[
+        pd.notnull(available_customers["route"])
+    ]
+    # left out customers are seen but not planned
+    left_out_customers = available_customers.loc[
+        pd.isnull(available_customers["route"])
+    ]
+
     late_minutes_sum = 0
     early_minutes_sum = 0
-    # Check time windows for planned customers
-    for customer in planned_customers:
-        route, _ = state.find_route(customer)
-        idx = state.find_index_in_route(customer, route)
-        # Use planned arrival times
-        arrival_time = route.planned_windows[idx][0]
-        due_time = data["time_window"][customer][1]
-        ready_time = data["time_window"][customer][0]
-        if arrival_time > due_time:
+
+    for _, customer in planned_customers.iterrows():
+        id = customer["id"]
+        route = customer["route"]
+        idx_in_route = state.find_index_in_route(id, state.routes[route])
+        planned_arrival_time = state.routes[route].planned_windows[idx_in_route][0]
+
+        due_time = customer["end_time"]
+        ready_time = customer["start_time"]
+        if planned_arrival_time > due_time:
             late += 1
-            late_minutes_sum += arrival_time - due_time
-        elif arrival_time < ready_time:
+            late_minutes_sum += planned_arrival_time - due_time
+        elif planned_arrival_time < ready_time:
             early += 1
-            early_minutes_sum += ready_time - arrival_time
-            #debug
-            print(f"Customer {customer} planned {arrival_time} ready {ready_time}")
-        elif arrival_time >= ready_time and arrival_time <= due_time:
+            early_minutes_sum += ready_time - planned_arrival_time
+        elif planned_arrival_time >= ready_time and planned_arrival_time <= due_time:
             ontime += 1
+
     dict = {
         "late": late,
         "early": early,

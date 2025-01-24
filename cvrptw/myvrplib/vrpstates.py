@@ -1,7 +1,7 @@
 from cvrptw.myvrplib.data_module import (
     data, 
-    generate_dynamic_cust_df, 
-    dynamic_cust_df_from_dict, 
+    generate_dynamic_df, 
+    dynamic_df_from_dict, 
     cost_matrix_from_coords,
     create_depots_dict
 )
@@ -21,7 +21,7 @@ class CvrptwState:
             Dictionary containing the dataset.
         unassigned: list
             List of unassigned customers.
-        cust_df: pd.DataFrame
+        nodes_df: pd.DataFrame
             DataFrame containing the customers data.
         seed: int
             Seed for the random number generator.
@@ -43,6 +43,8 @@ class CvrptwState:
             Number of customers in the dataset.
         vehicle_capacity: int
             Capacity of the vehicles in the dataset.
+        current_time: int
+            Current time of the simulation.
     """
 
     def __init__(
@@ -50,7 +52,8 @@ class CvrptwState:
         routes: list[Route] = None,
         dataset: dict = data,
         unassigned: list = None,
-        cust_df: pd.DataFrame = None,
+        nodes_df: pd.DataFrame = None,
+        current_time: int = 0,
         seed: int = 0,
     ):
 
@@ -58,20 +61,20 @@ class CvrptwState:
         self.seed = seed
         self.routes = routes if routes is not None else []
 
-        if cust_df is not None:
-            self.cust_df = cust_df
+        if nodes_df is not None:
+            self.nodes_df = nodes_df
         else:
-            self.cust_df = dynamic_cust_df_from_dict(data, seed=seed)
+            self.nodes_df = dynamic_df_from_dict(data, seed=seed)
         self.unassigned = unassigned if unassigned is not None else []
         # Initialize distances matrix
-        full_coordinates = self.cust_df[["x", "y"]].values
+        full_coordinates = self.nodes_df[["x", "y"]].values
         for depot in dataset["depots"]:
             full_coordinates = np.append(
                 full_coordinates, [dataset["node_coord"][depot]], axis=0
             )
         self.distances = cost_matrix_from_coords(coords=full_coordinates)
         # Initialize time window compatibility matrix
-        full_times = self.cust_df[["start_time", "end_time"]].values
+        full_times = self.nodes_df[["start_time", "end_time"]].values
         for depot in dataset["depots"]:
             full_times = np.append(full_times, [[0, END_OF_DAY]], axis=0)
         full_times = full_times.tolist()
@@ -79,6 +82,7 @@ class CvrptwState:
             full_times,
             self.distances,
         )
+        self.current_time = current_time
 
         self.qmax = self.get_qmax()
         self.dmax = self.get_dmax()
@@ -87,7 +91,7 @@ class CvrptwState:
         )  # Note: maybe use only norm_tw in the future?
         self.n_vehicles = dataset["vehicles"]
         self.depots = create_depots_dict(dataset)
-        self.n_customers = len(self.cust_df) -1     # first line is not a customer
+        self.n_customers = len(self.nodes_df) -1     # first line is not a customer
         self.vehicle_capacity = dataset["capacity"]
 
     def __str__(self):
@@ -98,7 +102,8 @@ class CvrptwState:
             [route.copy() for route in self.routes],  # Deep copy each Route
             self.dataset.copy(),
             self.unassigned.copy(),
-            self.cust_df.copy(deep=True),
+            self.nodes_df.copy(deep=True),
+            self.current_time,
             seed=self.seed
         )
 
@@ -127,7 +132,7 @@ class CvrptwState:
                     The route that contains the customer and its index.
         """
         assert customer >= 0, f"Customer ID must be non-negative, got {customer}."
-        assert customer > len(self.cust_df), f"Customer ID must be less than the number of customers, got {customer}."
+        assert customer > len(self.nodes_df), f"Customer ID must be less than the number of customers, got {customer}."
 
         found = False
         for idx, route in enumerate(self.routes):
@@ -142,6 +147,7 @@ class CvrptwState:
         """
         Return the index of the customer in the route.
         """
+        assert route is not None, "Route must be provided."
         if customer in route.customers_list:
             return route.customers_list.index(customer)
 
@@ -202,7 +208,7 @@ class CvrptwState:
         """
         Get the maximum demand of any customer.
         """
-        return self.cust_df["demand"].max()
+        return self.nodes_df["demand"].max()
 
     def n_served_customers(self):
         """
