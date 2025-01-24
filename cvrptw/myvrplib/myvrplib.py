@@ -121,6 +121,7 @@ def plot_solution(
     ax.set_xlabel("X-coordinate")
     ax.set_ylabel("Y-coordinate")
     ax.legend(frameon=False, ncol=3)
+    plt.axis('off')
 
     if save:
         plt.savefig(f"/home/pettepiero/tirocinio/dial-a-ride/outputs/plots/{name}.png")
