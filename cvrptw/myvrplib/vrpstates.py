@@ -132,7 +132,9 @@ class CvrptwState:
                     The route that contains the customer and its index.
         """
         assert customer >= 0, f"Customer ID must be non-negative, got {customer}."
-        assert customer > len(self.nodes_df), f"Customer ID must be less than the number of customers, got {customer}."
+        assert (
+            customer < self.nodes_df.shape[0]
+        ), f"Customer ID must be less than {self.nodes_df.shape[0]}, got {customer}."
 
         found = False
         for idx, route in enumerate(self.routes):

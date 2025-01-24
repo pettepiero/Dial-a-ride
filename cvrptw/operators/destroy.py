@@ -43,7 +43,6 @@ def random_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
             logger.debug(
                 f"Error: customer {customer.item()} not found in any route but picked from served customers."
             )
-
     return remove_empty_routes(destroyed)
 
 
