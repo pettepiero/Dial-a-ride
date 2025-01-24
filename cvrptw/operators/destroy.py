@@ -205,8 +205,8 @@ def shaw_removal(state: CvrptwState, rng) -> CvrptwState:
 
 def cost_reducing_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
     """
-    Cost reducing removal operator based on (Wang et al, 2024). Identifies
-    customers that can be inserted into a solution route at a lower cost.
+    Cost reducing removal operator based on algorithm 2 of (Wang et al, 2024). 
+    Identifies customers that can be inserted into a solution route at a lower cost.
     A limit on iterations is proposed to terminate the search for potential 
     customers using this operator.
         Parameters:
@@ -220,47 +220,44 @@ def cost_reducing_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
     """
 
     # TODO: Implement the limit on the iterations for this operator
-
     destroyed = state.copy()
-
-    for first_route_index in rng.choice(len(state.routes), 1):
-        customers = state.routes[first_route_index].customers_list
-        if (
-            len(customers) <= 2
-        ):  # route has only depot and customer :TODO: what to do in this case?
-            break
-        v = rng.choice(customers[1:-1])
-        i1 = customers[customers.index(v) - 1]  # previous customer
-        j1 = customers[customers.index(v) + 1]  # next customer
-
-        # DEBUG
-        # logger.debug(f"\n\nv: {v}, i1: {i1}, j1: {j1}, customers: {customers}")
-        di1v = data["edge_weight"][i1][v]
-        dvj1 = data["edge_weight"][v][j1]
-        di1j1 = data["edge_weight"][i1][j1]
-
-        for second_route_index in list(range(len(state.routes))):
-            customers2 = state.routes[second_route_index].customers_list
-            for i2 in customers2[:-1]:  # first customer of insertion arc
-                j2 = customers2[
-                    customers2.index(i2) + 1
-                ]  # second customer of insertion arc
-                if state.twc[v][i2] != -np.inf and state.twc[v][j2] != -np.inf:
-                    di2j2 = data["edge_weight"][i2][j2]
-                    di2v = data["edge_weight"][i2][v]
-                    dvj2 = data["edge_weight"][v][j2]
-                    if di1v + dvj1 + di2j2 > di1j1 + di2v + dvj2:
-                        # Remove v from first route and insert into second
-                        destroyed.routes[first_route_index].remove(v)
-                        destroyed.routes[first_route_index].calculate_planned_times()
-                        # state.routes[second_route_index].insert(
-                        #     customers2.index(j2), v.item()
-                        # )
-                        destroyed.unassigned.append(v)
-                        destroyed.update_times_attributes_routes()
-                    
-                        return remove_empty_routes(destroyed)
     
+    iterations = 10
+    for _ in range(iterations):
+        for first_route_index in rng.choice(len(state.routes), 1):
+            customers = state.routes[first_route_index].customers_list
+            if (len(customers) <= 2):   # rout has only depots
+                break
+            for v in customers[1:-1]:
+                i1 = customers[customers.index(v) - 1]  # previous customer
+                j1 = customers[customers.index(v) + 1]  # next customer
+                di1v = data["edge_weight"][i1][v]
+                dvj1 = data["edge_weight"][v][j1]
+                di1j1 = data["edge_weight"][i1][j1]
+
+                for second_route_index in list(range(len(state.routes))):
+                    customers2 = state.routes[second_route_index].customers_list
+                    for i2 in customers2[:-1]:  # first customer of insertion arc
+                        j2 = customers2[
+                            customers2.index(i2) + 1
+                        ]  # second customer of insertion arc
+                        if state.twc[v][i2] != -np.inf and state.twc[v][j2] != -np.inf:
+                            di2j2 = data["edge_weight"][i2][j2]
+                            di2v = data["edge_weight"][i2][v]
+                            dvj2 = data["edge_weight"][v][j2]
+                            if di1v + dvj1 + di2j2 > di1j1 + di2v + dvj2:
+                                # Remove v from first route and insert into second
+                                destroyed.routes[first_route_index].remove(v)
+                                destroyed.routes[first_route_index].calculate_planned_times()
+                                # state.routes[second_route_index].insert(
+                                #     customers2.index(j2), v.item()
+                                # )
+                                destroyed.unassigned.append(v)
+                                destroyed.update_times_attributes_routes()
+                            
+                                return remove_empty_routes(destroyed)
+    logger.debug(f"No customers found to remove in {iterations} iterations of cost_reducing_removals.")
+        
     destroyed.update_times_attributes_routes()
     return remove_empty_routes(destroyed)
 

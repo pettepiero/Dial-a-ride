@@ -23,13 +23,16 @@ class CvrptwState:
         routes: list[Route],
         dataset: dict = data,
         unassigned: list = None,
+        twc: np.ndarray = None,
     ):
         self.routes = routes
         # self.times = times  # planned arrival times for each customer
         self.dataset = dataset
         self.unassigned = unassigned if unassigned is not None else []
-
-        self.twc = self.generate_twc_matrix(dataset["time_window"], dataset["edge_weight"])
+        if twc is not None:
+            self.twc = twc
+        else:
+            self.twc = self.generate_twc_matrix(dataset["time_window"], dataset["edge_weight"])
         self.qmax = self.get_qmax()
         self.dmax = self.get_dmax()
         self.norm_tw = (
@@ -44,6 +47,7 @@ class CvrptwState:
             [route.copy() for route in self.routes],  # Deep copy each Route
             self.dataset.copy(),
             self.unassigned.copy(),
+            self.twc.copy(),
         )
 
     def objective(self):
@@ -195,6 +199,6 @@ def time_window_compatibility(tij: float, twi: tuple, twj: tuple) -> float:
     (aj, bj) = twj
 
     if bj > ai + tij:
-        return -np.inf  # Incompatible time windows
-    else:
         return round(min([bi + tij, bj]) - max([ai + tij, aj]), 2)
+    else:
+        return -np.inf  # Incompatible time windows
