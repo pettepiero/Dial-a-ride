@@ -7,7 +7,6 @@ import logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=LOGGING_LEVEL)
 degree_of_destruction = 0.05
-customers_to_remove = int((data["dimension"] - 1) * degree_of_destruction)
 
 
 def random_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
@@ -24,25 +23,29 @@ def random_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
                 The solution after applying the destroy operator.
     """
     destroyed: CvrptwState = state.copy()
+    customers_to_remove = int(destroyed.n_customers * degree_of_destruction)
 
     # list of customers in solution
     solution_customers = state.served_customers()
+    print(f"Solution customers: {solution_customers}")
+    print(f"sorted(Solution customers): {sorted(solution_customers)}")
 
     for customer in rng.choice(
         solution_customers, customers_to_remove, replace=False
     ):
+        assert customer not in destroyed.depots["depots_indices"], "Depot selected for removal."
         route, idx = destroyed.find_route(customer.item())
         if route is not None:
             destroyed.routes[idx].remove(customer.item())
             destroyed.unassigned.append(customer.item())
-            destroyed.update_times_attributes_routes()
-            # route.remove(customer.item())
-            # route.calculate_planned_times()
+            destroyed.update_times_attributes_routes(idx)
+            destroyed.routes_cost[idx] = destroyed.route_cost_calculator(idx)
             logger.debug(f"Customer {customer.item()} removed from route {idx}.")
         else:
             logger.debug(
                 f"Error: customer {customer.item()} not found in any route but picked from served customers."
             )
+    destroyed.update_unassigned_list()
     return remove_empty_routes(destroyed)
 
 
@@ -80,8 +83,9 @@ def random_route_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
         Returns:
             CvrptwState
                 The solution after applying the destroy operator.
-    """    
+    """
     destroyed: CvrptwState = state.copy()
+    customers_to_remove = int(destroyed.n_customers * degree_of_destruction)
     for route_idx in rng.choice(range(len(destroyed.routes)), min(customers_to_remove, state.n_served_customers()), replace=True):
         route = destroyed.routes[route_idx]
         # for route in rng.choice(destroyed.routes, customers_to_remove, replace=True):
@@ -89,10 +93,10 @@ def random_route_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
             customer = rng.choice(route.customers_list[1:-1], 1, replace=False)
             destroyed.unassigned.append(customer.item())
             destroyed.routes[route_idx].remove(customer)
-            destroyed.routes[route_idx].calculate_planned_times()
+            destroyed.update_times_attributes_routes(route_idx)
+            destroyed.routes_cost[route_idx] = destroyed.route_cost_calculator(route_idx)
 
-    destroyed.update_times_attributes_routes()
-
+    destroyed.update_unassigned_list()
     return remove_empty_routes(destroyed)
 
 
@@ -115,17 +119,17 @@ def relatedness_function(state: CvrptwState, i: int, j: int) -> float:
     a1 = 0.4
     a2 = 0.8
     a3 = 0.3
-    i_route = state.find_route(i)
-    j_route = state.find_route(j)
+    i_route, _ = state.find_route(i)
+    j_route, _ = state.find_route(j)
 
     i_index_in_route = state.find_index_in_route(i, i_route)
     j_index_in_route = state.find_index_in_route(j, j_route)
-    e_i = i_route.earliest_start_times[i_index_in_route]
-    e_j = j_route.earliest_start_times[j_index_in_route]
-    q_i = data["demand"][i]
-    q_j = data["demand"][j]
+    e_i = i_route.start_times[i_index_in_route][0]
+    e_j = j_route.start_times[j_index_in_route][0]
+    q_i = state.nodes_df.loc[state.nodes_df["id"] == i, "demand"].item()
+    q_j = state.nodes_df.loc[state.nodes_df["id"] == j, "demand"].item()
     value = (
-        a1 * (data["edge_weight"][i][j] / state.dmax)
+        a1 * (state.distances[i][j] / state.dmax)
         + a2 * (abs(e_i - e_j) / END_OF_DAY)
         + a3 * (abs(q_i - q_j) / state.qmax)
     )
@@ -149,6 +153,7 @@ def shaw_removal(state: CvrptwState, rng) -> CvrptwState:
     """
 
     destroyed: CvrptwState = state.copy()
+    customers_to_remove = destroyed.n_customers * degree_of_destruction
     min_value = np.inf
     j_star = None
     route_star_idx = None
@@ -160,7 +165,7 @@ def shaw_removal(state: CvrptwState, rng) -> CvrptwState:
     route_i = destroyed.routes[route_i_idx]
     first_customer = rng.choice(route_i.customers_list[1:-1], 1, replace=False).item()
     i_selection = [first_customer]
-    
+
     while len(i_selection) < customers_to_remove:
         i = rng.choice(i_selection, 1, replace=False).item()
 
@@ -186,19 +191,21 @@ def shaw_removal(state: CvrptwState, rng) -> CvrptwState:
         # print(f"Selected route: {destroyed.routes[route_star_idx].customers_list}")
         # print(f"i_selection {i_selection}")
         destroyed.routes[route_star_idx].remove(j_star)
-        destroyed.routes[route_star_idx].calculate_planned_times()
+        destroyed.update_times_attributes_routes(route_star_idx)
+        destroyed.routes_cost[route_star_idx] = destroyed.route_cost_calculator(
+            route_star_idx
+        )
         i_selection.append(j_star)
-        print("Now i_selection: ", i_selection)
         destroyed.unassigned.append(j_star)
         j_star = None
         min_value = np.inf
         route_star_idx = None
 
     route_i.remove(first_customer)
-    route_i.calculate_planned_times()
-    # destroyed.unassigned.append(first_customer)
-    destroyed.update_times()
+    destroyed.update_times_attributes_routes(route_i_idx)
+    destroyed.routes_cost[route_i_idx] = destroyed.route_cost_calculator(route_i_idx)
 
+    destroyed.update_unassigned_list()
     return remove_empty_routes(destroyed)
 
 
@@ -234,9 +241,9 @@ def cost_reducing_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
 
         # DEBUG
         # logger.debug(f"\n\nv: {v}, i1: {i1}, j1: {j1}, customers: {customers}")
-        di1v = data["edge_weight"][i1][v]
-        dvj1 = data["edge_weight"][v][j1]
-        di1j1 = data["edge_weight"][i1][j1]
+        di1v = state.distances[i1][v]
+        dvj1 = state.distances[v][j1]
+        di1j1 = state.distances[i1][j1]
 
         for second_route_index in list(range(len(state.routes))):
             customers2 = state.routes[second_route_index].customers_list
@@ -245,22 +252,24 @@ def cost_reducing_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
                     customers2.index(i2) + 1
                 ]  # second customer of insertion arc
                 if state.twc[v][i2] != -np.inf and state.twc[v][j2] != -np.inf:
-                    di2j2 = data["edge_weight"][i2][j2]
-                    di2v = data["edge_weight"][i2][v]
-                    dvj2 = data["edge_weight"][v][j2]
+                    di2j2 = state.distances[i2][j2]
+                    di2v = state.distances[i2][v]
+                    dvj2 = state.distances[v][j2]
                     if di1v + dvj1 + di2j2 > di1j1 + di2v + dvj2:
                         # Remove v from first route and insert into second
                         destroyed.routes[first_route_index].remove(v)
-                        destroyed.routes[first_route_index].calculate_planned_times()
+                        destroyed.update_times_attributes_routes(first_route_index)
+                        destroyed.routes_cost[first_route_index] = destroyed.route_cost_calculator(
+                            first_route_index
+                        )
                         # state.routes[second_route_index].insert(
                         #     customers2.index(j2), v.item()
                         # )
                         destroyed.unassigned.append(v)
-                        destroyed.update_times_attributes_routes()
-                    
+
                         return remove_empty_routes(destroyed)
-    
-    destroyed.update_times_attributes_routes()
+
+    destroyed.update_unassigned_list()
     return remove_empty_routes(destroyed)
 
 def worst_removal(state: CvrptwState, rng: np.random.Generator) -> CvrptwState:
@@ -282,9 +291,9 @@ def worst_removal(state: CvrptwState, rng: np.random.Generator) -> CvrptwState:
         for i in route.customers_list[1:-1]:
             j = route.customers_list[route.customers_list.index(i) - 1]
             k = route.customers_list[route.customers_list.index(i) + 1]
-            service_cost = (data["edge_weight"][j][i] +
-                            data["edge_weight"][i][k] -
-                            data["edge_weight"][j][k]
+            service_cost = (state.distances[j][i] +
+                            state.distances[i][k] -
+                            state.distances[j][k]
                             )
             if service_cost > max_service_cost:
                 max_service_cost = service_cost
@@ -292,9 +301,11 @@ def worst_removal(state: CvrptwState, rng: np.random.Generator) -> CvrptwState:
                 worst_route = route_idx
     # Removes the worst customer
     destroyed.routes[worst_route].remove(worst_customer)
-    destroyed.update_times_attributes_routes()
+    destroyed.update_times_attributes_routes(worst_route)
+    destroyed.routes_cost[worst_route] = destroyed.route_cost_calculator(worst_route)
     destroyed.unassigned.append(worst_customer)
 
+    destroyed.update_unassigned_list()
     return destroyed
 
 def exchange_reducing_removal(state: CvrptwState, rng: np.random.Generator) -> CvrptwState:
@@ -332,24 +343,24 @@ def exchange_reducing_removal(state: CvrptwState, rng: np.random.Generator) -> C
                 j2 = route2.customers_list[idx2 + 1]  # next node
                 # Check Time Window Compatibility
                 if destroyed.twc[v1][i2] != -np.inf and destroyed.twc[v2][i1] != np.inf:
-                    di1v1 = data["edge_weight"][i1][v1]
-                    dv1j1 = data["edge_weight"][v1][j1]
-                    di2v2 = data["edge_weight"][i2][v2]
-                    dv2j2 = data["edge_weight"][v2][j2]
+                    di1v1 = state.distances[i1][v1]
+                    dv1j1 = state.distances[v1][j1]
+                    di2v2 = state.distances[i2][v2]
+                    dv2j2 = state.distances[v2][j2]
 
-                    di1v2 = data["edge_weight"][i1][v2]
-                    dv2j1 = data["edge_weight"][v2][j1]
-                    di2v1 = data["edge_weight"][i2][v1]
-                    dv1j2 = data["edge_weight"][v1][j2]
+                    di1v2 = state.distances[i1][v2]
+                    dv2j1 = state.distances[v2][j1]
+                    di2v1 = state.distances[i2][v1]
+                    dv1j2 = state.distances[v1][j2]
 
                     if di1v1 + dv1j1 + di2v2 + dv2j2 > di1v2 + dv2j1 + di2v1 + dv1j2:
                         # swap v1 and v2
                         route1.customers_list[idx1] = v2
                         route2.customers_list[idx2] = v1
-                        destroyed.update_times_attributes_routes()
+                        destroyed.update_times_attributes_routes(destroyed.routes.index(route1))
+                        destroyed.update_times_attributes_routes(destroyed.routes.index(route2))
+                        destroyed.update_unassigned_list()
 
                         return remove_empty_routes(destroyed)
-
-    destroyed.update_times_attributes_routes()
 
     return remove_empty_routes(destroyed)

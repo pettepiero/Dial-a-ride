@@ -142,7 +142,7 @@ def nearest_neighbor_tw(state: CvrptwState, cordeau:bool = True, initial_time_sl
 
         route.append(route[0])  # Return to the depot
         route = Route(route, vehicle)
-        route.calculate_planned_times()
+        # route.calculate_planned_times()
         routes.append(route)
         # full_schedule.append(route_schedule)
         # Consider new vehicle
@@ -156,11 +156,15 @@ def nearest_neighbor_tw(state: CvrptwState, cordeau:bool = True, initial_time_sl
             state.nodes_df.loc[state.nodes_df["id"] == customer, "route"] = route_num        
 
     if unvisited:
-        print(f"Unvisited customers after nearest neighbor solution: {unvisited}")
+        print(f"#Unvisited customers after nearest neighbor solution: {len(unvisited)}")
     if vehicle < state.n_vehicles:
         print(f"Vehicles left: {state.n_vehicles - vehicle}")
 
-    solution = CvrptwState(routes, nodes_df=state.nodes_df, unassigned=list(unvisited))
-    solution.update_times_attributes_routes()
+    solution = CvrptwState(routes, nodes_df=state.nodes_df, given_unassigned=list(unvisited))
+    for route_idx in range(len(solution.routes)):
+        solution.update_times_attributes_routes(route_idx)
+        for customer in solution.routes[route_idx].customers_list:
+            solution.nodes_df.loc[solution.nodes_df["id"] == customer, "route"] = route_idx
+
 
     return solution

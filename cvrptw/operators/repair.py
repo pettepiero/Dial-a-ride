@@ -28,13 +28,6 @@ def greedy_repair(state: CvrptwState, rng: np.random) -> CvrptwState:
             CvrptwState
                 The repaired solution state.
     """
-    # debug
-    logger.debug("At the beginning of greedy repair:")
-    [
-        logger.debug(f"Route {idx}: {route.planned_windows}")
-        for idx, route in enumerate(state.routes)
-    ]
-
     new_state = state.copy()
     rng.shuffle(new_state.unassigned)
 
@@ -44,7 +37,9 @@ def greedy_repair(state: CvrptwState, rng: np.random) -> CvrptwState:
 
         if route_idx is not None:
             new_state.routes[route_idx].insert(idx, customer)
-            new_state.routes[route_idx].calculate_planned_times()
+            new_state.update_est_lst(route_idx)
+            new_state.calculate_planned_times(route_idx)
+            new_state.routes_cost[route_idx] = new_state.route_cost_calculator(route_idx)
         # If possible, create a new route
         elif len(new_state.routes) < data["vehicles"]:
             vehicle_number = len(new_state.routes)
@@ -63,6 +58,7 @@ def greedy_repair(state: CvrptwState, rng: np.random) -> CvrptwState:
         logger.debug(f"Route {idx}: {route.planned_windows}")
         for idx, route in enumerate(new_state.routes)
     ]
+    new_state.update_unassigned_list()
 
     return new_state
 
@@ -84,6 +80,8 @@ def greedy_repair_tw(state: CvrptwState, rng: np.random) -> CvrptwState:
     new_state = state.copy()
     rng.shuffle(new_state.unassigned)
 
+    logger.debug(f"In greedy_repair_tw, before loop unassigned = {sorted(new_state.unassigned)}")
+
     counter = 0
     n_unassigned = len(new_state.unassigned)
     while counter < n_unassigned:
@@ -93,7 +91,9 @@ def greedy_repair_tw(state: CvrptwState, rng: np.random) -> CvrptwState:
 
         if route_idx is not None:
             new_state.routes[route_idx].insert(idx, customer)
-            new_state.update_times_attributes_routes()
+            new_state.update_est_lst(route_idx)
+            new_state.update_times_attributes_routes(route_idx)
+            new_state.routes_cost[route_idx] = new_state.route_cost_calculator(route_idx)
             logger.debug(f"Inserted customer {customer} in route {route_idx}")
             
             # Check if the number of routes is less than the number of vehicles
@@ -111,11 +111,13 @@ def greedy_repair_tw(state: CvrptwState, rng: np.random) -> CvrptwState:
                     planned_windows=deepcopy(state.routes[-1].planned_windows.append([0, END_OF_DAY]))
                     )
             )
-            new_state.update_times_attributes_routes()
+            new_state.update_times_attributes_routes(len(new_state.routes) - 1)
             logger.debug(f"Created new route for customer {customer}")
 
         else:
             new_state.unassigned.append(customer)
+
+    new_state.update_unassigned_list()
     return new_state
 
 

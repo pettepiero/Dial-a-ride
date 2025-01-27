@@ -37,7 +37,7 @@ def wang_greedy_repair(state: CvrptwState, rng: np.random) -> CvrptwState:
 
         if route_idx is not None:
             new_state.routes[route_idx].insert(idx, customer)
-            new_state.update_times_attributes_routes()
+            new_state.update_times_attributes_routes(route_index=route_idx)
         elif len(new_state.routes) < data["vehicles"]:
             depot = data["vehicle_to_depot"][len(new_state.routes)]
             new_state.routes.append(
@@ -53,7 +53,7 @@ def wang_greedy_repair(state: CvrptwState, rng: np.random) -> CvrptwState:
                     ),
                 )
             )
-            new_state.update_times_attributes_routes()
+            new_state.update_times_attributes_routes(len(new_state.routes) - 1)
         else:    
             new_state.unassigned.insert(0, customer)
     return new_state

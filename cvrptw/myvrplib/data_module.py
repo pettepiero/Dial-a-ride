@@ -400,6 +400,20 @@ def get_initial_data(cust_df: pd.DataFrame) -> pd.DataFrame:
     return cust_df.loc[cust_df["call_in_time_slot"] == 0]
 
 def create_depots_dict(data: dict) -> dict:
+    """
+    Create a dictionary with depot information.
+    Attributes:
+        num_depots: int
+            Number of depots.
+        depot_to_vehicles: dict
+            Dictionary mapping depots to vehicles.
+        vehicle_to_depot: dict
+            Dictionary mapping vehicles to depots.
+        coords: np.array
+            Array with the coordinates of the depots.
+        depots_indices: list
+            List with the indices of the dep
+    """
 
     depots_dict = {
         "num_depots": data["n_depots"],

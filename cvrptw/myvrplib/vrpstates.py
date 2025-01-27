@@ -17,6 +17,8 @@ class CvrptwState:
     Attributes:
         routes: list
             List of routes in the state.
+        routes_cost: list
+            List of costs of each route.
         dataset: dict
             Dictionary containing the dataset.
         unassigned: list
@@ -50,8 +52,10 @@ class CvrptwState:
     def __init__(
         self,
         routes: list[Route] = None,
+        routes_cost: list = None,
         dataset: dict = data,
-        unassigned: list = None,
+        given_unassigned: list = None,
+        distances: np.ndarray = None,
         nodes_df: pd.DataFrame = None,
         current_time: int = 0,
         seed: int = 0,
@@ -60,19 +64,34 @@ class CvrptwState:
         self.dataset = dataset
         self.seed = seed
         self.routes = routes if routes is not None else []
-
         if nodes_df is not None:
             self.nodes_df = nodes_df
         else:
             self.nodes_df = dynamic_df_from_dict(data, seed=seed)
-        self.unassigned = unassigned if unassigned is not None else []
         # Initialize distances matrix
         full_coordinates = self.nodes_df[["x", "y"]].values
         for depot in dataset["depots"]:
             full_coordinates = np.append(
                 full_coordinates, [dataset["node_coord"][depot]], axis=0
             )
-        self.distances = cost_matrix_from_coords(coords=full_coordinates)
+        if distances is not None:
+            self.distances = distances
+        else:
+            self.distances = cost_matrix_from_coords(coords=full_coordinates)
+        self.routes_cost = routes_cost if routes_cost is not None else [self.route_cost_calculator(idx) for idx in range(len(self.routes))]
+        assert len(self.routes) == len(self.routes_cost), "Routes and routes_cost must have the same length."
+
+        self.depots = create_depots_dict(dataset)
+        if given_unassigned is not None:
+            self.unassigned = given_unassigned
+        else:
+            unassigned = self.nodes_df[["id", "route"]]
+            unassigned = unassigned.loc[pd.isna(unassigned["route"]), "id"].tolist()
+            # filter out depots
+            unassigned = [customer for customer in unassigned if customer not in self.depots["depots_indices"]]      
+
+            self.unassigned = unassigned
+        
         # Initialize time window compatibility matrix
         full_times = self.nodes_df[["start_time", "end_time"]].values
         for depot in dataset["depots"]:
@@ -90,7 +109,6 @@ class CvrptwState:
             self.twc / self.dmax
         )  # Note: maybe use only norm_tw in the future?
         self.n_vehicles = dataset["vehicles"]
-        self.depots = create_depots_dict(dataset)
         self.n_customers = len(self.nodes_df) -1     # first line is not a customer
         self.vehicle_capacity = dataset["capacity"]
 
@@ -100,19 +118,33 @@ class CvrptwState:
     def copy(self):
         return CvrptwState(
             [route.copy() for route in self.routes],  # Deep copy each Route
+            self.routes_cost.copy(),
             self.dataset.copy(),
             self.unassigned.copy(),
+            self.distances.copy(),
             self.nodes_df.copy(deep=True),
             self.current_time,
             seed=self.seed
         )
+
+    def route_cost_calculator(self, route_id: int):
+        """
+        Compute the cost of a route.
+        """
+        route = self.routes[route_id].customers_list
+        cost = 0
+        for idx, customer in enumerate(route[:-1]):
+            next_customer = route[idx + 1]
+            cost += self.distances[customer][next_customer]
+
+        return round(cost, 2)
 
     def objective(self):
         """
         Computes the total route costs.
         """
         unassigned_penalty = UNASSIGNED_PENALTY * len(self.unassigned)
-        return sum(route.cost for route in self.routes) + unassigned_penalty
+        return sum(self.routes_cost[idx] for idx in range(len(self.routes))) + unassigned_penalty
 
     @property
     def cost(self):
@@ -155,16 +187,13 @@ class CvrptwState:
 
         raise ValueError(f"Given route does not contain customer {customer}.")
 
-    def update_times_attributes_routes(self):
+    def update_times_attributes_routes(self, route_index: int):
         """
         Update the start, end and planned times for each customer in the routes.
         """        
-        for route in self.routes:
-            est = route.get_earliest_times()
-            lst = route.get_latest_times()
-            route.start_times = list(zip(est, lst))
-            # TODO udpate planned windows
-            route.calculate_planned_times()
+        self.update_est_lst(route_index)
+        # TODO udpate planned windows
+        self.calculate_planned_times(route_index)
 
     def generate_twc_matrix(self, time_windows: list, distances: np.ndarray, cordeau: bool = True) -> list:
         """
@@ -224,14 +253,125 @@ class CvrptwState:
         """
         return [customer for route in self.routes for customer in route.customers_list[1:-1]]
 
+        # TODO: Test this method
 
-# NOTE: maybe add time influence on cost of solution ?
-# def route_cost(route):
-#     distances = dataset["edge_weight"]
-#     tour = [0] + route.customers_list + [0]
+    def update_est_lst(self, route_index: int):
+        """
+        Calculates vectors of the earliest (EST) and latest (LST) start times for each customer in the route.
+        Based on equations (3b) and (13) of Wang et al. (2024).
+        Parameters:
+            route_index: int
+                Index of the route.
+        Returns:
+            None
+        """
+        est = []
+        route = self.routes[route_index].customers_list
+        df = self.nodes_df
 
-#     return sum(distances[tour[idx]][tour[idx + 1]] for idx in range(len(tour) - 1))
+        # If first element is a depot, then the earliest start time is 0
+        if route[0] in self.depots["depots_indices"]:
+            est.append(0)
+        else:
+            print(f"ERROR: first node {route[0]} in route {route_index} is not a depot, which are: {self.depots['depots_indices']}")
+            # TODO: This will have to be changed for dynamic case
+            raise AssertionError("First node in route is not a depot")
 
+        # Implementation of formula 3b of Wang et al. (2024)
+        for i in range(1, len(route)-1):
+            current = route[i]
+            prev = route[i-1]
+            # time = float(round(max(
+            #     est[i - 1]
+            #     + data["service_time"][prev]
+            #     + data["edge_weight"][current][prev],
+            #     data["time_window"][current][0],
+            # ), 2))
+            time = float(round(max(
+                est[i - 1]
+                + df.loc[df["id"] == prev, "service_time"].item()
+                + self.distances[current][prev],
+                df.loc[df["id"] == current, "start_time"].item(),
+            ), 2))
+            est.append(time)
+
+        if len(est) != len(route):
+            AssertionError("Error in calculating earliest start times")
+
+        lst = [None] * len(route)
+        lst[-1] = END_OF_DAY
+        for i in reversed(range(len(route) - 1)):
+            next = route[i + 1]
+            current = route[i]
+            time = round(
+                min(
+                    # lst[i + 1]
+                    # - data["service_time"][current]
+                    # - data["edge_weight"][current][next],
+                    # data["time_window"][current][1],
+                    lst[i + 1]
+                    - df.loc[df["id"] == current, "service_time"].item()
+                    - self.distances[current][next],
+                    df.loc[df["id"] == current, "end_time"].item()
+                ),
+                2,
+            )
+            lst[i] = float(time)
+
+        if len(lst) != len(route):
+            AssertionError("Error in calculating latest start times")
+
+        self.routes[route_index].start_times = list(zip(est, lst))
+
+    def calculate_planned_times(self, route_index:int):
+        """
+        Calculate the planned arrival and departure times for each customer in the route.
+        """
+        route = self.routes[route_index]
+        df = self.nodes_df
+        tw = []
+        first_customer = route.customers_list[1]
+
+        tw.append(
+            [
+                0,
+                float(
+                    round(
+                        max(
+                            0,
+                            df.loc[df['id'] == first_customer, "start_time"].item()
+                            # data["time_window"][first_customer][0]
+                            - self.distances[0][first_customer]
+                            # - data["edge_weight"][self.customers_list[0]][first_customer],
+                        ),
+                        2,
+                    )
+                ),
+            ]
+        )
+
+        last_departure = tw[0][1]
+        last_customer = route.customers_list[0]
+        for customer in route.customers_list[1:]:
+            # Planned arrival time at customer idx
+            # Planned departure time is the planned arrival time + service time
+            arr = last_departure + self.distances[last_customer][customer]
+            dep = arr + df.loc[df["id"] == customer, "service_time"].item()
+            tw.append([float(round(arr, 2)), float(round(dep, 2))])
+            # debug
+            # logger.debug(f"In calculate_planned_times: last_departure: {last_departure}")
+            # logger.debug(f"data['edge_weight'][{last_customer}][{customer}]: {data['edge_weight'][last_customer][customer]}")
+            last_departure = dep
+            last_customer = customer
+        self.routes[route_index].planned_windows = tw
+
+    def update_unassigned_list(self):
+        """
+        Update the list of unassigned customers.
+        """
+        self.unassigned = self.nodes_df.loc[pd.isna(self.nodes_df["route"]), "id"].tolist()
+        # filter out depots
+        self.unassigned = [customer for customer in self.unassigned if customer not in self.depots["depots_indices"]]
 
 def time_window_compatibility(tij: float, twi: tuple, twj: tuple) -> float:
     """

@@ -16,7 +16,7 @@ from alns.stop import MaxIterations
 from .data_module import data, END_OF_DAY
 
 UNASSIGNED_PENALTY = 50
-LOGGING_LEVEL = logging.ERROR
+LOGGING_LEVEL = logging.DEBUG
 
 
 def plot_data(data: Union[dict, pd.DataFrame], idx_annotations=False, name: str = "VRPTW Data", cordeau: bool = True, time_step: int = None):
@@ -212,6 +212,9 @@ def solution_times_statistics(state) -> dict:
         id = customer["id"]
         route = customer["route"]
         idx_in_route = state.find_index_in_route(id, state.routes[route])
+        print("DEBUG: ", id, route, idx_in_route)
+        print(f"DEBUG: {state.routes[route].customers_list}")
+        print(f"DEBUG: {state.routes[route].planned_windows}")
         planned_arrival_time = state.routes[route].planned_windows[idx_in_route][0]
 
         due_time = customer["end_time"]
