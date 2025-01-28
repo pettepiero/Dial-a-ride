@@ -253,49 +253,52 @@ def cost_reducing_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
 
     destroyed = state.copy()
 
-    for first_route_index in rng.choice(len(state.routes), 1):
-        customers = state.routes[first_route_index].customers_list
-        if (
-            len(customers) <= 2
-        ):  # route has only depot and customer :TODO: what to do in this case?
-            break
-        v = rng.choice(customers[1:-1])
-        i1 = customers[customers.index(v) - 1]  # previous customer
-        j1 = customers[customers.index(v) + 1]  # next customer
+    iterations = 10
+    for _ in range(iterations):
+        for first_route_index in rng.choice(len(state.routes), 1):
+            customers = state.routes[first_route_index].customers_list
+            if (
+                len(customers) <= 2
+            ):  # route has only depot and customer :TODO: what to do in this case?
+                break
+            for v in customers[1:-1]:
+                i1 = customers[customers.index(v) - 1]  # previous customer
+                j1 = customers[customers.index(v) + 1]  # next customer
 
-        # DEBUG
-        # logger.debug(f"\n\nv: {v}, i1: {i1}, j1: {j1}, customers: {customers}")
-        di1v = state.distances[i1][v]
-        dvj1 = state.distances[v][j1]
-        di1j1 = state.distances[i1][j1]
+                # DEBUG
+                # logger.debug(f"\n\nv: {v}, i1: {i1}, j1: {j1}, customers: {customers}")
+                di1v = state.distances[i1][v]
+                dvj1 = state.distances[v][j1]
+                di1j1 = state.distances[i1][j1]
 
-        for second_route_index in list(range(len(state.routes))):
-            customers2 = state.routes[second_route_index].customers_list
-            for i2 in customers2[:-1]:  # first customer of insertion arc
-                j2 = customers2[
-                    customers2.index(i2) + 1
-                ]  # second customer of insertion arc
-                if state.twc[v][i2] != -np.inf and state.twc[v][j2] != -np.inf:
-                    di2j2 = state.distances[i2][j2]
-                    di2v = state.distances[i2][v]
-                    dvj2 = state.distances[v][j2]
-                    if di1v + dvj1 + di2j2 > di1j1 + di2v + dvj2:
-                        # Remove v from first route and insert into second
-                        destroyed.routes[first_route_index].remove(v)
-                        #Update df
-                        destroyed.nodes_df.loc[v.item(), "route"] = None
-                        destroyed.nodes_df.loc[v.item(), "done"] = False
-                        if len(destroyed.routes[first_route_index]) != 2:
-                            destroyed.update_times_attributes_routes(first_route_index)
-                            destroyed.routes_cost[first_route_index] = destroyed.route_cost_calculator(
-                                first_route_index
-                            )
-                        # state.routes[second_route_index].insert(
-                        #     customers2.index(j2), v.item()
-                        # )
-                        destroyed.unassigned.append(v)
+                for second_route_index in list(range(len(state.routes))):
+                    customers2 = state.routes[second_route_index].customers_list
+                    for i2 in customers2[:-1]:  # first customer of insertion arc
+                        j2 = customers2[
+                            customers2.index(i2) + 1
+                        ]  # second customer of insertion arc
+                        if state.twc[v][i2] != -np.inf and state.twc[v][j2] != -np.inf:
+                            di2j2 = state.distances[i2][j2]
+                            di2v = state.distances[i2][v]
+                            dvj2 = state.distances[v][j2]
+                            if di1v + dvj1 + di2j2 > di1j1 + di2v + dvj2:
+                                # Remove v from first route and insert into second
+                                destroyed.routes[first_route_index].remove(v)
 
-                        return remove_empty_routes(destroyed)
+                                #Update df
+                                destroyed.nodes_df.loc[v.item(), "route"] = None
+                                destroyed.nodes_df.loc[v.item(), "done"] = False
+                                if len(destroyed.routes[first_route_index]) != 2:
+                                    destroyed.update_times_attributes_routes(first_route_index)
+                                    destroyed.routes_cost[first_route_index] = destroyed.route_cost_calculator(
+                                        first_route_index
+                                    )
+                                # state.routes[second_route_index].insert(
+                                #     customers2.index(j2), v.item()
+                                # )
+                                destroyed.unassigned.append(v)
+
+                                return remove_empty_routes(destroyed)
 
     destroyed.update_unassigned_list()
     return remove_empty_routes(destroyed)
