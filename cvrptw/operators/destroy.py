@@ -27,8 +27,6 @@ def random_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
 
     # list of customers in solution
     solution_customers = state.served_customers()
-    print(f"Solution customers: {solution_customers}")
-    print(f"sorted(Solution customers): {sorted(solution_customers)}")
 
     for customer in rng.choice(
         solution_customers, customers_to_remove, replace=False
@@ -51,7 +49,7 @@ def random_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
 
 def remove_empty_routes(state: CvrptwState) -> CvrptwState:
     """
-    Remove empty routes and timings after applying the destroy operator.
+    Remove empty routes and corresponding cost after applying the destroy operator.
     Cordeau dataset notation is followed, so empty routes ar those with two elements.
         Parameters:
             state: CvrptwState
@@ -60,14 +58,24 @@ def remove_empty_routes(state: CvrptwState) -> CvrptwState:
             CvrptwState
                 The solution after removing empty routes.
     """
-    routes_idx_to_remove = [
-        idx for idx, route in enumerate(state.routes) if len(route) == 2
-    ]
-    state.routes = [
-        route
-        for idx, route in enumerate(state.routes)
-        if idx not in routes_idx_to_remove
-    ]
+    for idx, route in enumerate(state.routes):
+        if len(route) == 2:
+            logger.debug(f"Route {idx} is empty and will be removed.")
+            del state.routes[idx]
+            state.routes_cost = np.delete(state.routes_cost, idx)
+
+    # routes_idx_to_remove = [
+    #     idx for idx, route in enumerate(state.routes) if len(route) == 2
+    # ]
+    # state.routes = [
+    #     route
+    #     for idx, route in enumerate(state.routes)
+    #     if idx not in routes_idx_to_remove
+    # ]
+
+    # state.routes_cost = [
+    #     state.route_cost_calculator(idx) for idx in range(len(state.routes))
+    # ]
     return state
 
 

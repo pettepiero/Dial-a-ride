@@ -52,6 +52,8 @@ def greedy_repair(state: CvrptwState, rng: np.random) -> CvrptwState:
                         ]
                     )
             )
+            # append to cost vector new cost
+            new_state.routes_cost.append(new_state.route_cost_calculator(len(new_state.routes) - 1))
         # debug
     logger.debug("At the end of greedy repair:")
     [
@@ -111,6 +113,8 @@ def greedy_repair_tw(state: CvrptwState, rng: np.random) -> CvrptwState:
                     planned_windows=deepcopy(state.routes[-1].planned_windows.append([0, END_OF_DAY]))
                     )
             )
+            # append to cost vector new cost
+            new_state.routes_cost.append(new_state.route_cost_calculator(len(new_state.routes) - 1))
             new_state.update_times_attributes_routes(len(new_state.routes) - 1)
             logger.debug(f"Created new route for customer {customer}")
 

@@ -16,7 +16,7 @@ from alns.stop import MaxIterations
 from .data_module import data, END_OF_DAY
 
 UNASSIGNED_PENALTY = 50
-LOGGING_LEVEL = logging.DEBUG
+LOGGING_LEVEL = logging.ERROR
 
 
 def plot_data(data: Union[dict, pd.DataFrame], idx_annotations=False, name: str = "VRPTW Data", cordeau: bool = True, time_step: int = None):

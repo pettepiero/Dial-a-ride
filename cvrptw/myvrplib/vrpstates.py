@@ -5,10 +5,14 @@ from cvrptw.myvrplib.data_module import (
     cost_matrix_from_coords,
     create_depots_dict
 )
-from cvrptw.myvrplib.myvrplib import END_OF_DAY, UNASSIGNED_PENALTY
+from cvrptw.myvrplib.myvrplib import END_OF_DAY, UNASSIGNED_PENALTY, LOGGING_LEVEL
 from cvrptw.myvrplib.route import Route
 import numpy as np
 import pandas as pd
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(LOGGING_LEVEL)
 
 
 class CvrptwState:
@@ -78,7 +82,19 @@ class CvrptwState:
             self.distances = distances
         else:
             self.distances = cost_matrix_from_coords(coords=full_coordinates)
-        self.routes_cost = routes_cost if routes_cost is not None else [self.route_cost_calculator(idx) for idx in range(len(self.routes))]
+
+        if routes_cost is not None:
+            self.routes_cost = routes_cost
+            logger.debug(f"Passed len(routes_cost): {len(self.routes_cost)}")
+            logger.debug(f"passed routes_cost: {self.routes_cost}")
+        else:
+            self.routes_cost = np.array([self.route_cost_calculator(idx) for idx in range(len(self.routes))])
+            logger.debug(f"Calculated len(routes_cost): {len(self.routes_cost)}")
+
+        # self.routes_cost = routes_cost if routes_cost is not None else [self.route_cost_calculator(idx) for idx in range(len(self.routes))]
+        # logger.debug(f"len(routes_cost): {len(self.routes_cost)}")
+        # logger.debug(f"len(self.routes) = {len(self.routes)}")
+        
         assert len(self.routes) == len(self.routes_cost), "Routes and routes_cost must have the same length."
 
         self.depots = create_depots_dict(dataset)
@@ -144,7 +160,7 @@ class CvrptwState:
         Computes the total route costs.
         """
         unassigned_penalty = UNASSIGNED_PENALTY * len(self.unassigned)
-        return sum(self.routes_cost[idx] for idx in range(len(self.routes))) + unassigned_penalty
+        return sum([self.routes_cost[idx] for idx in range(len(self.routes))]) + unassigned_penalty
 
     @property
     def cost(self):
