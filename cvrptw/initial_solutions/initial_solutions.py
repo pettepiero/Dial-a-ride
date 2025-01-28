@@ -47,11 +47,11 @@ def time_neighbours(state: CvrptwState, customer: int) -> list:
                 The list of customers in order of increasing time from the
                 given customer, excluding the depots.
     """
-    current_start_time = state.nodes_df.loc[state.nodes_df['id'] == customer, "start_time"]
+    current_start_time = state.nodes_df.loc[customer, "start_time"]
     current_start_time = current_start_time.item()
 
     locations = state.nodes_df[state.nodes_df['start_time'] > current_start_time][["id", "start_time"]].values.tolist()
-    locations = [[loc, time] for loc, time in locations if state.distances[customer][loc] + current_start_time <= state.nodes_df.loc[state.nodes_df['id'] == loc, "end_time"].item()]
+    locations = [[loc, time] for loc, time in locations if state.distances[customer][loc] + current_start_time <= state.nodes_df.loc[loc, "end_time"].item()]
     locations = sorted(locations, key=lambda x: x[1])
     locations = [loc for loc in locations if loc != customer]
 
@@ -124,7 +124,7 @@ def nearest_neighbor_tw(state: CvrptwState, cordeau:bool = True, initial_time_sl
                 break
             nearest = int(nearest[0])  # Nearest unvisited reachable customer
             # Check vehicle capacity and time window constraints
-            if route_demands + state.nodes_df[state.nodes_df["id"] == nearest]["demand"].item() > state.vehicle_capacity:
+            if route_demands + state.nodes_df.loc[nearest, "demand"].item() > state.vehicle_capacity:
                 break
             if not time_window_check(route_schedule[-1], current, nearest):
                 break
@@ -132,13 +132,11 @@ def nearest_neighbor_tw(state: CvrptwState, cordeau:bool = True, initial_time_sl
             route.append(nearest)
             route_schedule.append(
                 state.distances[current][nearest].item()
-                + state.nodes_df[state.nodes_df['id'] == current]["service_time"].item()
+                + state.nodes_df.loc[current, "service_time"].item()
             )
 
             unvisited.remove(nearest)
-            route_demands += state.nodes_df[state.nodes_df["id"] == nearest][
-                "demand"
-            ].item()
+            route_demands += state.nodes_df.loc[nearest, "demand"].item()
 
         route.append(route[0])  # Return to the depot
         route = Route(route, vehicle)
@@ -153,7 +151,7 @@ def nearest_neighbor_tw(state: CvrptwState, cordeau:bool = True, initial_time_sl
     # Assign routes to customers in nodes_df
     for route_num, route in enumerate(routes):
         for customer in route.customers_list:
-            state.nodes_df.loc[state.nodes_df["id"] == customer, "route"] = route_num        
+            state.nodes_df.loc[customer, "route"] = route_num        
 
     if unvisited:
         print(f"#Unvisited customers after nearest neighbor solution: {len(unvisited)}")
@@ -166,7 +164,7 @@ def nearest_neighbor_tw(state: CvrptwState, cordeau:bool = True, initial_time_sl
     for route_idx in range(len(solution.routes)):
         solution.update_times_attributes_routes(route_idx)
         for customer in solution.routes[route_idx].customers_list:
-            solution.nodes_df.loc[solution.nodes_df["id"] == customer, "route"] = route_idx
+            solution.nodes_df.loc[customer, "route"] = route_idx
 
     print(f"Initial solution cost vector: {solution.routes_cost}")
     print(f"Initial solution routes: {[route.customers_list for route in solution.routes]}")

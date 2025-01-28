@@ -33,11 +33,16 @@ def wang_greedy_repair(state: CvrptwState, rng: np.random) -> CvrptwState:
     while counter < n_unassigned:
         counter += 1
         customer = new_state.unassigned.pop()
+        logger.debug(f"Candidate customer: {customer}")
         route_idx, idx = wang_best_insert(customer, new_state)
 
         if route_idx is not None:
             new_state.routes[route_idx].insert(idx, customer)
+            new_state.nodes_df.loc[customer, "route"] = route_idx
             new_state.update_times_attributes_routes(route_index=route_idx)
+            new_state.routes_cost[route_idx] = new_state.route_cost_calculator(route_idx)
+            new_state.compute_route_demand(route_idx)
+
         elif len(new_state.routes) < data["vehicles"]:
             depot = data["vehicle_to_depot"][len(new_state.routes)]
             new_state.routes.append(
@@ -53,8 +58,14 @@ def wang_greedy_repair(state: CvrptwState, rng: np.random) -> CvrptwState:
                     ),
                 )
             )
+            new_state.nodes_df.loc[customer, "route"] = len(new_state.routes) - 1
+            new_state.routes_cost = np.append(
+                new_state.routes_cost,
+                new_state.route_cost_calculator(len(new_state.routes) - 1),
+            )
             new_state.update_times_attributes_routes(len(new_state.routes) - 1)
-        else:    
+        else:
+            logger.debug(f"Could not satisfy customer: {customer}")
             new_state.unassigned.insert(0, customer)
     return new_state
 
@@ -79,7 +90,7 @@ def wang_best_insert(customer: int, state: CvrptwState) -> tuple:
         for idx in range(1, len(route)):
             # if can_insert(customer, route_number, idx, state):
             if wang_can_insert(customer, route, idx):
-                cost = insert_cost(customer, route.customers_list, idx)
+                cost = insert_cost(customer, route.customers_list, idx, state)
 
                 if best_cost is None or cost < best_cost:
                     best_cost, best_route_idx, best_idx = cost, route_idx, idx

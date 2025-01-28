@@ -21,6 +21,8 @@ class Route():
             planned_windows: list of tuple
                 List of tuples containing planned arrival and departure times for each customer in the route,
                 including the depot.
+            demand: int
+                Total demand of the route.
     """
 
     def __init__(self, customers_list: list, vehicle: int=None, cost: float=None, start_times: list = None, planned_windows: list = [], vehicle_start_time:float = None):
@@ -31,6 +33,7 @@ class Route():
         # first value is the planned arrival time
         # second value is the planned departure time
         # NOTE: maybe only planned arrival time is sufficient
+        self.demand = None
 
     def __len__(self) -> int:
         """
@@ -52,7 +55,7 @@ class Route():
 
     def remove(self, customer: int) -> None:
         """
-        Removes a customer from the route and recalculates the cost.
+        Removes a customer from the route.
             Parameters:
                 - customer: int
                     Customer to be removed from the route.
@@ -63,8 +66,7 @@ class Route():
 
     def insert(self, position: int, customer: int) -> None:
         """
-        Inserts a customer in a given position in the route and recalculates the cost and
-        the planned times.
+        Inserts a customer in a given position in the route
             Parameters:
                 - position: int
                     Position where the customer will be inserted.

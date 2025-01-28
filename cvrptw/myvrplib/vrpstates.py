@@ -94,7 +94,7 @@ class CvrptwState:
         # self.routes_cost = routes_cost if routes_cost is not None else [self.route_cost_calculator(idx) for idx in range(len(self.routes))]
         # logger.debug(f"len(routes_cost): {len(self.routes_cost)}")
         # logger.debug(f"len(self.routes) = {len(self.routes)}")
-        
+
         assert len(self.routes) == len(self.routes_cost), "Routes and routes_cost must have the same length."
 
         self.depots = create_depots_dict(dataset)
@@ -107,7 +107,7 @@ class CvrptwState:
             unassigned = [customer for customer in unassigned if customer not in self.depots["depots_indices"]]      
 
             self.unassigned = unassigned
-        
+
         # Initialize time window compatibility matrix
         full_times = self.nodes_df[["start_time", "end_time"]].values
         for depot in dataset["depots"]:
@@ -159,6 +159,7 @@ class CvrptwState:
         """
         Computes the total route costs.
         """
+        assert len(self.routes) == len(self.routes_cost), "Routes and routes_cost must have the same length."
         unassigned_penalty = UNASSIGNED_PENALTY * len(self.unassigned)
         return sum([self.routes_cost[idx] for idx in range(len(self.routes))]) + unassigned_penalty
 
@@ -305,9 +306,9 @@ class CvrptwState:
             # ), 2))
             time = float(round(max(
                 est[i - 1]
-                + df.loc[df["id"] == prev, "service_time"].item()
+                + df.loc[prev, "service_time"].item()
                 + self.distances[current][prev],
-                df.loc[df["id"] == current, "start_time"].item(),
+                df.loc[current, "start_time"].item(),
             ), 2))
             est.append(time)
 
@@ -326,9 +327,9 @@ class CvrptwState:
                     # - data["edge_weight"][current][next],
                     # data["time_window"][current][1],
                     lst[i + 1]
-                    - df.loc[df["id"] == current, "service_time"].item()
+                    - df.loc[current, "service_time"].item()
                     - self.distances[current][next],
-                    df.loc[df["id"] == current, "end_time"].item()
+                    df.loc[current, "end_time"].item()
                 ),
                 2,
             )
@@ -355,7 +356,7 @@ class CvrptwState:
                     round(
                         max(
                             0,
-                            df.loc[df['id'] == first_customer, "start_time"].item()
+                            df.loc[first_customer, "start_time"].item()
                             # data["time_window"][first_customer][0]
                             - self.distances[0][first_customer]
                             # - data["edge_weight"][self.customers_list[0]][first_customer],
@@ -372,7 +373,7 @@ class CvrptwState:
             # Planned arrival time at customer idx
             # Planned departure time is the planned arrival time + service time
             arr = last_departure + self.distances[last_customer][customer]
-            dep = arr + df.loc[df["id"] == customer, "service_time"].item()
+            dep = arr + df.loc[customer, "service_time"].item()
             tw.append([float(round(arr, 2)), float(round(dep, 2))])
             # debug
             # logger.debug(f"In calculate_planned_times: last_departure: {last_departure}")
@@ -388,6 +389,22 @@ class CvrptwState:
         self.unassigned = self.nodes_df.loc[pd.isna(self.nodes_df["route"]), "id"].tolist()
         # filter out depots
         self.unassigned = [customer for customer in self.unassigned if customer not in self.depots["depots_indices"]]
+
+    def compute_route_demand(self, route_idx: int) -> None:
+        """
+        Compute the demand of a route and store in the route object.
+        Parameters:
+            route_idx: int
+                Index of the route.
+        Returns:
+            None
+        """
+        demand = 0
+        for customer in self.routes[route_idx].customers_list:
+            demand += self.nodes_df.loc[customer, "demand"].item()
+        self.routes[route_idx].demand = demand
+
+
 
 def time_window_compatibility(tij: float, twi: tuple, twj: tuple) -> float:
     """

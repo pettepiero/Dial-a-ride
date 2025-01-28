@@ -27,7 +27,7 @@ def random_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
 
     # list of customers in solution
     solution_customers = state.served_customers()
-
+    assert len(solution_customers) > 0, "No customers in solution."
     for customer in rng.choice(
         solution_customers, customers_to_remove, replace=False
     ):
@@ -35,9 +35,13 @@ def random_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
         route, idx = destroyed.find_route(customer.item())
         if route is not None:
             destroyed.routes[idx].remove(customer.item())
+            #Update df
+            destroyed.nodes_df.loc[customer.item(), "route"] = None
+            destroyed.nodes_df.loc[customer.item(), "done"] = False
             destroyed.unassigned.append(customer.item())
             destroyed.update_times_attributes_routes(idx)
-            destroyed.routes_cost[idx] = destroyed.route_cost_calculator(idx)
+            if len(destroyed.routes[idx]) != 2:
+                destroyed.routes_cost[idx] = destroyed.route_cost_calculator(idx)
             logger.debug(f"Customer {customer.item()} removed from route {idx}.")
         else:
             logger.debug(
@@ -101,8 +105,12 @@ def random_route_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
             customer = rng.choice(route.customers_list[1:-1], 1, replace=False)
             destroyed.unassigned.append(customer.item())
             destroyed.routes[route_idx].remove(customer)
-            destroyed.update_times_attributes_routes(route_idx)
-            destroyed.routes_cost[route_idx] = destroyed.route_cost_calculator(route_idx)
+            # Update df
+            destroyed.nodes_df.loc[customer.item(), "route"] = None
+            destroyed.nodes_df.loc[customer.item(), "done"] = False
+            if len(destroyed.routes[route_idx]) != 2:
+                destroyed.update_times_attributes_routes(route_idx)
+                destroyed.routes_cost[route_idx] = destroyed.route_cost_calculator(route_idx)
 
     destroyed.update_unassigned_list()
     return remove_empty_routes(destroyed)
@@ -134,8 +142,8 @@ def relatedness_function(state: CvrptwState, i: int, j: int) -> float:
     j_index_in_route = state.find_index_in_route(j, j_route)
     e_i = i_route.start_times[i_index_in_route][0]
     e_j = j_route.start_times[j_index_in_route][0]
-    q_i = state.nodes_df.loc[state.nodes_df["id"] == i, "demand"].item()
-    q_j = state.nodes_df.loc[state.nodes_df["id"] == j, "demand"].item()
+    q_i = state.nodes_df.loc[i, "demand"].item()
+    q_j = state.nodes_df.loc[j, "demand"].item()
     value = (
         a1 * (state.distances[i][j] / state.dmax)
         + a2 * (abs(e_i - e_j) / END_OF_DAY)
@@ -199,10 +207,14 @@ def shaw_removal(state: CvrptwState, rng) -> CvrptwState:
         # print(f"Selected route: {destroyed.routes[route_star_idx].customers_list}")
         # print(f"i_selection {i_selection}")
         destroyed.routes[route_star_idx].remove(j_star)
-        destroyed.update_times_attributes_routes(route_star_idx)
-        destroyed.routes_cost[route_star_idx] = destroyed.route_cost_calculator(
-            route_star_idx
-        )
+                    #Update df
+        destroyed.nodes_df.loc[j_star.item(), "route"] = None
+        destroyed.nodes_df.loc[j_star.item(), "done"] = False
+        if len(destroyed.routes[route_star_idx]) != 2:
+            destroyed.update_times_attributes_routes(route_star_idx)
+            destroyed.routes_cost[route_star_idx] = destroyed.route_cost_calculator(
+                route_star_idx
+            )
         i_selection.append(j_star)
         destroyed.unassigned.append(j_star)
         j_star = None
@@ -210,8 +222,12 @@ def shaw_removal(state: CvrptwState, rng) -> CvrptwState:
         route_star_idx = None
 
     route_i.remove(first_customer)
-    destroyed.update_times_attributes_routes(route_i_idx)
-    destroyed.routes_cost[route_i_idx] = destroyed.route_cost_calculator(route_i_idx)
+                #Update df
+    destroyed.nodes_df.loc[first_customer.item(), "route"] = None
+    destroyed.nodes_df.loc[first_customer.item(), "done"] = False
+    if len(route_i) != 2:
+        destroyed.update_times_attributes_routes(route_i_idx)
+        destroyed.routes_cost[route_i_idx] = destroyed.route_cost_calculator(route_i_idx)
 
     destroyed.update_unassigned_list()
     return remove_empty_routes(destroyed)
@@ -266,10 +282,14 @@ def cost_reducing_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
                     if di1v + dvj1 + di2j2 > di1j1 + di2v + dvj2:
                         # Remove v from first route and insert into second
                         destroyed.routes[first_route_index].remove(v)
-                        destroyed.update_times_attributes_routes(first_route_index)
-                        destroyed.routes_cost[first_route_index] = destroyed.route_cost_calculator(
-                            first_route_index
-                        )
+                        #Update df
+                        destroyed.nodes_df.loc[v.item(), "route"] = None
+                        destroyed.nodes_df.loc[v.item(), "done"] = False
+                        if len(destroyed.routes[first_route_index]) != 2:
+                            destroyed.update_times_attributes_routes(first_route_index)
+                            destroyed.routes_cost[first_route_index] = destroyed.route_cost_calculator(
+                                first_route_index
+                            )
                         # state.routes[second_route_index].insert(
                         #     customers2.index(j2), v.item()
                         # )
@@ -309,8 +329,12 @@ def worst_removal(state: CvrptwState, rng: np.random.Generator) -> CvrptwState:
                 worst_route = route_idx
     # Removes the worst customer
     destroyed.routes[worst_route].remove(worst_customer)
-    destroyed.update_times_attributes_routes(worst_route)
-    destroyed.routes_cost[worst_route] = destroyed.route_cost_calculator(worst_route)
+    #Update df
+    destroyed.nodes_df.loc[worst_customer, "route"] = None
+    destroyed.nodes_df.loc[worst_customer, "done"] = False
+    if len(destroyed.routes[worst_route]) != 2:
+        destroyed.update_times_attributes_routes(worst_route)
+        destroyed.routes_cost[worst_route] = destroyed.route_cost_calculator(worst_route)
     destroyed.unassigned.append(worst_customer)
 
     destroyed.update_unassigned_list()

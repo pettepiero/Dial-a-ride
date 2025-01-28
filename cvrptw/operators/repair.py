@@ -15,54 +15,54 @@ from copy import deepcopy
 logger = logging.getLogger(__name__)
 logger.setLevel(LOGGING_LEVEL)
 
-def greedy_repair(state: CvrptwState, rng: np.random) -> CvrptwState:
-    """
-    Inserts the unassigned customers in the best route. If there are no
-    feasible insertions, then a new route is created. Only checks capacity constraints.
-        Parameters:
-            state: CvrptwState
-                The current solution state.
-            rng: np.random
-                The random number generator.
-        Returns:
-            CvrptwState
-                The repaired solution state.
-    """
-    new_state = state.copy()
-    rng.shuffle(new_state.unassigned)
+# def greedy_repair(state: CvrptwState, rng: np.random) -> CvrptwState:
+#     """
+#     Inserts the unassigned customers in the best route. If there are no
+#     feasible insertions, then a new route is created. Only checks capacity constraints.
+#         Parameters:
+#             state: CvrptwState
+#                 The current solution state.
+#             rng: np.random
+#                 The random number generator.
+#         Returns:
+#             CvrptwState
+#                 The repaired solution state.
+#     """
+#     new_state = state.copy()
+#     rng.shuffle(new_state.unassigned)
 
-    while len(new_state.unassigned) != 0:
-        customer = new_state.unassigned.pop()
-        route_idx, idx = best_insert(customer, new_state)
+#     while len(new_state.unassigned) != 0:
+#         customer = new_state.unassigned.pop()
+#         route_idx, idx = best_insert(customer, new_state)
 
-        if route_idx is not None:
-            new_state.routes[route_idx].insert(idx, customer)
-            new_state.update_est_lst(route_idx)
-            new_state.calculate_planned_times(route_idx)
-            new_state.routes_cost[route_idx] = new_state.route_cost_calculator(route_idx)
-        # If possible, create a new route
-        elif len(new_state.routes) < data["vehicles"]:
-            vehicle_number = len(new_state.routes)
-            new_state.routes.append(
-                    Route(
-                        [
-                            data["vehicle_to_depot"][vehicle_number],
-                            customer,
-                            data["vehicle_to_depot"][vehicle_number],
-                        ]
-                    )
-            )
-            # append to cost vector new cost
-            new_state.routes_cost.append(new_state.route_cost_calculator(len(new_state.routes) - 1))
-        # debug
-    logger.debug("At the end of greedy repair:")
-    [
-        logger.debug(f"Route {idx}: {route.planned_windows}")
-        for idx, route in enumerate(new_state.routes)
-    ]
-    new_state.update_unassigned_list()
+#         if route_idx is not None:
+#             new_state.routes[route_idx].insert(idx, customer)
+#             new_state.update_est_lst(route_idx)
+#             new_state.calculate_planned_times(route_idx)
+#             new_state.routes_cost[route_idx] = new_state.route_cost_calculator(route_idx)
+#         # If possible, create a new route
+#         elif len(new_state.routes) < state.n_vehicles:
+#             vehicle_number = len(new_state.routes)
+#             new_state.routes.append(
+#                     Route(
+#                         [
+#                             state.depots["vehicle_to_depot"],
+#                             customer,
+#                             state.depots["vehicle_to_depot"],
+#                         ]
+#                     )
+#             )
+#             # append to cost vector new cost
+#             new_state.routes_cost.append(new_state.route_cost_calculator(len(new_state.routes) - 1))
+#         # debug
+#     logger.debug("At the end of greedy repair:")
+#     [
+#         logger.debug(f"Route {idx}: {route.planned_windows}")
+#         for idx, route in enumerate(new_state.routes)
+#     ]
+#     new_state.update_unassigned_list()
 
-    return new_state
+#     return new_state
 
 
 def greedy_repair_tw(state: CvrptwState, rng: np.random) -> CvrptwState:
@@ -80,12 +80,16 @@ def greedy_repair_tw(state: CvrptwState, rng: np.random) -> CvrptwState:
                 The repaired solution state.
     """
     new_state = state.copy()
-    rng.shuffle(new_state.unassigned)
 
     logger.debug(f"In greedy_repair_tw, before loop unassigned = {sorted(new_state.unassigned)}")
-
+    logger.debug(f"Routes =")
+    for idx, route in enumerate(new_state.routes):
+        logger.debug(f"Route {idx}: {route.customers_list}")
+    
     counter = 0
     n_unassigned = len(new_state.unassigned)
+    rng.shuffle(new_state.unassigned)
+    
     while counter < n_unassigned:
         counter += 1
         customer = new_state.unassigned.pop()
@@ -93,15 +97,15 @@ def greedy_repair_tw(state: CvrptwState, rng: np.random) -> CvrptwState:
 
         if route_idx is not None:
             new_state.routes[route_idx].insert(idx, customer)
-            new_state.update_est_lst(route_idx)
+            new_state.nodes_df.loc[customer, "route"] = route_idx
             new_state.update_times_attributes_routes(route_idx)
             new_state.routes_cost[route_idx] = new_state.route_cost_calculator(route_idx)
-            logger.debug(f"Inserted customer {customer} in route {route_idx}")
-            
+            new_state.compute_route_demand(route_idx)
+
             # Check if the number of routes is less than the number of vehicles
-        elif len(new_state.routes) < data["vehicles"]:
+        elif len(new_state.routes) < state.n_vehicles:
             # Initialize a new route and corresponding timings
-            depot = data["vehicle_to_depot"][len(new_state.routes)]
+            depot = state.depots["vehicle_to_depot"]
             new_state.routes.append(
                 Route(
                     [depot, customer, depot],
@@ -113,43 +117,46 @@ def greedy_repair_tw(state: CvrptwState, rng: np.random) -> CvrptwState:
                     planned_windows=deepcopy(state.routes[-1].planned_windows.append([0, END_OF_DAY]))
                     )
             )
+            new_state.nodes_df.loc[customer, "route"] = len(new_state.routes) - 1
             # append to cost vector new cost
-            new_state.routes_cost.append(new_state.route_cost_calculator(len(new_state.routes) - 1))
+            new_state.routes_cost = np.append(
+                new_state.routes_cost,
+                new_state.route_cost_calculator(len(new_state.routes) - 1),
+            )
             new_state.update_times_attributes_routes(len(new_state.routes) - 1)
-            logger.debug(f"Created new route for customer {customer}")
 
         else:
-            new_state.unassigned.append(customer)
+            new_state.unassigned.insert(0, customer)
 
     new_state.update_unassigned_list()
     return new_state
 
 
-def best_insert(customer: int, state: CvrptwState) -> tuple:
-    """
-    Finds the best feasible route and insertion idx for the customer.
-    Return (None, None) if no feasible route insertions are found.
-    Only checks capacity constraints.
-        Parameters:
-            customer: int
-                The customer to be inserted.
-            state: CvrptwState
-                The current solution state.
-        Returns:
-            tuple
-                The best route and insertion indices for the customer.
-    """
-    best_cost, best_route_idx, best_idx = None, None, None
+# def best_insert(customer: int, state: CvrptwState) -> tuple:
+#     """
+#     Finds the best feasible route and insertion idx for the customer.
+#     Return (None, None) if no feasible route insertions are found.
+#     Only checks capacity constraints.
+#         Parameters:
+#             customer: int
+#                 The customer to be inserted.
+#             state: CvrptwState
+#                 The current solution state.
+#         Returns:
+#             tuple
+#                 The best route and insertion indices for the customer.
+#     """
+#     best_cost, best_route_idx, best_idx = None, None, None
 
-    for route_number, route in enumerate(state.routes):
-        for idx in range(1, len(route)-1):
-            if can_insert(customer, route_number, idx, state):
-                cost = insert_cost(customer, route.customers_list, idx)
+#     for route_number, route in enumerate(state.routes):
+#         for idx in range(1, len(route)-1):
+#             if can_insert(customer, route_number, idx, state):
+#                 cost = insert_cost(customer, route.customers_list, idx, state)
 
-                if best_cost is None or cost < best_cost:
-                    best_cost, best_route_idx, best_idx = cost, route_number, idx
+#                 if best_cost is None or cost < best_cost:
+#                     best_cost, best_route_idx, best_idx = cost, route_number, idx
 
-    return best_route_idx, best_idx
+#     return best_route_idx, best_idx
 
 
 def best_insert_tw(customer: int, state: CvrptwState) -> tuple:
@@ -172,7 +179,7 @@ def best_insert_tw(customer: int, state: CvrptwState) -> tuple:
     for route_number, route in enumerate(state.routes):
         for idx in range(1, len(route) - 1):
             if can_insert_tw(customer, route_number, idx, state):
-                cost = insert_cost(customer, route.customers_list, idx)
+                cost = insert_cost(customer, route.customers_list, idx, state)
 
                 if best_cost is None or cost < best_cost:
                     best_cost, best_route_idx, best_idx = cost, route_number, idx
@@ -181,33 +188,39 @@ def best_insert_tw(customer: int, state: CvrptwState) -> tuple:
 
 
 # NOTE: I think performance can be improved by changing this function
-def can_insert(customer: int, route_number: int, idx: int, state: CvrptwState) -> bool:
-    """
-    Checks if inserting customer in route 'route_number' at position 'idx' does not 
-    exceed vehicle capacity.
-        Parameters:
-            customer: int
-                The customer to be inserted.
-            route_number: int
-                The route number.
-            idx: int
-                The insertion index.
-            state: CvrptwState
-                The current solution state.
-        Returns:
-            bool
-                True if the insertion is feasible, False otherwise.
-    """
-    route: Route = state.routes[route_number]
+# def can_insert(customer: int, route_number: int, idx: int, state: CvrptwState) -> bool:
+#     """
+#     Checks if inserting customer in route 'route_number' at position 'idx' does not
+#     exceed vehicle capacity.
+#         Parameters:
+#             customer: int
+#                 The customer to be inserted.
+#             route_number: int
+#                 The route number.
+#             idx: int
+#                 The insertion index.
+#             state: CvrptwState
+#                 The current solution state.
+#         Returns:
+#             bool
+#                 True if the insertion is feasible, False otherwise.
+#     """
+#     route: Route = state.routes[route_number]
+#     print(state.nodes_df)
 
-    # Capacity check
-    total = data["demand"][route.customers_list].sum() + data["demand"][customer]
-    if total > data["capacity"]:
-        return False
-    return True
+#     # Capacity check
+#     sub_df = state.nodes_df.loc[state.nodes_df["id"] in route.customers_list, "demand"]
+#     print(f"sub_df = {sub_df}")
+#     exit()
+#     total = state.nodes_df.loc[route.customers_list, "demand"].sum() + state.nodes_df.loc[customer, "demand"]
+#     total = data["demand"][route.customers_list].sum() + data["demand"][customer]
+#     if total > data["capacity"]:
+#         return False
+#     return True
 
 
 # NOTE: I think performance can be improved by changing this function
+# maybe insert total demand in route
 def can_insert_tw(
     customer: int, route_number: int, idx: int, state: CvrptwState
 ) -> bool:
@@ -229,24 +242,23 @@ def can_insert_tw(
     """
 
     route = state.routes[route_number]
-    # Capacity check
-    total = data["demand"][route.customers_list].sum() + data["demand"][customer]
-    if total > data["capacity"]:
-        return False
-    
-    #debug
-    # print(f"route_number = {route_number}, idx = {idx}")
-    # print(f"len(route) = {len(route)}, len(route.planned_windows) = {len(route.planned_windows)}")
-    # print(f"len(route.customers_list) = {len(route.customers_list)}")
-    # print(f"route.planned_windows[idx - 1]= {route.planned_windows[idx - 1]}")
 
+    # Capacity check
+    if route.demand is not None:
+        total = route.demand + state.nodes_df.loc[customer, "demand"]
+    else:
+        sub_df = state.nodes_df[state.nodes_df["id"].isin(route.customers_list)]["demand"]
+        total = sub_df.sum() + state.nodes_df.loc[customer, "demand"].item()
+    # total = data["demand"][route.customers_list].sum() + data["demand"][customer]
+    if total > state.vehicle_capacity:
+        return False
 
     # Time window check
     if time_window_check(route.planned_windows[idx - 1][0], route.customers_list[idx - 1], customer):
         return route_time_window_check(route, idx)
     return False
 
-def insert_cost(customer: int, route: list, idx: int) -> float:
+def insert_cost(customer: int, route: list, idx: int, state: CvrptwState) -> float:
     """
     Computes the insertion cost for inserting customer in route at idx.
         Parameters:
@@ -256,11 +268,13 @@ def insert_cost(customer: int, route: list, idx: int) -> float:
                 The route where the customer is to be inserted.
             idx: int
                 The insertion index.
+            state: CvrptwState
+                The current solution state.
         Returns:
             float
                 The insertion cost.
     """
-    dist = data["edge_weight"]
+    dist = state.distances
     pred = 0 if idx == 0 else route[idx - 1]
     succ = 0 if idx == len(route) else route[idx]
 

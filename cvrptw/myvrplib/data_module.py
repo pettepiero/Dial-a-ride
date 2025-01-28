@@ -358,6 +358,10 @@ def dynamic_df_from_dict(
 
     data_df["call_in_time_slot"] = samples.astype(int)
     data_df.iloc[-data["n_depots"]:, data_df.columns.get_loc("call_in_time_slot")] = 0
+
+    # Preindexing the dataframe using 'id'
+    data_df.set_index("id", inplace=True)
+    data_df['id'] = data_df.index
     
     return data_df
 
