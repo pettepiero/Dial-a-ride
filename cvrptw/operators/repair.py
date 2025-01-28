@@ -249,7 +249,6 @@ def can_insert_tw(
     else:
         sub_df = state.nodes_df[state.nodes_df["id"].isin(route.customers_list)]["demand"]
         total = sub_df.sum() + state.nodes_df.loc[customer, "demand"].item()
-    # total = data["demand"][route.customers_list].sum() + data["demand"][customer]
     if total > state.vehicle_capacity:
         return False
 

@@ -43,8 +43,8 @@ def wang_greedy_repair(state: CvrptwState, rng: np.random) -> CvrptwState:
             new_state.routes_cost[route_idx] = new_state.route_cost_calculator(route_idx)
             new_state.compute_route_demand(route_idx)
 
-        elif len(new_state.routes) < data["vehicles"]:
-            depot = data["vehicle_to_depot"][len(new_state.routes)]
+        elif len(new_state.routes) < state.n_vehicles:
+            depot = state.depots["vehicle_to_depot"][len(new_state.routes)]
             new_state.routes.append(
                 Route(
                     [
@@ -89,7 +89,8 @@ def wang_best_insert(customer: int, state: CvrptwState) -> tuple:
     for route_idx, route in enumerate(state.routes):
         for idx in range(1, len(route)):
             # if can_insert(customer, route_number, idx, state):
-            if wang_can_insert(customer, route, idx):
+            start, tend = state.nodes_df.loc[route.customers_list[idx], ["start_time", "end_time"]]
+            if wang_can_insert(customer, route, idx, state.distances, start, tend):
                 cost = insert_cost(customer, route.customers_list, idx, state)
 
                 if best_cost is None or cost < best_cost:
@@ -97,7 +98,7 @@ def wang_best_insert(customer: int, state: CvrptwState) -> tuple:
 
     return best_route_idx, best_idx
 
-def wang_can_insert(customer: int, route: Route, mu: int) -> bool:
+def wang_can_insert(customer: int, route: Route, mu: int, distances: np.ndarray, tsart: int, tend: int) -> bool:
     """
     Check if the customer can be inserted at the given position in the route. Based on formula (15)
     of Wang et al (2024).
@@ -108,6 +109,12 @@ def wang_can_insert(customer: int, route: Route, mu: int) -> bool:
                 The route where the customer is to be inserted.
             mu: int 
                 The position where the customer is to be inserted (i_mu, i_mu+1).
+            distances: np.ndarray
+                The distance matrix.
+            tsart: int
+                The start time of the customer to be inserted.
+            tend: int
+                The end time of the customer to be inserted.
         Returns:
             bool
                 True if the customer can be inserted, False otherwise.
@@ -118,11 +125,11 @@ def wang_can_insert(customer: int, route: Route, mu: int) -> bool:
     i_mu = route.customers_list[mu]
     i_mu_plus_1 = route.customers_list[mu + 1]
     est_mu = route.start_times[mu][0]
-    tic = data["edge_weight"][i_mu][customer]
-    a_c = data["time_window"][customer][0]
+    tic = distances[i_mu][customer]
+    a_c = tsart
     lst_mu_plus_1 = route.start_times[mu+1][1]
-    tci = data["edge_weight"][customer][i_mu_plus_1]
-    b_c = data["time_window"][customer][1]
+    tci = distances[customer][i_mu_plus_1]
+    b_c = tend
     # NOTE: service time?
     # DEBUG
     # print(f"Customer = {customer}")
