@@ -1,6 +1,9 @@
 import unittest
 from unittest.mock import Mock
 from cvrptw.myvrplib.data_module import *
+from cvrptw.myvrplib.vrpstates import CvrptwState
+from cvrptw.myvrplib.route import Route
+from cvrptw.operators.destroy import cost_reducing_removal
 
 class TestDFConversion(unittest.TestCase):
     def setUp(self):
@@ -122,6 +125,10 @@ class TestCoordsMatrix(unittest.TestCase):
         data = read_cordeau_data(
             "/home/pettepiero/tirocinio/dial-a-ride/tests/test_data"
         )
+
+        data_df = dynamic_df_from_dict(data)
+        print(data_df)
+
         known_cost_matrix = np.array([[np.nan,     np.nan,   np.nan,   np.nan,   np.nan,   np.nan,   np.nan],
                             [np.nan,      0,      65.19,  80.62,  31.62,  136.01, 14.14],
                             [np.nan,      65.19,	0.00,	35.36,  35.36,	79.06,	69.64],
@@ -132,6 +139,52 @@ class TestCoordsMatrix(unittest.TestCase):
         
         np.testing.assert_allclose(known_cost_matrix, data['edge_weight'])
 
+
+class TestCRR(unittest.TestCase):
+    """Test for cost reducing removal operator"""
+    def setUp(self):
+        self.data = read_cordeau_data(
+            "/home/pettepiero/tirocinio/dial-a-ride/tests/test_data"
+        )
+        self.data_df = dynamic_df_from_dict(self.data)
+        route1 = Route([6, 1, 2, 6])
+        route2 = Route([7, 4, 3, 7])
+        self.state = CvrptwState(routes=[route1, route2], dataset=self.data)
+        self.nodes_dict = {1: 'A', 2: 'B', 3: 'C', 4: 'D', 6: 'F', 7: 'G'}
+
+    def test_crr(self):
+        print(f"Starting from: {self.state.routes_cost}")
+
+        for route in self.state.routes:
+            path = []
+            for cust in route.customers_list:
+                path.append(self.nodes_dict[cust])
+            print(f'{path}\n')
+        np.testing.assert_allclose(self.state.routes_cost, np.array([148.98, 170.71]), rtol=0.01)
+
+        self.state = cost_reducing_removal(self.state, np.random)
+        print(f"After: {self.state.routes_cost}")
+        for route in self.state.routes:
+            path = []
+            for cust in route.customers_list:
+                path.append(self.nodes_dict[cust])
+            print(f"{path}\n")
+
+        self.state = cost_reducing_removal(self.state, np.random)
+        print(f"After: {self.state.routes_cost}")
+        for route in self.state.routes:
+            path = []
+            for cust in route.customers_list:
+                path.append(self.nodes_dict[cust])
+            print(f"{path}\n")
+
+        self.state = cost_reducing_removal(self.state, np.random)
+        print(f"After: {self.state.routes_cost}")
+        for route in self.state.routes:
+            path = []
+            for cust in route.customers_list:
+                path.append(self.nodes_dict[cust])
+            print(f"{path}\n")
 
 if __name__ == "__main__":
     unittest.main()

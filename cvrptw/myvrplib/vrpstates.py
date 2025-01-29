@@ -71,13 +71,11 @@ class CvrptwState:
         if nodes_df is not None:
             self.nodes_df = nodes_df
         else:
-            self.nodes_df = dynamic_df_from_dict(data, seed=seed)
+            self.nodes_df = dynamic_df_from_dict(dataset, seed=seed)
         # Initialize distances matrix
+
         full_coordinates = self.nodes_df[["x", "y"]].values
-        for depot in dataset["depots"]:
-            full_coordinates = np.append(
-                full_coordinates, [dataset["node_coord"][depot]], axis=0
-            )
+
         if distances is not None:
             self.distances = distances
         else:
@@ -110,6 +108,8 @@ class CvrptwState:
 
         # Initialize time window compatibility matrix
         full_times = self.nodes_df[["start_time", "end_time"]].values
+
+    
         for depot in dataset["depots"]:
             full_times = np.append(full_times, [[0, END_OF_DAY]], axis=0)
         full_times = full_times.tolist()
@@ -405,10 +405,9 @@ class CvrptwState:
         self.routes[route_idx].demand = demand
 
 
-
 def time_window_compatibility(tij: float, twi: tuple, twj: tuple) -> float:
     """
-    Time Window Compatibility (TWC) between a pair of vertices i and j. Based on
+    Time Window Compatibility (TWC) between a pair of vertices i and j. Based on eq. (12) of
     Wang et al. (2024). Returns the time window compatibility between two customers
     i and j, given their time windows and the travel time between them.
         Parameters:
@@ -426,6 +425,6 @@ def time_window_compatibility(tij: float, twi: tuple, twj: tuple) -> float:
     (aj, bj) = twj
 
     if bj > ai + tij:
-        return -np.inf  # Incompatible time windows
-    else:
         return round(min([bi + tij, bj]) - max([ai + tij, aj]), 2)
+    else:
+        return -np.inf  # Incompatible time windows

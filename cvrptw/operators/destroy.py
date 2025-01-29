@@ -251,10 +251,11 @@ def cost_reducing_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
 
     # TODO: Implement the limit on the iterations for this operator
 
+    logger.debug(f"In cost reducing removal")
     destroyed = state.copy()
 
     iterations = 10
-    for _ in range(iterations):
+    for i in range(iterations):
         for first_route_index in rng.choice(len(state.routes), 1):
             customers = state.routes[first_route_index].customers_list
             if (
@@ -273,22 +274,21 @@ def cost_reducing_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
 
                 for second_route_index in list(range(len(state.routes))):
                     customers2 = state.routes[second_route_index].customers_list
-                    for i2 in customers2[:-1]:  # first customer of insertion arc
-                        j2 = customers2[
-                            customers2.index(i2) + 1
-                        ]  # second customer of insertion arc
+                    for i2 in customers2[:-2]:  # first customer of insertion arc
+                        i2_idx = customers2.index(i2)
+                        j2 = customers2[i2_idx + 1]  # second customer of insertion arc
                         if state.twc[v][i2] != -np.inf and state.twc[v][j2] != -np.inf:
-                            logger.error(f"First check passed for routes {first_route_index} and {second_route_index}.")
-                            logger.error(f"j2: {j2}, i2: {i2}, v: {v}")
                             di2j2 = state.distances[i2][j2]
                             di2v = state.distances[i2][v]
                             dvj2 = state.distances[v][j2]
-                            logger.error(f"Checking if {di1v} + {dvj1} + {di2j2} > {di1j1} + {di2v} + {dvj2}")
+                            logger.debug(
+                                f"Checking if {di1v} + {dvj1} + {di2j2} > {di1j1} + {di2v} + {dvj2}"
+                            )
                             if di1v + dvj1 + di2j2 > di1j1 + di2v + dvj2:
                                 # Remove v from first route and insert into second
                                 destroyed.routes[first_route_index].remove(v)
 
-                                #Update df
+                                # Update df
                                 destroyed.nodes_df.loc[v, "route"] = None
                                 destroyed.nodes_df.loc[v, "done"] = False
                                 if len(destroyed.routes[first_route_index]) != 2:
@@ -296,16 +296,26 @@ def cost_reducing_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
                                     destroyed.routes_cost[first_route_index] = destroyed.route_cost_calculator(
                                         first_route_index
                                     )
-                                # state.routes[second_route_index].insert(
-                                #     customers2.index(j2), v.item()
+                                
+                                # SHOULD I STAY OR SHOULD I GO?
+                                # destroyed.routes[second_route_index].insert(
+                                #     customers2.index(j2), v
                                 # )
+
                                 destroyed.unassigned.append(v)
-                                logger.error(f"\nRemoved customer {v} from route {first_route_index}.")
+                                logger.debug(
+                                    f"\nRemoved customer {v} from route {first_route_index} and inserted\
+                                    in position {customers2.index(j2)} of route {second_route_index}."
+                                )
                                 return remove_empty_routes(destroyed)
                             else:
-                                logger.error(f"No customer found to remove.")
+                                logger.debug(f"No customer found to remove.")
+                        # else:
+                        # print(f"Time window check failed.")
+                    
 
     destroyed.update_unassigned_list()
+    print(f"Finished")
     return remove_empty_routes(destroyed)
 
 def worst_removal(state: CvrptwState, rng: np.random.Generator) -> CvrptwState:
