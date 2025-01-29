@@ -374,43 +374,57 @@ def exchange_reducing_removal(state: CvrptwState, rng: np.random.Generator) -> C
 
     destroyed = state.copy()
 
-    route1 = rng.choice(destroyed.routes, 1).item()
+    iterations = 50
+    twc_checks = 0
+    for _ in range(iterations):
+        for first_route_index in rng.choice(len(destroyed.routes), 1):
+            route1 = destroyed.routes[first_route_index]
+            customers = route1.customers_list
+            if len(customers) <= 2:
+                break
+            for v1 in customers[1:-1]:
+                idx1 = customers.index(v1)
+                i1 = customers[idx1 - 1]  # previous customer
+                j1 = customers[idx1 + 1]  # next customer
+                di1v1 = destroyed.distances[i1][v1]
+                dv1j1 = destroyed.distances[v1][j1]
+                di1j1 = destroyed.distances[i1][j1]
 
-    for idx1 in range(1, len(route1.customers_list)-1):
-        v1 = route1.customers_list[idx1]
-        # for v1 in route1.customers_list:
-        #     idx1 = route1.customers_list.index(v1)
-        i1 = route1.customers_list[idx1 - 1]    #previous node
-        j1 = route1.customers_list[idx1 + 1]    #next node
+            for second_route_index in list(range(len(destroyed.routes))):
+                route2 = destroyed.routes[second_route_index]
+                customers2 = route2.customers_list
+                for v2 in customers2[1:-1]:
+                    idx2 = customers2.index(v2)
+                    if second_route_index == first_route_index and idx2 == idx1:
+                        continue
+                    i2 = customers2[idx2 - 1]
+                    j2 = customers2[idx2 + 1]
 
-        for route2 in destroyed.routes:
-            for v2 in route2.customers_list[1:-1]:
-                if route2 == route1 and v2 == v1:
-                    continue
+                    # Check Time Window Compatibility
+                    twc_checks += 1
+                    if twc_checks > iterations:
+                        break
 
-                idx2 = route2.customers_list.index(v2)
-                i2 = route2.customers_list[idx2 - 1]  # previous node
-                j2 = route2.customers_list[idx2 + 1]  # next node
-                # Check Time Window Compatibility
-                if destroyed.twc[v1][i2] != -np.inf and destroyed.twc[v2][i1] != np.inf:
-                    di1v1 = state.distances[i1][v1]
-                    dv1j1 = state.distances[v1][j1]
-                    di2v2 = state.distances[i2][v2]
-                    dv2j2 = state.distances[v2][j2]
+                    if destroyed.twc[i2][v1] != -np.inf and destroyed.twc[v1][j2] != np.inf:
+                        if destroyed.twc[i1][v2] != -np.inf and destroyed.twc[v2][j1] != np.inf:
+                            di1v1 = destroyed.distances[i1][v1]
+                            dv1j1 = destroyed.distances[v1][j1]
+                            di2v2 = destroyed.distances[i2][v2]
+                            dv2j2 = destroyed.distances[v2][j2]
 
-                    di1v2 = state.distances[i1][v2]
-                    dv2j1 = state.distances[v2][j1]
-                    di2v1 = state.distances[i2][v1]
-                    dv1j2 = state.distances[v1][j2]
+                            di1v2 = destroyed.distances[i1][v2]
+                            dv2j1 = destroyed.distances[v2][j1]
+                            di2v1 = destroyed.distances[i2][v1]
+                            dv1j2 = destroyed.distances[v1][j2]
 
-                    if di1v1 + dv1j1 + di2v2 + dv2j2 > di1v2 + dv2j1 + di2v1 + dv1j2:
-                        # swap v1 and v2
-                        route1.customers_list[idx1] = v2
-                        route2.customers_list[idx2] = v1
-                        destroyed.update_times_attributes_routes(destroyed.routes.index(route1))
-                        destroyed.update_times_attributes_routes(destroyed.routes.index(route2))
-                        destroyed.update_unassigned_list()
+                            if di1v1 + dv1j1 + di2v2 + dv2j2 > di1v2 + dv2j1 + di2v1 + dv1j2:
+                                # swap v1 and v2
+                                route1.customers_list[idx1] = v2
+                                route2.customers_list[idx2] = v1
+                                destroyed.update_times_attributes_routes(first_route_index)
+                                destroyed.update_times_attributes_routes(second_route_index)
+                                destroyed.update_unassigned_list()
 
-                        return remove_empty_routes(destroyed)
+                                return remove_empty_routes(destroyed)
 
     return remove_empty_routes(destroyed)
