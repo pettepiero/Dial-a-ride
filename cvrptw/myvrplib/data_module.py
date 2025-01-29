@@ -51,6 +51,7 @@ def read_cordeau_data(file: str, print_data: bool = False) -> dict:
         customers.append(line.split())
 
     customers = np.array(customers, dtype=np.float64)
+    
 
     # Save depots in array
     depots = []

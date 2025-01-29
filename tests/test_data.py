@@ -116,5 +116,22 @@ class TestDFConversion(unittest.TestCase):
         )
 
 
+class TestCoordsMatrix(unittest.TestCase):
+    def test_coords_matrix(self):
+        #on hand made test data
+        data = read_cordeau_data(
+            "/home/pettepiero/tirocinio/dial-a-ride/tests/test_data"
+        )
+        known_cost_matrix = np.array([[np.nan,     np.nan,   np.nan,   np.nan,   np.nan,   np.nan,   np.nan],
+                            [np.nan,      0,      65.19,  80.62,  31.62,  136.01, 14.14],
+                            [np.nan,      65.19,	0.00,	35.36,  35.36,	79.06,	69.64],
+                            [np.nan,      80.62,	35.36,	0.00,	50.00,	100.00,	90.00],
+                            [np.nan,      31.62,  35.36,	50.00,	0.00,	111.80,	40.00],
+                            [np.nan,      136.01,	79.06,	100.00,	111.80,	0.00,	134.54],
+                            [np.nan,      14.14,	69.64,	90.00,	40.00,	134.54,	0.00]])
+        
+        np.testing.assert_allclose(known_cost_matrix, data['edge_weight'])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -278,16 +278,19 @@ def cost_reducing_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
                             customers2.index(i2) + 1
                         ]  # second customer of insertion arc
                         if state.twc[v][i2] != -np.inf and state.twc[v][j2] != -np.inf:
+                            logger.error(f"First check passed for routes {first_route_index} and {second_route_index}.")
+                            logger.error(f"j2: {j2}, i2: {i2}, v: {v}")
                             di2j2 = state.distances[i2][j2]
                             di2v = state.distances[i2][v]
                             dvj2 = state.distances[v][j2]
+                            logger.error(f"Checking if {di1v} + {dvj1} + {di2j2} > {di1j1} + {di2v} + {dvj2}")
                             if di1v + dvj1 + di2j2 > di1j1 + di2v + dvj2:
                                 # Remove v from first route and insert into second
                                 destroyed.routes[first_route_index].remove(v)
 
                                 #Update df
-                                destroyed.nodes_df.loc[v.item(), "route"] = None
-                                destroyed.nodes_df.loc[v.item(), "done"] = False
+                                destroyed.nodes_df.loc[v, "route"] = None
+                                destroyed.nodes_df.loc[v, "done"] = False
                                 if len(destroyed.routes[first_route_index]) != 2:
                                     destroyed.update_times_attributes_routes(first_route_index)
                                     destroyed.routes_cost[first_route_index] = destroyed.route_cost_calculator(
@@ -297,8 +300,10 @@ def cost_reducing_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
                                 #     customers2.index(j2), v.item()
                                 # )
                                 destroyed.unassigned.append(v)
-
+                                logger.error(f"\nRemoved customer {v} from route {first_route_index}.")
                                 return remove_empty_routes(destroyed)
+                            else:
+                                logger.error(f"No customer found to remove.")
 
     destroyed.update_unassigned_list()
     return remove_empty_routes(destroyed)
