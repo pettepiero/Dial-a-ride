@@ -152,11 +152,6 @@ def nearest_neighbor_tw(state: CvrptwState, cordeau:bool = True, initial_time_sl
     for route_num, route in enumerate(routes):
         for customer in route.customers_list:
             state.nodes_df.loc[customer, "route"] = route_num        
-
-    if unvisited:
-        print(f"#Unvisited customers after nearest neighbor solution: {len(unvisited)}")
-    if vehicle < state.n_vehicles:
-        print(f"Vehicles left: {state.n_vehicles - vehicle}")
     
     # Create the solution object of type CvrptwState
     solution = CvrptwState(routes, nodes_df=state.nodes_df, given_unassigned=list(unvisited))
@@ -165,7 +160,4 @@ def nearest_neighbor_tw(state: CvrptwState, cordeau:bool = True, initial_time_sl
         solution.update_times_attributes_routes(route_idx)
         for customer in solution.routes[route_idx].customers_list:
             solution.nodes_df.loc[customer, "route"] = route_idx
-
-    print(f"Initial solution cost vector: {solution.routes_cost}")
-    print(f"Initial solution routes: {[route.customers_list for route in solution.routes]}")
     return solution

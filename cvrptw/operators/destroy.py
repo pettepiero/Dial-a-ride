@@ -156,8 +156,8 @@ def relatedness_function(state: CvrptwState, i: int, j: int) -> float:
 def shaw_removal(state: CvrptwState, rng) -> CvrptwState:
     """
     Based on (Wang et. al, 2024), formula (4), which is itself based on the work of
-    Shaw (1997) and Ropke and Pisinger (2006). This operator removes customers_to_remove
-    customers from the solution by selecting the most related customers.
+    Shaw (1997) and Ropke and Pisinger (2006). This operator removes a customer_to_remove 
+    customers from the solution by selecting the most related ones, according to the formula.
         Parameters:
             state: CvrptwState
                 The solution from which to remove customers.
@@ -169,57 +169,52 @@ def shaw_removal(state: CvrptwState, rng) -> CvrptwState:
     """
 
     destroyed: CvrptwState = state.copy()
-    customers_to_remove = destroyed.n_customers * degree_of_destruction
     min_value = np.inf
     j_star = None
     route_star_idx = None
 
+    # Search phase
+    # Randomly select seed customer to remove from the solution
     route_i_idx = rng.choice(
         range(len(destroyed.routes)), 1
-    ).item()  # Randomly select first customer to remove from the solution
-    # route_i = rng.choice(destroyed.routes, 1).item()  # Randomly select first customer to remove from the solution
+    ).item()  
     route_i = destroyed.routes[route_i_idx]
     first_customer = rng.choice(route_i.customers_list[1:-1], 1, replace=False).item()
+    
     i_selection = [first_customer]
 
-    while len(i_selection) < customers_to_remove:
-        i = rng.choice(i_selection, 1, replace=False).item()
+    for route_idx, route_j in enumerate(destroyed.routes):
+        for j in route_j.customers_list[1:-1]:
+            if j in i_selection:
+                continue
+            if first_customer == j and route_i == route_j:
+                continue
+            value = relatedness_function(state, first_customer, j)   #NOTE: maybe use dynamic programming to store values
+            if value < min_value:
+                min_value = value
+                j_star = j
+                route_star_idx = route_idx
 
-        for route_idx, route in enumerate(destroyed.routes):
-            for j in route.customers_list[1:-1]:
-                if j in i_selection:
-                    continue
-                if i == j and route_i == route:
-                    continue
-                value = relatedness_function(state, i, j)   #NOTE: maybe use dynamic programming to store values
-                if value < min_value:
-                    min_value = value
-                    j_star = j
-                    route_star_idx = route_idx
+    if j_star is None:
+        print(f"\nFinished checking all customers and no j_star found")
+        print(f"Left routes: {[route.customers_list for route in destroyed.routes]}")
+        return destroyed
 
-        if j_star is None:
-            print(f"\nFinished checking all customers and no j_star found")
-            print(f"Left routes: {[route.customers_list for route in destroyed.routes]}")
-            continue
-        # DEBUG
-        # print(f"Selected j_star: {j_star}")
-        # print(f"Selected route_star_idx: {route_star_idx}")
-        # print(f"Selected route: {destroyed.routes[route_star_idx].customers_list}")
-        # print(f"i_selection {i_selection}")
-        destroyed.routes[route_star_idx].remove(j_star)
-                    #Update df
-        destroyed.nodes_df.loc[j_star.item(), "route"] = None
-        destroyed.nodes_df.loc[j_star.item(), "done"] = False
-        if len(destroyed.routes[route_star_idx]) != 2:
-            destroyed.update_times_attributes_routes(route_star_idx)
-            destroyed.routes_cost[route_star_idx] = destroyed.route_cost_calculator(
-                route_star_idx
-            )
-        i_selection.append(j_star)
-        destroyed.unassigned.append(j_star)
-        j_star = None
-        min_value = np.inf
-        route_star_idx = None
+    # Modify phase
+    destroyed.routes[route_star_idx].remove(j_star)
+                #Update df
+    destroyed.nodes_df.loc[j_star.item(), "route"] = None
+    destroyed.nodes_df.loc[j_star.item(), "done"] = False
+    if len(destroyed.routes[route_star_idx]) != 2:
+        destroyed.update_times_attributes_routes(route_star_idx)
+        destroyed.routes_cost[route_star_idx] = destroyed.route_cost_calculator(
+            route_star_idx
+        )
+    i_selection.append(j_star)
+    destroyed.unassigned.append(j_star)
+    j_star = None
+    min_value = np.inf
+    route_star_idx = None
 
     route_i.remove(first_customer)
                 #Update df
