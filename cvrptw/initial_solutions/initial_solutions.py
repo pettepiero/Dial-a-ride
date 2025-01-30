@@ -151,7 +151,7 @@ def nearest_neighbor_tw(state: CvrptwState, cordeau:bool = True, initial_time_sl
     # Assign routes to customers in nodes_df
     for route_num, route in enumerate(routes):
         for customer in route.customers_list:
-            state.nodes_df.loc[customer, "route"] = route_num        
+            state.nodes_df.loc[customer, "route"] = route_num
     
     # Create the solution object of type CvrptwState
     solution = CvrptwState(routes, nodes_df=state.nodes_df, given_unassigned=list(unvisited))

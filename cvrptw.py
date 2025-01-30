@@ -5,12 +5,10 @@ from alns.accept import RecordToRecordTravel
 from alns.select import *
 from alns.stop import MaxIterations
 
-
-from cvrptw.myvrplib.myvrplib import plot_solution, plot_data, solution_times_statistics, LOGGING_LEVEL
-from cvrptw.myvrplib.data_module import END_OF_DAY, read_solution_format
+from cvrptw.myvrplib.myvrplib import LOGGING_LEVEL
 from cvrptw.myvrplib.data_module import d_data as d_data
 from cvrptw.myvrplib.vrpstates import CvrptwState
-from cvrptw.initial_solutions.initial_solutions import nearest_neighbor_tw, time_neighbours
+from cvrptw.initial_solutions.initial_solutions import nearest_neighbor_tw
 from cvrptw.operators.destroy import *
 from cvrptw.operators.repair import *
 from cvrptw.operators.wang_operators import *
