@@ -44,6 +44,13 @@ pip install -r requirements.txt
 ```
 
 ## How to execute the code
+An instance of the static problem can be obtained by executing cvrptw.py, with the desired command line options. A description of these options is available running: 
+
+```
+python cvrptw.py --help
+```
+
+
 Currently, the newest implementation of the article [(Wang et al., 2024)](https://www.sciencedirect.com/science/article/abs/pii/S0360835224002432) is in `cvrptw/wang-2024.ipynb`. This should be ready to run with the mentioned requirements.
 
 ## Plots and videos

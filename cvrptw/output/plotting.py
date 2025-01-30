@@ -42,3 +42,5 @@ def plot_solution(data, solution, name="CVRP solution"):
     ax.set_xlabel("X-coordinate")
     ax.set_ylabel("Y-coordinate")
     ax.legend(frameon=False, ncol=3)
+
+
