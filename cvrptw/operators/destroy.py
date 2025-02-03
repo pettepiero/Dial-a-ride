@@ -304,71 +304,6 @@ def exchange_reducing_removal(state: CvrptwState, rng: np.random.Generator) -> C
     logger.debug(f"In cost reducing removal")
     destroyed = state.copy()
 
-<<<<<<< HEAD
-    iterations = 50
-    twc_checks = 0  # Initialize counter for time window compatibility checks
-
-    for _ in range(iterations):
-        for first_route_index in rng.choice(len(state.routes), 1):
-            route1 = state.routes[first_route_index]
-            customers = state.routes[first_route_index].customers_list
-            if len(customers) <= 2:  # route has only depots
-                break
-            for v1 in customers[1:-1]:
-                idx1 = customers.index(v1)
-                i1 = customers[customers.index(v1) - 1]  # previous customer
-                j1 = customers[customers.index(v1) + 1]  # next customer
-                di1v = data["edge_weight"][i1][v1]
-                dvj1 = data["edge_weight"][v1][j1]
-                di1j1 = data["edge_weight"][i1][j1]
-
-                for second_route_index in list(range(len(state.routes))):
-                    customers2 = state.routes[second_route_index].customers_list
-                    route2 = state.routes[second_route_index]
-                    for v2 in customers2[1:-1]:  # first customer of insertion arc
-                        if second_route_index == first_route_index and v2 == v1:
-                            continue
-                        idx2 = customers2.index(v2)
-                        i2 = route2.customers_list[idx2 - 1]  # previous node
-                        j2 = route2.customers_list[idx2 + 1]  # next node
-                        # Check Time Window Compatibility
-                        twc_checks += 1
-                        if twc_checks > iterations:
-                            break
-
-                        if (
-                            destroyed.twc[i2][v1] != -np.inf
-                            and destroyed.twc[v1][j2] != np.inf
-                        ):
-                            if (
-                                destroyed.twc[i1][v2] == -np.inf
-                                or destroyed.twc[v2][j1] == -np.inf
-                            ):
-                                idx2 = route2.customers_list.index(v2)
-                                j2 = route2.customers_list[idx2 + 1]  # next node
-                                di1v1 = data["edge_weight"][i1][v1]
-                                dv1j1 = data["edge_weight"][v1][j1]
-                                di2v2 = data["edge_weight"][i2][v2]
-                                dv2j2 = data["edge_weight"][v2][j2]
-
-                                di1v2 = data["edge_weight"][i1][v2]
-                                dv2j1 = data["edge_weight"][v2][j1]
-                                di2v1 = data["edge_weight"][i2][v1]
-                                dv1j2 = data["edge_weight"][v1][j2]
-
-                                if (
-                                    di1v1 + dv1j1 + di2v2 + dv2j2
-                                    > di1v2 + dv2j1 + di2v1 + dv1j2
-                                ):
-                                    # swap v1 and v2
-                                    route1.customers_list[idx1] = v2
-                                    route2.customers_list[idx2] = v1
-                                    destroyed.update_times_attributes_routes()
-
-                                    return remove_empty_routes(destroyed)
-
-    destroyed.update_times_attributes_routes()
-=======
     iterations = 10
     for i in range(iterations):
         for first_route_index in rng.choice(len(state.routes), 1):
@@ -431,7 +366,6 @@ def exchange_reducing_removal(state: CvrptwState, rng: np.random.Generator) -> C
 
     destroyed.update_unassigned_list()
     print(f"Finished")
->>>>>>> df
     return remove_empty_routes(destroyed)
 
 def worst_removal(state: CvrptwState, rng: np.random.Generator) -> CvrptwState:
@@ -473,8 +407,6 @@ def worst_removal(state: CvrptwState, rng: np.random.Generator) -> CvrptwState:
 
     destroyed.update_unassigned_list()
     return destroyed
-<<<<<<< HEAD
-=======
 
 def exchange_reducing_removal(state: CvrptwState, rng: np.random.Generator) -> CvrptwState:
     """
@@ -546,4 +478,3 @@ def exchange_reducing_removal(state: CvrptwState, rng: np.random.Generator) -> C
                                 return remove_empty_routes(destroyed)
 
     return remove_empty_routes(destroyed)
->>>>>>> df
