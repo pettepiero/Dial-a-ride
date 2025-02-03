@@ -431,14 +431,14 @@ def create_depots_dict(data: dict) -> dict:
     return depots_dict
 
 data = read_cordeau_data(
-    "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr12", print_data=False
+    "./data/c-mdvrptw/pr12", print_data=False
 )
 # bks = read_solution_format("./data/c-mdvrptw-sol/pr02.res", print_data=True)
 test_data = read_cordeau_data(
-    "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr12",
+    "./data/c-mdvrptw/pr12",
     print_data=False,
 )
 
 d_data = generate_dynamic_df(
-    "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr12", print_data=False, seed=0
+    "./data/c-mdvrptw/pr12", print_data=False, seed=0
 )
