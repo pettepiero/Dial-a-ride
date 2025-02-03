@@ -51,6 +51,7 @@ def read_cordeau_data(file: str, print_data: bool = False) -> dict:
         customers.append(line.split())
 
     customers = np.array(customers, dtype=np.float64)
+    
 
     # Save depots in array
     depots = []
@@ -69,7 +70,7 @@ def read_cordeau_data(file: str, print_data: bool = False) -> dict:
     data_dict["n_depots"] = t
     data_dict["depot_to_vehicles"] = {}  # {depot: [vehicles]}
     data_dict["vehicle_to_depot"] = {}  # {vehicle: depot}
-    data_dict["depots"] = [i for i in range(n, n + t)]
+    data_dict["depots"] = [i for i in range(n+1, n+1 + t)]
 
     data_dict["node_coord"] = np.array((None, None))
     coords = np.array([rows[1:3] for rows in customers])
@@ -301,91 +302,130 @@ def read_solution_format(file: str, print_data: bool = False) -> dict:
 
     return data
 
-
-def convert_to_dynamic_data(file: str, print_data: bool = False, n_steps = 20, seed = 0) -> dict:
+def dynamic_df_from_dict(
+        data: dict,
+        static: bool = False, 
+        n_steps:int = 20, seed: int = 0
+    ) -> pd.DataFrame:
     """
-    Convert a static CVRPTW instance to a dynamic instance with a single day.
-    Call in time for each customer is sampled from a gamma distribution.
+    Convert a data dictionary to a pandas DataFrame for dynamic customer and depot information.
+    If static attribute is True, call in time for each customer is sampled from a 
+    gamma distribution. This is done to simulate dynamic customer requests, placing
+    more customers in the beginning of the time horizon. Depots have call in time 0.
+    Parameters:
+        data (dict): Data dictionary.
+        static (bool): If True, all call in times are set to 0.
+        n_steps (int): Number of time steps.
+        seed (int): Random seed.
+    Returns:
+        pd.DataFrame: DataFrame with dynamic customer and depot information.
+        Columns:
+            id: Customer ID.
+            x: x-coordinate.
+            y: y-coordinate.
+            demand: Customer demand.
+            start_time: Time window start.
+            end_time: Time window end.
+            service_time: Customer service time.
+            call_in_time_slot: Time slot when customer calls in.
+            route: Route customer is assigned to.
+            done: Boolean indicating if customer has been satisfied.
     """
     np.random.seed(seed)
-    data = read_cordeau_data(file, print_data=print_data)
-    data["call_in_time_slot"] = np.zeros(data["dimension"], dtype=int)
-
+    n = data["dimension"] + data["n_depots"]+1
+    
+    data_df = pd.DataFrame(
+        {
+            "id": [i for i in range(n)],
+            "x": [coord[0] for coord in data["node_coord"][:n]],
+            "y": [coord[1] for coord in data["node_coord"][:n]],
+            "demand": data["demand"][:n],
+            "start_time": [tw[0] for tw in data["time_window"][:n]],
+            "end_time": [tw[1] for tw in data["time_window"][:n]],
+            "service_time": data["service_time"][:n],
+            "call_in_time_slot": np.zeros(n, dtype=int),
+            "route": [None]*n,
+            "done": [False]*n,
+        }
+    )
+    if static:
+        return data_df
+    
     # Parameters of gamma  distribution
     k = 0.5  # Shape parameter
     mean = n_steps/4  # Desired mean    
     theta = mean / k  # Scale parameter
-    samples = np.random.gamma(k, scale=theta, size=data["dimension"])
+    samples = np.random.gamma(k, scale=theta, size=data["dimension"]+data["n_depots"]+1)
 
-    for i in range(1, data["dimension"]):
-        call_in_time = int(samples[i])
-        data["call_in_time_slot"][i] = call_in_time
+    data_df["call_in_time_slot"] = samples.astype(int)
+    data_df.iloc[-data["n_depots"]:, data_df.columns.get_loc("call_in_time_slot")] = 0
 
-    # convert to list
-    data["call_in_time_slot"] = data["call_in_time_slot"].tolist()
-
-    return data
-
-def get_customers_in_time_slot(data: dict, time_slot: int) -> list:
-    """
-    Get the indices of customers that call in the given time slot.
-    """
-    indices = [i for i, t in enumerate(data["call_in_time_slot"]) if t == time_slot]
-    return indices
-
-def get_initial_data(full_data: dict) -> dict:
-    """
-        Returns the initial data for the first step.
-        """
-    # Get indices of initial customers
-    initial_cust_idxs = get_customers_in_time_slot(full_data, 0)
-    # Remove all but the first customers from full_data
-    initial_data = copy.deepcopy(full_data)
-    initial_data["dimension"] = len(initial_cust_idxs)
-    initial_data["node_coord"] = [
-        initial_data["node_coord"][i] for i in initial_cust_idxs
-    ]
-    initial_data["demand"] = [initial_data["demand"][i] for i in initial_cust_idxs]
-    initial_data["time_window"] = [
-            initial_data["time_window"][i] for i in initial_cust_idxs
-        ]
-    initial_data["service_time"] = [
-            initial_data["service_time"][i] for i in initial_cust_idxs
-        ]
-    initial_data["call_in_time_slot"] = [
-            initial_data["call_in_time_slot"][i] for i in initial_cust_idxs
-        ]
-
-    return initial_data
-
-def create_customers_df(data: dict) -> pd.DataFrame:
-    """
-    Convert a data dictionary to a pandas DataFrame
-    for customer information.
-    """
-    n = data["dimension"]+1
+    # Preindexing the dataframe using 'id'
+    data_df.set_index("id", inplace=True)
+    data_df['id'] = data_df.index
     
-    df = pd.DataFrame(
-        {
-            "customer_id": [i for i in range(1, n)],
-            "x": [coord[0] for coord in data["node_coord"][1:n]],
-            "y": [coord[1] for coord in data["node_coord"][1:n]],
-            "demand": data["demand"][1:n],
-            "start_time": [tw[0] for tw in data["time_window"][1:n]],
-            "end_time": [tw[1] for tw in data["time_window"][1:n]],
-            "service_time": data["service_time"][1:n],
-        }
+    return data_df
+
+
+def generate_dynamic_df(file: str, static: bool = False, print_data: bool = False, n_steps = 20, seed = 0) -> pd.DataFrame:
+    """
+    Reads file and converts it to a dynamic customers and depots dataframe.
+    Call in time for each customer is sampled from a gamma distribution, unless static is True.
+    Parameters:
+        file (str): Path to the file to be read.
+        static (bool): If True, all call in times are set to 0.
+        print_data (bool): If True, print parsed data.
+        n_steps (int): Number of time steps.
+        seed (int): Random seed.
+    """
+    data = read_cordeau_data(file, print_data=print_data)
+    return dynamic_df_from_dict(
+        data, static=static, n_steps=n_steps, seed=seed
     )
 
-    return df
+def get_ids_of_time_slot(customer_df: pd.DataFrame, time_slot: int) -> list:
+    """
+    Get the IDs of customers that call in the given time slot.
+    """
+    assert time_slot >= 0, "Time slot must be a non-negative integer."
+
+    indices = customer_df.loc[
+        customer_df["call_in_time_slot"] == time_slot, "id"
+    ].tolist()
+    # depots ids are the elements that have demand = 0 and we need to remove them from the list
+    depots = customer_df.loc[customer_df["demand"] == 0, "id"].tolist()
+    indices = [i for i in indices if i not in depots]
+    return indices
+
+def get_initial_data(cust_df: pd.DataFrame) -> pd.DataFrame:
+    """
+        Returns subset of initial df containing customers
+        and depots from the first time slot.
+    """
+    return cust_df.loc[cust_df["call_in_time_slot"] == 0]
 
 def create_depots_dict(data: dict) -> dict:
+    """
+    Create a dictionary with depot information.
+    Attributes:
+        num_depots: int
+            Number of depots.
+        depot_to_vehicles: dict
+            Dictionary mapping depots to vehicles.
+        vehicle_to_depot: dict
+            Dictionary mapping vehicles to depots.
+        coords: np.array
+            Array with the coordinates of the depots.
+        depots_indices: list
+            List with the indices of the dep
+    """
 
     depots_dict = {
         "num_depots": data["n_depots"],
         "depot_to_vehicles": data["depot_to_vehicles"],
         "vehicle_to_depot": data["vehicle_to_depot"],
         "coords": data["node_coord"][data["dimension"] + 1 :],
+        "depots_indices": data["depots"],
     }
 
     return depots_dict
@@ -399,7 +439,6 @@ test_data = read_cordeau_data(
     print_data=False,
 )
 
-d_data = convert_to_dynamic_data(
-    "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr12", print_data=False
+d_data = generate_dynamic_df(
+    "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr12", print_data=False, seed=0
 )
-d_data = get_initial_data(d_data)

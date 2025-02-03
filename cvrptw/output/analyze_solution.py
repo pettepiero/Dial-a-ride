@@ -5,13 +5,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
-def verify_time_windows(data: dict, sol: CvrptwState, percentage: bool = False) -> dict:
+def verify_time_windows(data: pd.DataFrame, sol: CvrptwState, percentage: bool = False) -> dict:
     """
     Verifies the time windows of the solution and returns the early/late/ontime counts.
     If percentage is True, then the counts are returned as percentages of served customers.
         Parameters:
-            data: dict
-                The data dictionary.
+            data: pd.DataFrame
+                The data dataframe.
             sol: CvrptwState
                 The solution to be verified.
             percentage: bool
@@ -25,16 +25,18 @@ def verify_time_windows(data: dict, sol: CvrptwState, percentage: bool = False) 
 
     for route in sol.routes:
         for cust_idx, customer in enumerate(route.customers_list):
-            if route.planned_windows[cust_idx][0] < data["time_window"][customer][0]:
+            start_time = data.loc[customer, "start_time"].item()
+            end_time = data.loc[customer, "end_time"].item()
+            if route.planned_windows[cust_idx][0] < start_time:
                 early += 1
-                sum_early += data["time_window"][customer][0] - route.planned_windows[cust_idx][0]
-            elif route.planned_windows[cust_idx][0] > data["time_window"][customer][1]:
+                sum_early += start_time - route.planned_windows[cust_idx][0]
+            elif route.planned_windows[cust_idx][0] > end_time:
                 late += 1
-                sum_late += route.planned_windows[cust_idx][1] - data["time_window"][customer][0]
+                sum_late += route.planned_windows[cust_idx][1] - end_time
             else:
                 ontime += 1
     total = early + late + ontime
-    
+
     if percentage:
         early = round(early / total * 100, 1)
         late = round(late / total * 100, 1)
