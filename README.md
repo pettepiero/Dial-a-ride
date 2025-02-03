@@ -44,22 +44,28 @@ pip install -r requirements.txt
 ```
 
 ## How to execute the code
-An instance of the static problem can be obtained by executing cvrptw.py, with the desired command line options. A description of these options is available running: 
+An instance of the static problem can be obtained by executing cvrptw.py, with the desired command line options. 
+```
+python cvrptw.py
+```
+A description of these options is available running the following command, but most of there are still work in progress..
 
 ```
 python cvrptw.py --help
 ```
+For example, it should be possible to create a video of the running algorithm by adding the `--video` argument.
 
-Currently, the newest implementation of the article [(Wang et al., 2024)](https://www.sciencedirect.com/science/article/abs/pii/S0360835224002432) is in `cvrptw/wang-2024.ipynb`. This should be ready to run with the mentioned requirements. As opposed to `cvrptw.py`, it also produces useful plots of the statistics on the operators. 
+
+The implementation of the article [(Wang et al., 2024)](https://www.sciencedirect.com/science/article/abs/pii/S0360835224002432) is also available in a *Jupyter notebook* format in `cvrptw/wang-2024.ipynb`. This should be ready to run with the mentioned requirements. As opposed to `cvrptw.py`, it also produces useful plots of the statistics on the operators.
 
 The notebook can also be run on colab, without installing anything through [this link](https://colab.research.google.com/github/pettepiero/Dial-a-ride/blob/main/wang-2024.ipynb). To execute it, uncomment the first cell and set the recommended data_file path in cell before *Solution state*. **Note:** This notebook might produce some errors on `plot_solution function`.
 ## Plots and videos
 Running `cvrptw/wang-2024.ipynb` will save plots inside `outputs/plots/[foldername]` where `foldername` is given by the year, month, day, hour, minute and seconds of execution. Therefore, **it is recommended to remove these folders to save space after some executions**.
 
-To generate a video of the solution, copy the video output folder that is printed after the `iterate` method. Then execute 
+To generate a video of the solution, copy the video output folder that is printed after the `iterate` method (with `save_plots` parameter set to `True`). Then execute 
 
 ```
-python cvrptw/generate_video.py --image_folder=<copied-path> 
+python cvrptw/output/generate_video.py --image_folder=<copied-path> 
 ```
 and optionally specify a video output name with argument `--video_name`. The video will be saved in `outputs/videos` folder.
 
