@@ -24,12 +24,11 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=LOGGING_LEVEL)
 
 degree_of_destruction = 0.05
-customers_to_remove = int((data["dimension"] - 1) * degree_of_destruction)
 
 def main():
 
     args = parse_options()
-    print(args)
+    print(f"Arguments: {args}")
 
     # alns = ALNS(rnd.default_rng(SEED))
     alns = ALNS(rnd.default_rng())
@@ -53,7 +52,7 @@ def main():
         initial_solution.objective(), 0.02, 0, NUM_ITERATIONS
     )
     stop = MaxIterations(NUM_ITERATIONS)
-    
+
     result, *_ = (
         alns.iterate(initial_solution, select, accept, stop, data=data, save_plots=args.video)
     )    
@@ -65,23 +64,32 @@ def main():
     print(f"\nIn the INITIAL SOLUTION there were {len(initial_solution.routes)} routes")
     served_customers = 0
     for route in initial_solution.routes:
-        customers = [cust for cust in route.customers_list if cust not in data["depots"]]
+        customers = [
+            cust
+            for cust in route.customers_list
+            if cust not in init.depots["depots_indices"]
+        ]
         served_customers += len(customers)
         print(route.customers_list)
 
     print(f"Total number of served customers: {served_customers}")
-    initial_solution_stats = verify_time_windows(data, initial_solution, percentage=False)
+    data_df = initial_solution.nodes_df
+    initial_solution_stats = verify_time_windows(data_df, initial_solution, percentage=False)
 
     print(f"\nIn the HEURISTIC SOLUTION there are {len(solution.routes)} routes")
     served_customers = 0
     for route in solution.routes:
-        customers = [cust for cust in route.customers_list if cust not in data['depots']]
+        customers = [
+            cust
+            for cust in route.customers_list
+            if cust not in solution.depots["depots_indices"]
+        ]
         served_customers += len(customers)
         print(route.customers_list)
 
     print(f"Total number of served customers: {served_customers}")
     # Calculating the late, early, ontime and left out customers
-    solution_stats = verify_time_windows(data, solution, percentage=False)
+    solution_stats = verify_time_windows(data_df, solution, percentage=False)
 
     # results dict
     results_dict = {

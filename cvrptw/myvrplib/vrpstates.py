@@ -298,12 +298,6 @@ class CvrptwState:
         for i in range(1, len(route)-1):
             current = route[i]
             prev = route[i-1]
-            # time = float(round(max(
-            #     est[i - 1]
-            #     + data["service_time"][prev]
-            #     + data["edge_weight"][current][prev],
-            #     data["time_window"][current][0],
-            # ), 2))
             time = float(round(max(
                 est[i - 1]
                 + df.loc[prev, "service_time"].item()
@@ -322,10 +316,6 @@ class CvrptwState:
             current = route[i]
             time = round(
                 min(
-                    # lst[i + 1]
-                    # - data["service_time"][current]
-                    # - data["edge_weight"][current][next],
-                    # data["time_window"][current][1],
                     lst[i + 1]
                     - df.loc[current, "service_time"].item()
                     - self.distances[current][next],
@@ -357,9 +347,7 @@ class CvrptwState:
                         max(
                             0,
                             df.loc[first_customer, "start_time"].item()
-                            # data["time_window"][first_customer][0]
                             - self.distances[0][first_customer]
-                            # - data["edge_weight"][self.customers_list[0]][first_customer],
                         ),
                         2,
                     )
@@ -375,9 +363,6 @@ class CvrptwState:
             arr = last_departure + self.distances[last_customer][customer]
             dep = arr + df.loc[customer, "service_time"].item()
             tw.append([float(round(arr, 2)), float(round(dep, 2))])
-            # debug
-            # logger.debug(f"In calculate_planned_times: last_departure: {last_departure}")
-            # logger.debug(f"data['edge_weight'][{last_customer}][{customer}]: {data['edge_weight'][last_customer][customer]}")
             last_departure = dep
             last_customer = customer
         self.routes[route_index].planned_windows = tw

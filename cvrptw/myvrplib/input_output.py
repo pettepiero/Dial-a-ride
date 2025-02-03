@@ -76,33 +76,31 @@ def parse_options():
         default=1,
         help="Operator selection schemes (1 means RouletteWheel).",
     )
-    parser.add_argument(
-        "--video",
-        type=bool,
-        default=False,
-        help="Generate video from images. Video is saved in outputs/videos, and images in outputs/images.",
-    )
+    
+    parser.add_argument('--video', action=argparse.BooleanOptionalAction, help='Generate video from images. Video is saved in outputs/videos, and images in outputs/images. \
+                        Use --video to create video, --no-video otherwise.', default=False)
+    # parser.add_argument(
+    #     "--video",
+    #     type=bool,
+    #     default=False,
+    #     help="Generate video from images. Video is saved in outputs/videos, and images in outputs/images.",
+    # )
 
     # Parse initial command-line arguments
     args = parser.parse_args()
     args_dict = vars(args)
 
+
     # Load config file if provided
     config_options = {}
     if args.config:
         config_options = read_json_options(args.config)
-
-    # Merge values:
-    # - Config file values overwrite argparse defaults.
-    # - Command-line values (non-default) overwrite config file values.
-    final_options = {
-        **config_options,
-        **{k: v for k, v in args_dict.items() if v != parser.get_default(k)},
-    }
-
-    return argparse.Namespace(**final_options)
-
-
+        args = {
+            **config_options,
+            **{k: v for k, v in args_dict.items() if v != parser.get_default(k)},
+        }
+        args_dict = args
+    return argparse.Namespace(**args_dict)
 
 def read_json_options(config_file: str) -> dict:
     """Load parameters from a JSON or YAML file."""

@@ -10,7 +10,7 @@ from cvrptw.myvrplib.data_module import (
 )
 from cvrptw.myvrplib.vrpstates import CvrptwState
 from cvrptw.myvrplib.route import Route
-from cvrptw.myvrplib.myvrplib import time_window_check, route_time_window_check
+from cvrptw.myvrplib.myvrplib import time_window_check
 
 def neighbours(state: CvrptwState, customer: int) -> list:
     """
@@ -56,22 +56,6 @@ def time_neighbours(state: CvrptwState, customer: int) -> list:
     locations = [loc for loc in locations if loc != customer]
 
     return [loc[0] for loc in locations]
-
-    # # assert customer not in depots, "Customer cannot be a depot"
-    # locations = [(loc, state.nodes_df.loc[state.nodes_df['id'] == loc, "start_time"]) for loc in range(state.n_customers)]
-    # locations = [loc for loc in locations if loc[0] not in state.depots["depots_indices"]]
-    # #order by soonest start time after current customer
-    # current_start_time = locations[customer][1]
-    # # Filter customers from the past
-    # locations = [loc for loc in locations if loc[1] > current_start_time]
-    # # Filter reachable customers
-    # locations = [loc for loc in locations if data["edge_weight"][customer][loc[0]] + current_start_time <= data["time_window"][loc[0]][1]]
-
-    # locations = sorted(locations, key=lambda x: x[1])
-    # locations = [loc for loc in locations if loc[0] != customer]
-
-    # return [loc[0] for loc in locations]
-
 
 def nearest_neighbor_tw(state: CvrptwState, cordeau:bool = True, initial_time_slot: bool = True) -> CvrptwState:
     """
@@ -124,9 +108,15 @@ def nearest_neighbor_tw(state: CvrptwState, cordeau:bool = True, initial_time_sl
                 break
             nearest = int(nearest[0])  # Nearest unvisited reachable customer
             # Check vehicle capacity and time window constraints
-            if route_demands + state.nodes_df.loc[nearest, "demand"].item() > state.vehicle_capacity:
+            nearest_demand, nearest_end_time = state.nodes_df.loc[
+                nearest, ["demand", "end_time"]
+            ].values
+            edge_time = state.distances[current][nearest].item()
+
+            if route_demands + nearest_demand > state.vehicle_capacity:
                 break
-            if not time_window_check(route_schedule[-1], current, nearest):
+            current_service_time = state.nodes_df.loc[current, "service_time"].item()
+            if not time_window_check(route_schedule[-1], current_service_time, edge_time, nearest_end_time):
                 break
 
             route.append(nearest)
@@ -140,13 +130,8 @@ def nearest_neighbor_tw(state: CvrptwState, cordeau:bool = True, initial_time_sl
 
         route.append(route[0])  # Return to the depot
         route = Route(route, vehicle)
-        # route.calculate_planned_times()
         routes.append(route)
-        # full_schedule.append(route_schedule)
-        # Consider new vehicle
         vehicle += 1
-        # if vehicle == full_data["vehicles"]:
-        #     vehicle = 0
 
     # Assign routes to customers in nodes_df
     for route_num, route in enumerate(routes):

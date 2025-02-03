@@ -188,38 +188,6 @@ def best_insert_tw(customer: int, state: CvrptwState) -> tuple:
 
 
 # NOTE: I think performance can be improved by changing this function
-# def can_insert(customer: int, route_number: int, idx: int, state: CvrptwState) -> bool:
-#     """
-#     Checks if inserting customer in route 'route_number' at position 'idx' does not
-#     exceed vehicle capacity.
-#         Parameters:
-#             customer: int
-#                 The customer to be inserted.
-#             route_number: int
-#                 The route number.
-#             idx: int
-#                 The insertion index.
-#             state: CvrptwState
-#                 The current solution state.
-#         Returns:
-#             bool
-#                 True if the insertion is feasible, False otherwise.
-#     """
-#     route: Route = state.routes[route_number]
-#     print(state.nodes_df)
-
-#     # Capacity check
-#     sub_df = state.nodes_df.loc[state.nodes_df["id"] in route.customers_list, "demand"]
-#     print(f"sub_df = {sub_df}")
-#     exit()
-#     total = state.nodes_df.loc[route.customers_list, "demand"].sum() + state.nodes_df.loc[customer, "demand"]
-#     total = data["demand"][route.customers_list].sum() + data["demand"][customer]
-#     if total > data["capacity"]:
-#         return False
-#     return True
-
-
-# NOTE: I think performance can be improved by changing this function
 # maybe insert total demand in route
 def can_insert_tw(
     customer: int, route_number: int, idx: int, state: CvrptwState
@@ -240,21 +208,27 @@ def can_insert_tw(
             bool
                 True if the insertion is feasible, False otherwise.
     """
-
+    df = state.nodes_df
     route = state.routes[route_number]
 
     # Capacity check
     if route.demand is not None:
-        total = route.demand + state.nodes_df.loc[customer, "demand"]
+        total = route.demand + df.loc[customer, "demand"]
     else:
-        sub_df = state.nodes_df[state.nodes_df["id"].isin(route.customers_list)]["demand"]
-        total = sub_df.sum() + state.nodes_df.loc[customer, "demand"].item()
+        sub_df = df[df["id"].isin(route.customers_list)]["demand"]
+        total = sub_df.sum() + df.loc[customer, "demand"].item()
     if total > state.vehicle_capacity:
         return False
 
+    previous_customer = route.customers_list[idx - 1]
+
     # Time window check
-    if time_window_check(route.planned_windows[idx - 1][0], route.customers_list[idx - 1], customer):
-        return route_time_window_check(route, idx)
+    if time_window_check(
+        prev_customer_time=route.planned_windows[idx - 1][0],
+        prev_service_time=df.loc[previous_customer, "service_time"].item(),
+        edge_time=state.distances[previous_customer][customer],
+        candidate_end_time=df.loc[customer, "end_time"].item()):
+        return route_time_window_check(state, route, idx)
     return False
 
 def insert_cost(customer: int, route: list, idx: int, state: CvrptwState) -> float:

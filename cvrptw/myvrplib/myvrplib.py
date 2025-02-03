@@ -1,6 +1,6 @@
 import logging
 import pandas as pd
-from .data_module import data, END_OF_DAY
+from .data_module import END_OF_DAY
 
 UNASSIGNED_PENALTY = 50
 LOGGING_LEVEL = logging.ERROR
@@ -17,14 +17,14 @@ def solution_times_statistics(state) -> dict:
                 A dictionary containing the number of customers served late, early,
                  on-time, left-out customers, and the sum of late and early minutes.
     """
-    data = state.nodes_df
+    data_df = state.nodes_df
 
     late, early, ontime = 0, 0, 0
     # To get customers in the solution, first remove all the depots
     # then get all the customers that were seen by the system
     # until current time step
 
-    available_customers = data.loc[data["demand"] != 0]
+    available_customers = data_df.loc[data_df["demand"] != 0]
     available_customers = available_customers.loc[
         available_customers["call_in_time_slot"] <= state.current_time
     ]
@@ -47,9 +47,6 @@ def solution_times_statistics(state) -> dict:
         id = customer["id"]
         route = customer["route"]
         idx_in_route = state.find_index_in_route(id, state.routes[route])
-        print("DEBUG: ", id, route, idx_in_route)
-        print(f"DEBUG: {state.routes[route].customers_list}")
-        print(f"DEBUG: {state.routes[route].planned_windows}")
         planned_arrival_time = state.routes[route].planned_windows[idx_in_route][0]
 
         due_time = customer["end_time"]
@@ -87,7 +84,7 @@ def close_route(route: list) -> list:
     return route + [route[0]]
 
 
-def route_time_window_check(route, start_index: int = 1) -> bool:
+def route_time_window_check(state, route, start_index: int = 1) -> bool:
     """
     Check if the route satisfies time-window constraints. Ignores the depots as
     they are considered available 24h. Depots are first and last elements
@@ -101,10 +98,11 @@ def route_time_window_check(route, start_index: int = 1) -> bool:
             bool
                 True if the route satisfies time-window constraints, False otherwise.
     """
+    data_df = state.nodes_df
     # check if planned arrival time is later than the due time
     for idx, customer in enumerate(route.customers_list[start_index:-1]):
         idx += start_index
-        if route.planned_windows[idx][0] > data["time_window"][customer][1]:
+        if route.planned_windows[idx][0] > data_df.loc[customer, "end_time"].item():
             return False
     return True
 
@@ -115,7 +113,7 @@ def route_time_window_check(route, start_index: int = 1) -> bool:
 # Is the vehicle allowed to be early?
 # For now, yes. It will stay at the customer until the time window opens.
 def time_window_check(
-    prev_customer_time: float, prev_customer: int, candidate_customer: int
+    prev_customer_time: float, prev_service_time: float, edge_time: float, candidate_end_time: float
 ):
     """
     Check if the candidate customer satisfies time-window constraints. Returns true if the
@@ -133,7 +131,7 @@ def time_window_check(
     """
     return (
         prev_customer_time
-        + data["service_time"][prev_customer]
-        + data["edge_weight"][prev_customer][candidate_customer]
-        <= data["time_window"][candidate_customer][1]
+        + prev_service_time
+        + edge_time
+        <= candidate_end_time
     )
