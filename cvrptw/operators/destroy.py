@@ -28,14 +28,14 @@ def random_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
     # list of customers in solution
     solution_customers = state.served_customers()
     assert len(solution_customers) > 0, "No customers in solution."
-    for customer in rng.choice(
-        solution_customers, customers_to_remove, replace=False
-    ):
-        assert customer not in destroyed.depots["depots_indices"], "Depot selected for removal."
+    for customer in rng.choice(solution_customers, customers_to_remove, replace=False):
+        assert (
+            customer not in destroyed.depots["depots_indices"]
+        ), "Depot selected for removal."
         route, idx = destroyed.find_route(customer.item())
         if route is not None:
             destroyed.routes[idx].remove(customer.item())
-            #Update df
+            # Update df
             destroyed.nodes_df.loc[customer.item(), "route"] = None
             destroyed.nodes_df.loc[customer.item(), "done"] = False
             destroyed.unassigned.append(customer.item())
@@ -85,7 +85,7 @@ def remove_empty_routes(state: CvrptwState) -> CvrptwState:
 
 def random_route_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
     """
-    Based on (Wang et. al, 2024). This operator randomly selects customers_to_remove 
+    Based on (Wang et. al, 2024). This operator randomly selects customers_to_remove
     routes from a given solution and then removes a random customer from each route.
         Parameters:
             state: CvrptwState
@@ -98,7 +98,11 @@ def random_route_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
     """
     destroyed: CvrptwState = state.copy()
     customers_to_remove = int(destroyed.n_customers * degree_of_destruction)
-    for route_idx in rng.choice(range(len(destroyed.routes)), min(customers_to_remove, state.n_served_customers()), replace=True):
+    for route_idx in rng.choice(
+        range(len(destroyed.routes)),
+        min(customers_to_remove, state.n_served_customers()),
+        replace=True,
+    ):
         route = destroyed.routes[route_idx]
         # for route in rng.choice(destroyed.routes, customers_to_remove, replace=True):
         if len(route.customers_list[1:-1]) != 0:
@@ -110,7 +114,9 @@ def random_route_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
             destroyed.nodes_df.loc[customer.item(), "done"] = False
             if len(destroyed.routes[route_idx]) != 2:
                 destroyed.update_times_attributes_routes(route_idx)
-                destroyed.routes_cost[route_idx] = destroyed.route_cost_calculator(route_idx)
+                destroyed.routes_cost[route_idx] = destroyed.route_cost_calculator(
+                    route_idx
+                )
 
     destroyed.update_unassigned_list()
     return remove_empty_routes(destroyed)
@@ -119,7 +125,7 @@ def random_route_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
 def relatedness_function(state: CvrptwState, i: int, j: int) -> float:
     """
     Calculates how related two requests are. The lower the value, the more related.
-    Based on (Wang et. al, 2024), formula (4), which is itself based on the work of 
+    Based on (Wang et. al, 2024), formula (4), which is itself based on the work of
     Shaw (1997) and Ropke and Pisinger (2006).
         Parameters:
             state: CvrptwState
@@ -128,7 +134,7 @@ def relatedness_function(state: CvrptwState, i: int, j: int) -> float:
                 The first customer.
             j: int
                 The second customer.
-        Returns:    
+        Returns:
             float
                 The relatedness value between the two customers.
     """
@@ -156,7 +162,7 @@ def relatedness_function(state: CvrptwState, i: int, j: int) -> float:
 def shaw_removal(state: CvrptwState, rng) -> CvrptwState:
     """
     Based on (Wang et. al, 2024), formula (4), which is itself based on the work of
-    Shaw (1997) and Ropke and Pisinger (2006). This operator removes a customer_to_remove 
+    Shaw (1997) and Ropke and Pisinger (2006). This operator removes a customer_to_remove
     customers from the solution by selecting the most related ones, according to the formula.
         Parameters:
             state: CvrptwState
@@ -175,9 +181,7 @@ def shaw_removal(state: CvrptwState, rng) -> CvrptwState:
 
     # Search phase
     # Randomly select seed customer to remove from the solution
-    route_i_idx = rng.choice(
-        range(len(destroyed.routes)), 1
-    ).item()  
+    route_i_idx = rng.choice(range(len(destroyed.routes)), 1).item()
     route_i = destroyed.routes[route_i_idx]
     first_customer = rng.choice(route_i.customers_list[1:-1], 1, replace=False).item()
 
@@ -189,7 +193,9 @@ def shaw_removal(state: CvrptwState, rng) -> CvrptwState:
                 continue
             if first_customer == j and route_i == route_j:
                 continue
-            value = relatedness_function(state, first_customer, j)   #NOTE: maybe use dynamic programming to store values
+            value = relatedness_function(
+                state, first_customer, j
+            )  # NOTE: maybe use dynamic programming to store values
             if value < min_value:
                 min_value = value
                 j_star = j
@@ -222,7 +228,9 @@ def shaw_removal(state: CvrptwState, rng) -> CvrptwState:
     destroyed.nodes_df.loc[first_customer.item(), "done"] = False
     if len(route_i) != 2:
         destroyed.update_times_attributes_routes(route_i_idx)
-        destroyed.routes_cost[route_i_idx] = destroyed.route_cost_calculator(route_i_idx)
+        destroyed.routes_cost[route_i_idx] = destroyed.route_cost_calculator(
+            route_i_idx
+        )
 
     destroyed.update_unassigned_list()
     return remove_empty_routes(destroyed)
@@ -317,87 +325,6 @@ def cost_reducing_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
     return remove_empty_routes(destroyed)
 
 
-def exchange_reducing_removal(state: CvrptwState, rng: np.random.Generator) -> CvrptwState:
-    """
-    Variation of the cost-reducing removal based on Wang et. al (2024). Selects 
-    customers in pairs, allowing one customer to be replaced by another simultaneously.
-        Parameters:
-            state: CvrptwState
-                The solution from which to remove customers.
-            rng: np.random.Generator
-                Random number generator.
-        Returns:
-            CvrptwState
-                The solution after applying the destroy operator.
-    """
-
-    logger.debug(f"In cost reducing removal")
-    destroyed = state.copy()
-
-    iterations = 10
-    for i in range(iterations):
-        for first_route_index in rng.choice(len(state.routes), 1):
-            customers = state.routes[first_route_index].customers_list
-            if (
-                len(customers) <= 2
-            ):  # route has only depot and customer :TODO: what to do in this case?
-                break
-            for v in customers[1:-1]:
-                i1 = customers[customers.index(v) - 1]  # previous customer
-                j1 = customers[customers.index(v) + 1]  # next customer
-
-                # DEBUG
-                # logger.debug(f"\n\nv: {v}, i1: {i1}, j1: {j1}, customers: {customers}")
-                di1v = state.distances[i1][v]
-                dvj1 = state.distances[v][j1]
-                di1j1 = state.distances[i1][j1]
-
-                for second_route_index in list(range(len(state.routes))):
-                    customers2 = state.routes[second_route_index].customers_list
-                    for i2 in customers2[:-2]:  # first customer of insertion arc
-                        i2_idx = customers2.index(i2)
-                        j2 = customers2[i2_idx + 1]  # second customer of insertion arc
-                        if state.twc[v][i2] != -np.inf and state.twc[v][j2] != -np.inf:
-                            di2j2 = state.distances[i2][j2]
-                            di2v = state.distances[i2][v]
-                            dvj2 = state.distances[v][j2]
-                            logger.debug(
-                                f"Checking if {di1v} + {dvj1} + {di2j2} > {di1j1} + {di2v} + {dvj2}"
-                            )
-                            if di1v + dvj1 + di2j2 > di1j1 + di2v + dvj2:
-                                # Remove v from first route and insert into second
-                                destroyed.routes[first_route_index].remove(v)
-
-                                # Update df
-                                destroyed.nodes_df.loc[v, "route"] = None
-                                destroyed.nodes_df.loc[v, "done"] = False
-                                if len(destroyed.routes[first_route_index]) != 2:
-                                    destroyed.update_times_attributes_routes(first_route_index)
-                                    destroyed.routes_cost[first_route_index] = destroyed.route_cost_calculator(
-                                        first_route_index
-                                    )
-                                
-                                # SHOULD I STAY OR SHOULD I GO?
-                                # destroyed.routes[second_route_index].insert(
-                                #     customers2.index(j2), v
-                                # )
-
-                                destroyed.unassigned.append(v)
-                                logger.debug(
-                                    f"\nRemoved customer {v} from route {first_route_index} and inserted\
-                                    in position {customers2.index(j2)} of route {second_route_index}."
-                                )
-                                return remove_empty_routes(destroyed)
-                            else:
-                                logger.debug(f"No customer found to remove.")
-                        # else:
-                        # print(f"Time window check failed.")
-                    
-
-    destroyed.update_unassigned_list()
-    print(f"Finished")
-    return remove_empty_routes(destroyed)
-
 def worst_removal(state: CvrptwState, rng: np.random.Generator) -> CvrptwState:
     """
     Removes customers in decreasing order of service cost.
@@ -417,30 +344,34 @@ def worst_removal(state: CvrptwState, rng: np.random.Generator) -> CvrptwState:
         for i in route.customers_list[1:-1]:
             j = route.customers_list[route.customers_list.index(i) - 1]
             k = route.customers_list[route.customers_list.index(i) + 1]
-            service_cost = (state.distances[j][i] +
-                            state.distances[i][k] -
-                            state.distances[j][k]
-                            )
+            service_cost = (
+                state.distances[j][i] + state.distances[i][k] - state.distances[j][k]
+            )
             if service_cost > max_service_cost:
                 max_service_cost = service_cost
                 worst_customer = i
                 worst_route = route_idx
     # Removes the worst customer
     destroyed.routes[worst_route].remove(worst_customer)
-    #Update df
+    # Update df
     destroyed.nodes_df.loc[worst_customer, "route"] = None
     destroyed.nodes_df.loc[worst_customer, "done"] = False
     if len(destroyed.routes[worst_route]) != 2:
         destroyed.update_times_attributes_routes(worst_route)
-        destroyed.routes_cost[worst_route] = destroyed.route_cost_calculator(worst_route)
+        destroyed.routes_cost[worst_route] = destroyed.route_cost_calculator(
+            worst_route
+        )
     destroyed.unassigned.append(worst_customer)
 
     destroyed.update_unassigned_list()
     return destroyed
 
-def exchange_reducing_removal(state: CvrptwState, rng: np.random.Generator) -> CvrptwState:
+
+def exchange_reducing_removal(
+    state: CvrptwState, rng: np.random.Generator
+) -> CvrptwState:
     """
-    Variation of the cost-reducing removal based on Wang et. al (2024). Selects 
+    Variation of the cost-reducing removal based on Wang et. al (2024). Selects
     customers in pairs, allowing one customer to be replaced by another simultaneously.
         Parameters:
             state: CvrptwState
@@ -485,8 +416,14 @@ def exchange_reducing_removal(state: CvrptwState, rng: np.random.Generator) -> C
                     if twc_checks > iterations:
                         break
 
-                    if destroyed.twc[i2][v1] != -np.inf and destroyed.twc[v1][j2] != np.inf:
-                        if destroyed.twc[i1][v2] != -np.inf and destroyed.twc[v2][j1] != np.inf:
+                    if (
+                        destroyed.twc[i2][v1] != -np.inf
+                        and destroyed.twc[v1][j2] != np.inf
+                    ):
+                        if (
+                            destroyed.twc[i1][v2] != -np.inf
+                            and destroyed.twc[v2][j1] != np.inf
+                        ):
                             di1v1 = destroyed.distances[i1][v1]
                             dv1j1 = destroyed.distances[v1][j1]
                             di2v2 = destroyed.distances[i2][v2]
@@ -497,12 +434,19 @@ def exchange_reducing_removal(state: CvrptwState, rng: np.random.Generator) -> C
                             di2v1 = destroyed.distances[i2][v1]
                             dv1j2 = destroyed.distances[v1][j2]
 
-                            if di1v1 + dv1j1 + di2v2 + dv2j2 > di1v2 + dv2j1 + di2v1 + dv1j2:
+                            if (
+                                di1v1 + dv1j1 + di2v2 + dv2j2
+                                > di1v2 + dv2j1 + di2v1 + dv1j2
+                            ):
                                 # swap v1 and v2
                                 route1.customers_list[idx1] = v2
                                 route2.customers_list[idx2] = v1
-                                destroyed.update_times_attributes_routes(first_route_index)
-                                destroyed.update_times_attributes_routes(second_route_index)
+                                destroyed.update_times_attributes_routes(
+                                    first_route_index
+                                )
+                                destroyed.update_times_attributes_routes(
+                                    second_route_index
+                                )
                                 destroyed.update_unassigned_list()
 
                                 return remove_empty_routes(destroyed)
