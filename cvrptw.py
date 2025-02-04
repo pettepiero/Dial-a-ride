@@ -13,38 +13,55 @@ from cvrptw.operators.destroy import *
 from cvrptw.operators.repair import *
 from cvrptw.operators.wang_operators import *
 from cvrptw.output.analyze_solution import verify_time_windows
-from cvrptw.myvrplib.input_output import print_results_dict, parse_options
+from cvrptw.myvrplib.input_output import print_results_dict, parse_options, add_d_operators, add_i_operators
 from cvrptw.output.video import generate_video
 SEED = 1234
 NUM_ITERATIONS = 100
 
-# logging setup
-import logging
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=LOGGING_LEVEL)
 
 def main():
 
     args = parse_options()
     print(f"Arguments: {args}")
 
-    # alns = ALNS(rnd.default_rng(SEED))
-    alns = ALNS(rnd.default_rng())
+    # random seed setup
+    if args.random:
+        seed = rnd.default_rng().integers(0, 2**32)
+        print(f"Using random seed {seed}")
+        alns = ALNS(rnd.default_rng(seed=seed))
+    else:
+        if args.seed:
+            print(f"Using fixed seed {args.seed}")
+            alns = ALNS(rnd.default_rng(seed=args.seed))
+        else:
+            print(f"Using fixed seed {SEED}")
+            alns = ALNS(rnd.default_rng(seed=SEED))
 
-    alns.add_destroy_operator(random_removal)
-    alns.add_destroy_operator(random_route_removal)
-    alns.add_destroy_operator(cost_reducing_removal)
-    alns.add_destroy_operator(worst_removal)
+    # setting up alns operators
+    if args.removal_operators:
+        add_d_operators(args.removal_operators, alns)
+    else:
+        add_d_operators(0, alns)
 
-    alns.add_destroy_operator(exchange_reducing_removal)  #to be implemented
-    # alns.add_destroy_operator(shaw_removal)   #to be implemented
+    if args.insertion_operators:
+        add_i_operators(args.insertion_operators, alns)
+    else:
+        add_i_operators(0, alns)
 
-    alns.add_repair_operator(greedy_repair_tw)
-    alns.add_repair_operator(wang_greedy_repair)
+    # alns.add_destroy_operator(random_removal)
+    # alns.add_destroy_operator(random_route_removal)
+    # alns.add_destroy_operator(cost_reducing_removal)
+    # alns.add_destroy_operator(worst_removal)
 
+    # alns.add_destroy_operator(exchange_reducing_removal)  #to be implemented
+    # # alns.add_destroy_operator(shaw_removal)   #to be implemented
+
+    # alns.add_repair_operator(greedy_repair_tw)
+    # alns.add_repair_operator(wang_greedy_repair)
+    
     init = CvrptwState(dataset=data)
     initial_solution = nearest_neighbor_tw(state=init, initial_time_slot=False)
-    select = RouletteWheel([25, 5, 1, 0], 0.8, 5, 2)
+    select = RouletteWheel([25, 5, 1, 0], 0.8, len(alns.destroy_operators), len(alns.repair_operators))
     # select = RandomSelect(num_destroy=4, num_repair=2)
     accept = RecordToRecordTravel.autofit(
         initial_solution.objective(), 0.02, 0, NUM_ITERATIONS

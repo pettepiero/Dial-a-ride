@@ -1,7 +1,10 @@
 import tabulate
 import argparse
 import json
-
+from cvrptw.operators.destroy import random_removal, random_route_removal, cost_reducing_removal, worst_removal, exchange_reducing_removal
+from cvrptw.operators.repair import greedy_repair_tw
+from cvrptw.operators.wang_operators import wang_greedy_repair
+from alns import ALNS
 def print_results_dict(results_dict: dict) -> None:
     """
     Prints the results dictionary as a table.
@@ -21,30 +24,30 @@ def parse_options():
     # Define command line arguments with sensible defaults
     parser.add_argument("--config", type=str, help="Configuration file in JSON format.")
     parser.add_argument(
-        "--random",
-        action="store_true",
-        help="Use a random seed instead of a fixed one.",
+        "--seed",
+        type=int,
+        help="Specify random seed to use. Default is 1234.",
     )
     parser.add_argument(
-        "--logging",
-        type=str,
-        default="ERROR",
-        help="Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL).",
+        "--random",
+        action=argparse.BooleanOptionalAction,
+        help="Use a random seed or not.",
     )
     parser.add_argument(
         "--dataset", type=str, default="pr12", help="Dataset name (pr01 to pr20)."
     )
-
     parser.add_argument(
         "--removal_operators",
         type=int,
-        default=1,
-        help="Number of removal operators (1 means all implemented).",
+        default=0,
+        help="Removal operators (0 means all implemented).Otherwise: \
+            1: random_removal, 2: random_route_removal, 3: cost_reducing_removal, 4: worst_removal,\
+                5: exchange_reducing_removal. Example: --removal_operators 12 means random_removal and random_route_removal.",
     )
     parser.add_argument(
         "--insertion_operators",
         type=int,
-        default=1,
+        default=0,
         help="Number of insertion operators (1 means all implemented).",
     )
     parser.add_argument(
@@ -108,3 +111,60 @@ def read_json_options(config_file: str) -> dict:
     except Exception as e:
         print(f"Error loading config file: {e}")
         return {}
+
+
+def add_d_operators(ops: int, alns: ALNS):
+    """Add destroy operators to the ALNS object, as described by the --help option"""
+    if ops == 0:
+        alns.add_destroy_operator(random_removal)
+        alns.add_destroy_operator(random_route_removal)
+        alns.add_destroy_operator(cost_reducing_removal)
+        alns.add_destroy_operator(worst_removal)
+        alns.add_destroy_operator(exchange_reducing_removal)
+        print(f"Added all destroy operators")
+        return
+    else:
+        assert isinstance(ops, int)
+        ops_list = [int(digit) for digit in str(ops)]
+        for op in ops_list:
+            match op:
+                case 1:
+                    alns.add_destroy_operator(random_removal)
+                    print(f"Added random removal operator")
+                case 2:
+                    alns.add_destroy_operator(random_route_removal)
+                    print(f"Added random route removal operator")
+                case 3:
+                    alns.add_destroy_operator(cost_reducing_removal)
+                    print(f"Added cost reducing removal operator")
+                case 4:
+                    alns.add_destroy_operator(worst_removal)
+                    print(f"Added worst removal operator")
+                case 5:
+                    alns.add_destroy_operator(exchange_reducing_removal)
+                    print(f"Added exchange reducing removal operator")
+                case _:
+                    print(f"Operator {op} not implemented. Skipping.")
+        return
+
+def add_i_operators(ops: int, alns: ALNS):
+    """Add insertion operators to the ALNS object, as described by the --help option"""
+    if ops == 0:
+        alns.add_repair_operator(greedy_repair_tw)
+        alns.add_repair_operator(wang_greedy_repair)
+        print(f"Added all repair operators")
+        return
+    else:
+        assert isinstance(ops, int)
+        ops_list = [int(digit) for digit in str(ops)]
+        for op in ops_list:
+            match op:
+                case 1:
+                    alns.add_repair_operator(greedy_repair_tw)
+                    print("Added greedy repair operator")
+                case 2:
+                    alns.add_repair_operator(wang_greedy_repair)
+                    print("Added Wang greedy repair operator")
+                case _:
+                    print(f"Operator {op} not implemented. Skipping.")
+        return

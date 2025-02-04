@@ -1,9 +1,8 @@
 {
     "random": false,
-    "logging": "ERROR",
     "dataset": "pr12",
     "removal_operators": 1,
-    "insertion_operators": 1,
+    "insertion_operators": 0,
     "acceptance_criterion": 1,
     "stop_criterion": 1,
     "num_iterations": 100,
