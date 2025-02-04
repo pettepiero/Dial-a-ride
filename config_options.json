@@ -2,7 +2,6 @@
     "random": false,
     "logging": "ERROR",
     "dataset": "pr12",
-    "degree_of_destruction": 0.05,
     "removal_operators": 1,
     "insertion_operators": 1,
     "acceptance_criterion": 1,

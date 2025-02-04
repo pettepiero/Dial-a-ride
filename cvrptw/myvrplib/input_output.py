@@ -32,14 +32,9 @@ def parse_options():
         help="Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL).",
     )
     parser.add_argument(
-        "--dataset", type=str, default="pr12", help="Dataset name (e.g., pr01 to pr20)."
+        "--dataset", type=str, default="pr12", help="Dataset name (pr01 to pr20)."
     )
-    parser.add_argument(
-        "--degree_of_destruction",
-        type=float,
-        default=0.05,
-        help="Degree of destruction (default: 0.05).",
-    )
+
     parser.add_argument(
         "--removal_operators",
         type=int,

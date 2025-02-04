@@ -23,8 +23,6 @@ import logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=LOGGING_LEVEL)
 
-degree_of_destruction = 0.05
-
 def main():
 
     args = parse_options()
