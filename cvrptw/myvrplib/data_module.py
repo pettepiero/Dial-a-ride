@@ -2,6 +2,7 @@ import numpy as np
 import numpy.random as rnd
 import copy
 import pandas as pd
+from typing import Union
 
 END_OF_DAY = 1000
 SEED = 1234
@@ -193,7 +194,8 @@ def cost_matrix_from_coords(coords: list, cordeau: bool=True) -> list:
 
 
 def calculate_depots(
-    data, rng: np.random.Generator = rnd.default_rng(SEED)
+    data: Union[dict, pd.DataFrame], rng: np.random.Generator = rnd.default_rng(SEED),
+    n_vehicles: int=None
 ):
     """
     Calculate the depot index for the vehicles. If the number of vehicles is equal to the number of depots,
@@ -206,9 +208,6 @@ def calculate_depots(
     n_vehicles = data["vehicles"]
     n_depots = data["n_depots"]
     depots = data["depots"]
-    # print(f"Number of customers: {n_customers}")
-    # print(f"Before, depot to vehicles: {data['depot_to_vehicles']}")
-    # Initialization of the dictionaries
     for depot in depots:
         data["depot_to_vehicles"][depot] = []
     for vehicle in range(n_vehicles):
@@ -404,7 +403,7 @@ def get_initial_data(cust_df: pd.DataFrame) -> pd.DataFrame:
     """
     return cust_df.loc[cust_df["call_in_time_slot"] == 0]
 
-def create_depots_dict(data: dict) -> dict:
+def create_depots_dict(data: Union[dict, pd.DataFrame], num_vehicles: int=None) -> dict:
     """
     Create a dictionary with depot information.
     Attributes:
@@ -419,15 +418,24 @@ def create_depots_dict(data: dict) -> dict:
         depots_indices: list
             List with the indices of the dep
     """
-
-    depots_dict = {
-        "num_depots": data["n_depots"],
-        "depot_to_vehicles": data["depot_to_vehicles"],
-        "vehicle_to_depot": data["vehicle_to_depot"],
-        "coords": data["node_coord"][data["dimension"] + 1 :],
-        "depots_indices": data["depots"],
-    }
-
+    if isinstance(data, pd.DataFrame):
+        depots_dict = {
+            "num_depots": data["service_time"].value_counts()[0],
+            "depot_to_vehicles": {},
+            "vehicle_to_depot": {},
+            "coords": data.loc[data["service_time"] == 0, ["x", "y"]].values,
+            "depots_indices": data.loc[data["demand"] == 0, "id"].tolist(),
+        }
+        return depots_dict
+    
+    elif isinstance(data, dict):
+        depots_dict = {
+            "num_depots": data["n_depots"],
+            "depot_to_vehicles": data["depot_to_vehicles"],
+            "vehicle_to_depot": data["vehicle_to_depot"],
+            "coords": data["node_coord"][data["dimension"] + 1 :],
+            "depots_indices": data["depots"],
+        }
     return depots_dict
 
 data = read_cordeau_data(

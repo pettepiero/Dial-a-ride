@@ -10,6 +10,7 @@ from cvrptw.myvrplib.route import Route
 import numpy as np
 import pandas as pd
 import logging
+from typing import Union
 
 logger = logging.getLogger(__name__)
 logger.setLevel(LOGGING_LEVEL)
@@ -23,8 +24,8 @@ class CvrptwState:
             List of routes in the state.
         routes_cost: list
             List of costs of each route.
-        dataset: dict
-            Dictionary containing the dataset.
+        dataset: dict or pd.DataFrame
+            Dictionary or pd.DataFrame containing the dataset.
         unassigned: list
             List of unassigned customers.
         nodes_df: pd.DataFrame
@@ -57,23 +58,32 @@ class CvrptwState:
         self,
         routes: list[Route] = None,
         routes_cost: list = None,
-        dataset: dict = data,
+        dataset: Union[dict, pd.DataFrame] = data,
         given_unassigned: list = None,
         distances: np.ndarray = None,
         nodes_df: pd.DataFrame = None,
         current_time: int = 0,
         seed: int = 0,
     ):
-
-        self.dataset = dataset
-        self.seed = seed
-        self.routes = routes if routes is not None else []
-        if nodes_df is not None:
-            self.nodes_df = nodes_df
+        
+        if isinstance(dataset, dict):
+            self.dataset = dataset
+            self.seed = seed
+            self.routes = routes if routes is not None else []
+            if nodes_df is not None:
+                self.nodes_df = nodes_df
+            else:
+                self.nodes_df = dynamic_df_from_dict(dataset, seed=seed)
+        elif isinstance(dataset, pd.DataFrame):
+            self.nodes_df = dataset
+            self.dataset = data
+            self.seed = seed
+            self.routes = routes if routes is not None else []
+            self.depots = dataset.loc[dataset["service_time"] == 0, "id"].tolist()
         else:
-            self.nodes_df = dynamic_df_from_dict(dataset, seed=seed)
-        # Initialize distances matrix
+            raise ValueError("Dataset must be a dictionary or a DataFrame.")
 
+        # Initialize distances matrix
         full_coordinates = self.nodes_df[["x", "y"]].values
 
         if distances is not None:
@@ -107,15 +117,12 @@ class CvrptwState:
             self.unassigned = unassigned
 
         # Initialize time window compatibility matrix
-        full_times = self.nodes_df[["start_time", "end_time"]].values
-
-    
-        for depot in dataset["depots"]:
-            full_times = np.append(full_times, [[0, END_OF_DAY]], axis=0)
+        full_times = self.nodes_df[["pstart_time", "pend_time", "dstart_time", "dend_time"]].values
         full_times = full_times.tolist()
         self.twc = self.generate_twc_matrix(
             full_times,
             self.distances,
+            pd=True
         )
         self.current_time = current_time
 
@@ -212,7 +219,7 @@ class CvrptwState:
         # TODO udpate planned windows
         self.calculate_planned_times(route_index)
 
-    def generate_twc_matrix(self, time_windows: list, distances: np.ndarray, cordeau: bool = True) -> list:
+    def generate_twc_matrix(self, time_windows: list, distances: np.ndarray, cordeau: bool = True, pd: bool = False) -> list:
         """
         Generate the time window compatability matrix matrix. If cordeau is True,
         the first row and column are set to -inf, as customer 0 is not considered
@@ -224,26 +231,28 @@ class CvrptwState:
                     List of distances between each pair of customers.
                 cordeau: bool
                     If True, the first row and column are set to -inf.
+                pd: bool
+                    If True, TWC is computed for pick up and delivery problem (default is False).
             Returns:
                 list
                     Time window compatibility matrix.
         """
-
-        start_idx = 1 if cordeau else 0
-        twc = np.zeros_like(distances)
-        for i in range(start_idx, distances.shape[0]):
-            for j in range(start_idx, distances.shape[0]):
-                if i != j:
-                    twc[i][j] = time_window_compatibility(
-                        distances[i, j], time_windows[i], time_windows[j]
-                    )
-                else:
-                    twc[i][j] = -np.inf
-        if cordeau:
-            for i in range(distances.shape[0]):
-                twc[i][0] = -np.inf
-                twc[0][i] = -np.inf
-        return twc
+        if not pd:
+            start_idx = 1 if cordeau else 0
+            twc = np.zeros_like(distances)
+            for i in range(start_idx, distances.shape[0]):
+                for j in range(start_idx, distances.shape[0]):
+                    if i != j:
+                        twc[i][j] = time_window_compatibility(
+                            distances[i, j], time_windows[i], time_windows[j]
+                        )
+                    else:
+                        twc[i][j] = -np.inf
+            if cordeau:
+                for i in range(distances.shape[0]):
+                    twc[i][0] = -np.inf
+                    twc[0][i] = -np.inf
+            return twc
 
     def get_dmax(self):
         """

@@ -1,4 +1,5 @@
 import numpy.random as rnd
+import pandas as pd
 
 from alns import ALNS
 from alns.accept import RecordToRecordTravel
@@ -16,7 +17,7 @@ from cvrptw.output.analyze_solution import verify_time_windows
 from cvrptw.myvrplib.input_output import print_results_dict, parse_options
 from cvrptw.output.video import generate_video
 SEED = 1234
-NUM_ITERATIONS = 100
+NUM_ITERATIONS = 200
 
 # logging setup
 import logging
