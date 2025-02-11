@@ -9,5 +9,7 @@
     "stop_criterion": 1,
     "num_iterations": 100,
     "operator_selection_schemes": 1,
-    "video": false
+    "video": false,
+    "vehicle_capacity": 195,
+    "num_vehicles": 2,
 }

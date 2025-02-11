@@ -76,6 +76,18 @@ def parse_options():
         default=1,
         help="Operator selection schemes (1 means RouletteWheel).",
     )
+    parser.add_argument(
+        "--n_vehicles",
+        type=int,
+        default=2,
+        help="Number of vehicles (default: 2).",
+    )
+    parser.add_argument(
+        "--vehicle_capacity",
+        type=int,
+        default=195,
+        help="Vehicle capacity (default: 195).",
+    )
     
     parser.add_argument('--video', action=argparse.BooleanOptionalAction, help='Generate video from images. Video is saved in outputs/videos, and images in outputs/images. \
                         Use --video to create video, --no-video otherwise.', default=False)

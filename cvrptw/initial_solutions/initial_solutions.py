@@ -1,13 +1,7 @@
 from typing import List
 import numpy as np
 import pandas as pd
-from cvrptw.myvrplib.data_module import (
-    data,
-    d_data,
-    calculate_depots,
-    get_initial_data,
-    get_ids_of_time_slot,
-)
+from cvrptw.myvrplib.data_module import get_ids_of_time_slot, cust_row
 from cvrptw.myvrplib.vrpstates import CvrptwState
 from cvrptw.myvrplib.route import Route
 from cvrptw.myvrplib.myvrplib import time_window_check
@@ -47,11 +41,13 @@ def time_neighbours(state: CvrptwState, customer: int) -> list:
                 The list of customers in order of increasing time from the
                 given customer, excluding the depots.
     """
-    current_start_time = state.nodes_df.loc[customer, "start_time"]
-    current_start_time = current_start_time.item()
 
-    locations = state.nodes_df[state.nodes_df['start_time'] > current_start_time][["id", "start_time"]].values.tolist()
-    locations = [[loc, time] for loc, time in locations if state.distances[customer][loc] + current_start_time <= state.nodes_df.loc[loc, "end_time"].item()]
+    current_start_time = state.nodes_df.loc[state.nodes_df["id"] == customer, "pstart_time"]
+    current_start_time = current_start_time.item()
+    print(f"DEBUG: considering customer: {customer}")
+
+    locations = state.nodes_df[state.nodes_df['pstart_time'] > current_start_time][["id", "pstart_time"]].values.tolist()
+    locations = [[loc, time] for loc, time in locations if state.distances[customer][loc] + current_start_time <= state.nodes_df.loc[loc, "pend_time"].item()]
     locations = sorted(locations, key=lambda x: x[1])
     locations = [loc for loc in locations if loc != customer]
 
@@ -109,7 +105,7 @@ def nearest_neighbor_tw(state: CvrptwState, cordeau:bool = True, initial_time_sl
             nearest = int(nearest[0])  # Nearest unvisited reachable customer
             # Check vehicle capacity and time window constraints
             nearest_demand, nearest_end_time = state.nodes_df.loc[
-                nearest, ["demand", "end_time"]
+                nearest, ["demand", "pend_time"]
             ].values
             edge_time = state.distances[current][nearest].item()
 
@@ -137,9 +133,15 @@ def nearest_neighbor_tw(state: CvrptwState, cordeau:bool = True, initial_time_sl
     for route_num, route in enumerate(routes):
         for customer in route.customers_list:
             state.nodes_df.loc[customer, "route"] = route_num
-    
+
     # Create the solution object of type CvrptwState
-    solution = CvrptwState(routes, nodes_df=state.nodes_df, given_unassigned=list(unvisited))
+    solution = CvrptwState(
+        routes=routes,
+        n_vehicles=state.n_vehicles,
+        vehicle_capacity=state.vehicle_capacity,
+        nodes_df=state.nodes_df,
+        given_unassigned=list(unvisited),
+    )
     # Update the time and cost attributes of the solution
     for route_idx in range(len(solution.routes)):
         solution.update_times_attributes_routes(route_idx)

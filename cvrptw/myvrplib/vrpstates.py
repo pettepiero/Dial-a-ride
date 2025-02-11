@@ -1,9 +1,12 @@
 from cvrptw.myvrplib.data_module import (
-    data, 
-    generate_dynamic_df, 
-    dynamic_df_from_dict, 
+    data,
+    generate_dynamic_df,
+    dynamic_df_from_dict,
     cost_matrix_from_coords,
-    create_depots_dict
+    create_depots_dict,
+    dynamic_extended_df,
+    generate_twc_matrix,
+    create_cust_nodes_mapping
 )
 from cvrptw.myvrplib.myvrplib import END_OF_DAY, UNASSIGNED_PENALTY, LOGGING_LEVEL
 from cvrptw.myvrplib.route import Route
@@ -26,8 +29,11 @@ class CvrptwState:
             List of costs of each route.
         dataset: dict or pd.DataFrame
             Dictionary or pd.DataFrame containing the dataset.
+        cust_to_nodes: dict
+            Dictionary mapping customer IDs to node IDs.
         unassigned: list
-            List of unassigned customers.
+            List of unassigned customers' IDs (note node IDs). 
+            To get node IDs use mapping cust_to_nodes.
         nodes_df: pd.DataFrame
             DataFrame containing the customers data.
         seed: int
@@ -56,40 +62,43 @@ class CvrptwState:
 
     def __init__(
         self,
+        n_vehicles: int,
+        vehicle_capacity: int,
         routes: list[Route] = None,
         routes_cost: list = None,
         dataset: Union[dict, pd.DataFrame] = data,
         given_unassigned: list = None,
         distances: np.ndarray = None,
-        nodes_df: pd.DataFrame = None,
         current_time: int = 0,
         seed: int = 0,
     ):
-        
+
         if isinstance(dataset, dict):
             self.dataset = dataset
             self.seed = seed
             self.routes = routes if routes is not None else []
-            if nodes_df is not None:
-                self.nodes_df = nodes_df
-            else:
-                self.nodes_df = dynamic_df_from_dict(dataset, seed=seed)
+            self.nodes_df = dynamic_df_from_dict(dataset, seed=seed)
         elif isinstance(dataset, pd.DataFrame):
             self.nodes_df = dataset
-            self.dataset = data
             self.seed = seed
             self.routes = routes if routes is not None else []
             self.depots = dataset.loc[dataset["service_time"] == 0, "id"].tolist()
         else:
             raise ValueError("Dataset must be a dictionary or a DataFrame.")
 
-        # Initialize distances matrix
-        full_coordinates = self.nodes_df[["x", "y"]].values
+        # # Initialize distances matrix
 
+        # Change data format for twc and distances computation
+        self.dataset = self.nodes_df
+        self.twc_format_nodes_df = dynamic_extended_df(self.nodes_df)
+        self.cust_to_nodes = create_cust_nodes_mapping(self.twc_format_nodes_df)
         if distances is not None:
             self.distances = distances
         else:
-            self.distances = cost_matrix_from_coords(coords=full_coordinates)
+            self.distances = cost_matrix_from_coords(
+                coords=self.twc_format_nodes_df[["x", "y"]].values,
+                cordeau=False
+            )
 
         if routes_cost is not None:
             self.routes_cost = routes_cost
@@ -104,8 +113,9 @@ class CvrptwState:
         # logger.debug(f"len(self.routes) = {len(self.routes)}")
 
         assert len(self.routes) == len(self.routes_cost), "Routes and routes_cost must have the same length."
+        self.n_vehicles = n_vehicles
 
-        self.depots = create_depots_dict(dataset)
+        self.depots = create_depots_dict(self.nodes_df, n_vehicles)
         if given_unassigned is not None:
             self.unassigned = given_unassigned
         else:
@@ -117,13 +127,14 @@ class CvrptwState:
             self.unassigned = unassigned
 
         # Initialize time window compatibility matrix
-        full_times = self.nodes_df[["pstart_time", "pend_time", "dstart_time", "dend_time"]].values
-        full_times = full_times.tolist()
-        self.twc = self.generate_twc_matrix(
-            full_times,
+        self.twc = generate_twc_matrix(
+            self.twc_format_nodes_df[["start_time", "end_time"]].values.tolist(),
             self.distances,
-            pd=True
+            cordeau=False, #node indices start from 0 (cust indices start from 1 because of cordeau)
         )
+
+        del self.twc_format_nodes_df
+
         self.current_time = current_time
 
         self.qmax = self.get_qmax()
@@ -131,12 +142,16 @@ class CvrptwState:
         self.norm_tw = (
             self.twc / self.dmax
         )  # Note: maybe use only norm_tw in the future?
-        self.n_vehicles = dataset["vehicles"]
-        self.n_customers = len(self.nodes_df) -1     # first line is not a customer
-        self.vehicle_capacity = dataset["capacity"]
+
+        self.n_vehicles = n_vehicles
+        self.n_customers = self.nodes_df.loc[
+            self.nodes_df["demand"] != 0
+        ].count() 
+        self.vehicle_capacity = vehicle_capacity
 
     def __str__(self):
-        return f"Routes: {[route.customers_list for route in self.routes]}, \nUnassigned: {self.unassigned}"
+        return  f"Planned routes: {[route.customers_list for route in self.routes]}, \
+                \nUnassigned customer IDs:  {self.unassigned}"
 
     def copy(self):
         return CvrptwState(
@@ -219,40 +234,6 @@ class CvrptwState:
         # TODO udpate planned windows
         self.calculate_planned_times(route_index)
 
-    def generate_twc_matrix(self, time_windows: list, distances: np.ndarray, cordeau: bool = True, pd: bool = False) -> list:
-        """
-        Generate the time window compatability matrix matrix. If cordeau is True,
-        the first row and column are set to -inf, as customer 0 is not considered
-        in the matrix.
-            Parameters:
-                time_windows: list
-                    List of time windows for each customer.
-                distances: list
-                    List of distances between each pair of customers.
-                cordeau: bool
-                    If True, the first row and column are set to -inf.
-                pd: bool
-                    If True, TWC is computed for pick up and delivery problem (default is False).
-            Returns:
-                list
-                    Time window compatibility matrix.
-        """
-        if not pd:
-            start_idx = 1 if cordeau else 0
-            twc = np.zeros_like(distances)
-            for i in range(start_idx, distances.shape[0]):
-                for j in range(start_idx, distances.shape[0]):
-                    if i != j:
-                        twc[i][j] = time_window_compatibility(
-                            distances[i, j], time_windows[i], time_windows[j]
-                        )
-                    else:
-                        twc[i][j] = -np.inf
-            if cordeau:
-                for i in range(distances.shape[0]):
-                    twc[i][0] = -np.inf
-                    twc[0][i] = -np.inf
-            return twc
 
     def get_dmax(self):
         """
@@ -397,28 +378,3 @@ class CvrptwState:
         for customer in self.routes[route_idx].customers_list:
             demand += self.nodes_df.loc[customer, "demand"].item()
         self.routes[route_idx].demand = demand
-
-
-def time_window_compatibility(tij: float, twi: tuple, twj: tuple) -> float:
-    """
-    Time Window Compatibility (TWC) between a pair of vertices i and j. Based on eq. (12) of
-    Wang et al. (2024). Returns the time window compatibility between two customers
-    i and j, given their time windows and the travel time between them.
-        Parameters:
-            tij: float
-                Travel time between the two customers.
-            twi: tuple
-                Time window of customer i.
-            twj: tuple
-                Time window of customer j.
-        Returns:
-            float
-                Time window compatibility between the two customers.
-    """
-    (ai, bi) = twi
-    (aj, bj) = twj
-
-    if bj > ai + tij:
-        return round(min([bi + tij, bj]) - max([ai + tij, aj]), 2)
-    else:
-        return -np.inf  # Incompatible time windows

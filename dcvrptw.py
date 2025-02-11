@@ -49,10 +49,14 @@ def main():
     alns.add_repair_operator(wang_greedy_repair)
 
     data = pd.read_csv("./data/dynamic_df.csv")
-    print(data)
 
-    init = CvrptwState(dataset=data)
+    init = CvrptwState(dataset=data, n_vehicles=args.n_vehicles, vehicle_capacity=args.vehicle_capacity)    
+    print(f"init.dataset: {init.dataset}")
+    print(f"init.nodes_df: {init.nodes_df}")
+    print(f"init.unassignes: {init.unassigned}")
+
     initial_solution = nearest_neighbor_tw(state=init, initial_time_slot=False)
+
     select = RouletteWheel([25, 5, 1, 0], 0.8, 5, 2)
     # select = RandomSelect(num_destroy=4, num_repair=2)
     accept = RecordToRecordTravel.autofit(

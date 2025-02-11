@@ -4,8 +4,14 @@ import copy
 import pandas as pd
 from typing import Union
 
+
 END_OF_DAY = 1000
 SEED = 1234
+
+# macro for mapping customer to row in the dataframe where each row corresponds
+# to a node, therefore each customer has 2 rows (pick up and delivery)
+cust_row = lambda id, pickup: id * 2 - 1 if pickup else id * 2
+
 
 def read_cordeau_data(file: str, print_data: bool = False) -> dict:
     """
@@ -52,7 +58,6 @@ def read_cordeau_data(file: str, print_data: bool = False) -> dict:
         customers.append(line.split())
 
     customers = np.array(customers, dtype=np.float64)
-    
 
     # Save depots in array
     depots = []
@@ -94,7 +99,9 @@ def read_cordeau_data(file: str, print_data: bool = False) -> dict:
     data_dict["service_time"] += [int(row[3]) for row in customers]
     data_dict["service_time"] += [int(row[3]) for row in depots]
     data_dict["edge_weight"] = cost_matrix_from_coords(data_dict["node_coord"])
-    calculate_depots(data_dict)
+    data_dict["depot_to_vehicles"], data_dict["vehicle_to_depot"] = calculate_depots(
+        data_dict, n_vehicles=data_dict["vehicles"]
+    )
 
     if print_data:
         print("Problem type: ", problem_type)
@@ -170,12 +177,27 @@ def read_solution_format(file: str, print_data: bool = False) -> dict:
 # data = read_solution_format("path_to_file.txt", print_data=True)
 
 
+def create_cust_nodes_mapping(twc_format_nodes_df: pd.DataFrame) -> dict:
+    """
+    Creates a dict mapping customer ids to the node_ids in the dataframe.
+    The expected dataframe should be in the format given by dynamic_extended_df,
+    this condition is tested at the beginning.
+    """
+    df_cols = twc_format_nodes_df.columns.to_list()
+    known_cols = ['node_id', 'cust_id', 'x', 'y', 'demand', 'start_time', 'end_time', 'service_time', 'call_in_time_slot', 'route', 'type']
+    assert all([col in df_cols for col in known_cols]), "Dataframe columns do not match the expected columns."
+    
+    cust_to_nodes = {cust: [] for cust in twc_format_nodes_df["cust_id"].unique()}
+    for index, row in twc_format_nodes_df.iterrows():
+        cust_to_nodes[row["cust_id"]].append(row["node_id"])
+    return cust_to_nodes
+
+
 def cost_matrix_from_coords(coords: list, cordeau: bool=True) -> list:
     """
     Create a cost matrix from a list of coordinates. Uses the Euclidean distance as cost. 
     If Cordeau notation is used, the first row and column are set to None.
     """
-
     n = len(coords)
     cost_matrix = np.zeros((n, n))
     if cordeau:
@@ -192,49 +214,117 @@ def cost_matrix_from_coords(coords: list, cordeau: bool=True) -> list:
                 cost_matrix[i, j] = round(np.linalg.norm(coords[i] - coords[j]), 2)
         return cost_matrix
 
+def generate_twc_matrix(
+    time_windows: list,
+    distances: np.ndarray,
+    cordeau: bool = True,
+) -> list:
+    """
+    Generate the time window compatability matrix matrix. If cordeau is True,
+    the first row and column are set to -inf, as customer 0 is not considered
+    in the matrix.
+        Parameters:
+            time_windows: list
+                List of time windows for each customer.
+            distances: list
+                List of distances between each pair of customers.
+            cordeau: bool
+                If True, the first row and column are set to -inf.
+        Returns:
+            list
+                Time window compatibility matrix.
+    """
+    start_idx = 1 if cordeau else 0
+    twc = np.zeros_like(distances)
+    for i in range(start_idx, distances.shape[0]):
+        for j in range(start_idx, distances.shape[0]):
+            if i != j:
+                twc[i][j] = time_window_compatibility(
+                    distances[i, j], time_windows[i], time_windows[j]
+                )
+            else:
+                twc[i][j] = -np.inf
+    if cordeau:
+        for i in range(distances.shape[0]):
+            twc[i][0] = -np.inf
+            twc[0][i] = -np.inf
+    return twc
+
+
+def time_window_compatibility(tij: float, twi: tuple, twj: tuple) -> float:
+    """
+    Time Window Compatibility (TWC) between a pair of vertices i and j. Based on eq. (12) of
+    Wang et al. (2024). Returns the time window compatibility between two customers
+    i and j, given their time windows and the travel time between them.
+        Parameters:
+            tij: float
+                Travel time between the two customers.
+            twi: tuple
+                Time window of customer i.
+            twj: tuple
+                Time window of customer j.
+        Returns:
+            float
+                Time window compatibility between the two customers.
+    """
+    (ai, bi) = twi
+    (aj, bj) = twj
+
+    if bj > ai + tij:
+        return round(min([bi + tij, bj]) - max([ai + tij, aj]), 2)
+    else:
+        return -np.inf  # Incompatible time windows
+
 
 def calculate_depots(
-    data: Union[dict, pd.DataFrame], rng: np.random.Generator = rnd.default_rng(SEED),
-    n_vehicles: int=None
-):
+    data: Union[dict, pd.DataFrame], 
+    n_vehicles: int,
+    rng: np.random.Generator = rnd.default_rng(SEED),
+) -> tuple:
     """
     Calculate the depot index for the vehicles. If the number of vehicles is equal to the number of depots,
     then vehicle i is mapped to depot i. If the number of vehicles is greater than the number of depots, then
     round robin assignment is used. If the number of vehicles is less than the number of depots, then random
     assignment is used, but load balancing between depots is guaranteed. The mapping is stored in the data
     dictionaries "depot_to_vehicles" and "vehicle_to_depot".
+    Parameters:
+        data (dict or pd.DataFrame): Data dictionary or DataFrame.
+        rng (np.random.Generator): Random number generator.
+        n_vehicles (int): Number of vehicles.
+    Returns:
+        tuple: Tuple of dicts (depot_to_vehicles, vehicle_to_depot).
     """
-    n_customers = data["dimension"]
-    n_vehicles = data["vehicles"]
-    n_depots = data["n_depots"]
-    depots = data["depots"]
-    for depot in depots:
-        data["depot_to_vehicles"][depot] = []
-    for vehicle in range(n_vehicles):
-        data["vehicle_to_depot"][vehicle] = None
+    if isinstance(data, dict):
+        n_depots = data["n_depots"]
+        depots = data["depots"]
+    elif isinstance(data, pd.DataFrame):
+        n_depots = data.loc[data["demand"] == 0, "id"].count()
+        depots = data.loc[data["demand"] == 0, "id"].tolist()
+
+    dict_depot_to_vehicles = {depot: [] for depot in depots}
+    dict_vehicle_to_depot = {vehicle: None for vehicle in range(n_vehicles)}
+    
     # vehicle i -> depot i
     if n_vehicles == n_depots:
         for depot in depots:
-            data["depot_to_vehicles"][depot].append(depot)
-            data["vehicle_to_depot"][depot] = depot
+            dict_depot_to_vehicles[depot].append(depot)
+            dict_vehicle_to_depot[depot] = depot
 
     elif n_vehicles > n_depots:
         # Round robin assignment
         for vehicle in range(n_vehicles):
             depot = vehicle % n_depots
-            # print(f"Vehicle {vehicle} assigned to depot {depot}.")
-            # print(f"Depot to vehicles: {data['depot_to_vehicles']}")
-            # print(f"After, depot to vehicles: {data['depot_to_vehicles']}")
-            # print(f"n_customer + depot: {n_customers + depot}")
-            data["depot_to_vehicles"][n_customers + depot].append(vehicle)
-            data["vehicle_to_depot"][vehicle] = n_customers + depot
+            dict_depot_to_vehicles[depot].append(vehicle)
+            dict_vehicle_to_depot[vehicle] = depot
     else:
         # Random assignment
         depots = rng.choice(depots, size=n_vehicles, replace=False)
         for vehicle in range(n_vehicles):
             depot = depots[vehicle]
-            data["depot_to_vehicles"][depot].append(vehicle)
-            data["vehicle_to_depot"][vehicle] = int(depot)
+            dict_depot_to_vehicles[depot].append(vehicle)
+            dict_vehicle_to_depot[vehicle] = int(depot)
+
+    return dict_depot_to_vehicles, dict_vehicle_to_depot
 
 
 def read_solution_format(file: str, print_data: bool = False) -> dict:
@@ -420,14 +510,18 @@ def create_depots_dict(data: Union[dict, pd.DataFrame], num_vehicles: int=None) 
     """
     if isinstance(data, pd.DataFrame):
         depots_dict = {
-            "num_depots": data["service_time"].value_counts()[0],
+            "num_depots": data["demand"].value_counts()[0],
             "depot_to_vehicles": {},
             "vehicle_to_depot": {},
-            "coords": data.loc[data["service_time"] == 0, ["x", "y"]].values,
+            "coords": data.loc[data["demand"] == 0, ["x", "y"]].values,
             "depots_indices": data.loc[data["demand"] == 0, "id"].tolist(),
         }
+
+        depots_dict["depot_to_vehicles"], depots_dict["vehicle_to_depot"] = (
+            calculate_depots(data, n_vehicles=num_vehicles)
+        )
         return depots_dict
-    
+
     elif isinstance(data, dict):
         depots_dict = {
             "num_depots": data["n_depots"],
@@ -437,6 +531,131 @@ def create_depots_dict(data: Union[dict, pd.DataFrame], num_vehicles: int=None) 
             "depots_indices": data["depots"],
         }
     return depots_dict
+
+
+def dynamic_extended_df(data: Union[pd.DataFrame, str]) -> pd.DataFrame:
+    """
+    Create a df where each entry is either a pick up or delivery node.
+    Parameters:
+        data (pd.DataFrame or str): Dataframe or path to file.
+    Returns:
+        pd.DataFrame: Extended dataframe.
+    """
+
+    if isinstance(data, str):
+        expected_columns = ['id', 'x', 'y', 'demand', 'pstart_time', 'pend_time', 'dx', 'dy', 'dstart_time', 'dend_time', 'service_time', 'call_in_time_slot', 'route', 'done', 'id.1']
+        init_data = pd.read_csv(data)
+        if not np.array_equal(init_data.columns.to_list(), expected_columns):
+            raise ValueError(f"CSV columns do not match the expected columns. Found: {init_data.columns.tolist()}")
+    elif isinstance(data, pd.DataFrame):
+        init_data = data
+    else:
+        print("Error: Data must be a DataFrame or a path to a file.")
+        return None
+    # exclude depots
+    sub_df = init_data.loc[init_data["demand"] != 0]
+    new_df_list = []
+    for _, row in sub_df.iterrows():
+        pickup_series = pd.Series(
+            [
+                row["id"],
+                row["x"],
+                row["y"],
+                row["demand"],
+                row["pstart_time"],
+                row["pend_time"],
+                row["service_time"],
+                row["call_in_time_slot"],
+                row["route"],
+                "pickup",
+            ],
+            index=[
+                "cust_id",
+                "x",
+                "y",
+                "demand",
+                "start_time",
+                "end_time",
+                "service_time",
+                "call_in_time_slot",
+                "route",
+                "type",
+            ],
+        )
+
+        delivery_series = pd.Series(
+            [
+                row["id"],
+                row["dx"],
+                row["dy"],
+                row["demand"],
+                row["dstart_time"],
+                row["dend_time"],
+                row["service_time"],
+                row["call_in_time_slot"],
+                row["route"],
+                "delivery",
+            ],
+            index=[
+                "cust_id",
+                "x",
+                "y",
+                "demand",
+                "start_time",
+                "end_time",
+                "service_time",
+                "call_in_time_slot",
+                "route",
+                "type",
+            ],
+        )
+
+        new_df_list.append(pickup_series)
+        new_df_list.append(delivery_series)
+
+    new_df = pd.concat(new_df_list, axis=1).T.reset_index(drop=True)
+    #depots series
+    depots_sub_df = init_data.loc[init_data["demand"] == 0]
+    depots_list = []
+    for _, row in depots_sub_df.iterrows():
+        depot_series = pd.Series(
+            [
+                row["id"],
+                row["x"],
+                row["y"],
+                row["demand"],
+                row["pstart_time"],
+                row["pend_time"],
+                row["service_time"],
+                row["call_in_time_slot"],
+                row["route"],
+                "depot",
+            ],
+            index=[
+                "cust_id",
+                "x",
+                "y",
+                "demand",
+                "start_time",
+                "end_time",
+                "service_time",
+                "call_in_time_slot",
+                "route",
+                "type",
+            ],
+        )
+        depots_list.append(depot_series)
+
+    depots_df = pd.concat(depots_list, axis=1).T.reset_index(drop=True)
+
+    new_df = pd.concat([new_df, depots_df])
+
+    new_df["node_id"] = range(len(new_df))
+    new_df.insert(0, "node_id", new_df.pop("node_id"))
+    new_df.reset_index(drop=True, inplace=True)
+    new_df.index += 1
+    return new_df
+
 
 data = read_cordeau_data(
     "./data/c-mdvrptw/pr12", print_data=False
