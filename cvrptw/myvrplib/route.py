@@ -13,7 +13,8 @@ class Route():
     Based on 'label' concept of: Wang et al (2024)
         Attributes:
             customers_list: list of int
-                List of customers in the route.
+                List of customers' IDs in the route. The first time a customer appears in the list,
+                it is being picked up, and the second time it appears, it is the drop off.
             vehicle: int
                 Vehicle used in the route.
             start_times: list of tuple
@@ -34,6 +35,9 @@ class Route():
         # second value is the planned departure time
         # NOTE: maybe only planned arrival time is sufficient
         self.demand = None
+
+    def __str__(self):
+        return f"Route(customers_list={self.customers_list}, vehicle={self.vehicle}, start_times={self.start_times}, planned_windows={self.planned_windows})"
 
     def __len__(self) -> int:
         """
@@ -62,7 +66,7 @@ class Route():
             Returns:
                 - None
         """
-        self.customers_list.remove(customer)
+        self.customers_list = list(filter(lambda a: a!=customer, self.customers_list))
 
     def insert(self, position: int, customer: int) -> None:
         """

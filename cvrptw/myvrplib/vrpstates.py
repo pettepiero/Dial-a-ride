@@ -76,15 +76,19 @@ class CvrptwState:
         if isinstance(dataset, dict):
             self.dataset = dataset
             self.seed = seed
-            self.routes = routes if routes is not None else []
             self.nodes_df = dynamic_df_from_dict(dataset, seed=seed)
         elif isinstance(dataset, pd.DataFrame):
             self.nodes_df = dataset
             self.seed = seed
-            self.routes = routes if routes is not None else []
             self.depots = dataset.loc[dataset["service_time"] == 0, "id"].tolist()
         else:
             raise ValueError("Dataset must be a dictionary or a DataFrame.")
+        
+        self.routes = routes if routes is not None else []
+        # Update self.nodes_df with the routes
+        for idx, route in enumerate(self.routes):
+            for customer in route.customers_list:
+                self.nodes_df.loc[self.nodes_df["id"] == customer, "route"] = int(idx)
 
         # # Initialize distances matrix
 
@@ -171,9 +175,22 @@ class CvrptwState:
         """
         route = self.routes[route_id].customers_list
         cost = 0
+        picked_up_customers = []
         for idx, customer in enumerate(route[:-1]):
+            if customer not in picked_up_customers:
+                start_node = self.cust_to_nodes[customer][0]
+                picked_up_customers.append(customer)
+            else:
+                start_node = self.cust_to_nodes[customer][1]
             next_customer = route[idx + 1]
-            cost += self.distances[customer][next_customer]
+            if next_customer not in picked_up_customers:
+                next_node = self.cust_to_nodes[next_customer][0]
+                # add next_customer to picked_up_customers only
+                # when it is considered the current customer, not now
+            else:
+                next_node = self.cust_to_nodes[next_customer][1]
+
+            cost += self.distances[start_node][next_node]
 
         return round(cost, 2)
 
@@ -218,11 +235,12 @@ class CvrptwState:
 
     def find_index_in_route(self, customer, route: Route):
         """
-        Return the index of the customer in the route.
+        Return the tuple containing indices of the customer in the route.
+        (pick up index, delivery index)
         """
         assert route is not None, "Route must be provided."
         if customer in route.customers_list:
-            return route.customers_list.index(customer)
+            return [i for i, x in enumerate(route.customers_list) if x == customer]
 
         raise ValueError(f"Given route does not contain customer {customer}.")
 
@@ -233,7 +251,6 @@ class CvrptwState:
         self.update_est_lst(route_index)
         # TODO udpate planned windows
         self.calculate_planned_times(route_index)
-
 
     def get_dmax(self):
         """
@@ -252,19 +269,26 @@ class CvrptwState:
         """
         Return the number of served customers.
         """
-        return sum(len(route.customers_list[1:-1]) for route in self.routes)
+        served_customers = self.served_customers()
+        
+        return len(served_customers)
 
     def served_customers(self):
         """
         Return the list of served customers.
         """
-        return [customer for route in self.routes for customer in route.customers_list[1:-1]]
+        served_customers = set()
+        for route in self.routes:
+            for customer in route.customers_list[1:-1]:
+                served_customers.add(customer)
+        
+        return list(served_customers)
 
         # TODO: Test this method
 
     def update_est_lst(self, route_index: int):
         """
-        Calculates vectors of the earliest (EST) and latest (LST) start times for each customer in the route.
+        Calculates vectors of the earliest (EST) and latest (LST) start times for each NODE in the route.
         Based on equations (3b) and (13) of Wang et al. (2024).
         Parameters:
             route_index: int

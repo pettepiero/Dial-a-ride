@@ -186,10 +186,16 @@ def create_cust_nodes_mapping(twc_format_nodes_df: pd.DataFrame) -> dict:
     df_cols = twc_format_nodes_df.columns.to_list()
     known_cols = ['node_id', 'cust_id', 'x', 'y', 'demand', 'start_time', 'end_time', 'service_time', 'call_in_time_slot', 'route', 'type']
     assert all([col in df_cols for col in known_cols]), "Dataframe columns do not match the expected columns."
-    
+
     cust_to_nodes = {cust: [] for cust in twc_format_nodes_df["cust_id"].unique()}
     for index, row in twc_format_nodes_df.iterrows():
         cust_to_nodes[row["cust_id"]].append(row["node_id"])
+
+    # Manually add second node for depots
+    depots_list = twc_format_nodes_df.loc[twc_format_nodes_df["type"] == "depot", "cust_id"].tolist()
+    for depot in depots_list:
+        cust_to_nodes[depot].append(cust_to_nodes[depot][0])
+
     return cust_to_nodes
 
 
@@ -541,17 +547,19 @@ def dynamic_extended_df(data: Union[pd.DataFrame, str]) -> pd.DataFrame:
     Returns:
         pd.DataFrame: Extended dataframe.
     """
-
     if isinstance(data, str):
         expected_columns = ['id', 'x', 'y', 'demand', 'pstart_time', 'pend_time', 'dx', 'dy', 'dstart_time', 'dend_time', 'service_time', 'call_in_time_slot', 'route', 'done', 'id.1']
         init_data = pd.read_csv(data)
+        init_data.fillna(-1, inplace=True)
         if not np.array_equal(init_data.columns.to_list(), expected_columns):
             raise ValueError(f"CSV columns do not match the expected columns. Found: {init_data.columns.tolist()}")
     elif isinstance(data, pd.DataFrame):
         init_data = data
+
     else:
         print("Error: Data must be a DataFrame or a path to a file.")
         return None
+
     # exclude depots
     sub_df = init_data.loc[init_data["demand"] != 0]
     new_df_list = []
@@ -614,7 +622,7 @@ def dynamic_extended_df(data: Union[pd.DataFrame, str]) -> pd.DataFrame:
         new_df_list.append(delivery_series)
 
     new_df = pd.concat(new_df_list, axis=1).T.reset_index(drop=True)
-    #depots series
+    # depots series
     depots_sub_df = init_data.loc[init_data["demand"] == 0]
     depots_list = []
     for _, row in depots_sub_df.iterrows():
@@ -654,6 +662,11 @@ def dynamic_extended_df(data: Union[pd.DataFrame, str]) -> pd.DataFrame:
     new_df.insert(0, "node_id", new_df.pop("node_id"))
     new_df.reset_index(drop=True, inplace=True)
     new_df.index += 1
+    # new_df.fillna(-1, inplace=True)
+    new_df = new_df.infer_objects(copy=False)
+    new_df["route"] = new_df["route"].fillna(-1).astype(int)
+    # new_df = new_df.astype({"node_id": int, "cust_id": int, "demand": int, "start_time": int, "end_time": int, "service_time": int, "call_in_time_slot": int, "route": int})
+
     return new_df
 
 
