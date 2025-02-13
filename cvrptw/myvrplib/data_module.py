@@ -188,7 +188,9 @@ def create_cust_nodes_mapping(twc_format_nodes_df: pd.DataFrame) -> dict:
     assert all([col in df_cols for col in known_cols]), "Dataframe columns do not match the expected columns."
 
     cust_to_nodes = {cust: [] for cust in twc_format_nodes_df["cust_id"].unique()}
+    print(f"DEBUG: len(twc_format_nodes_df): {len(twc_format_nodes_df)}")
     for index, row in twc_format_nodes_df.iterrows():
+        # print(f"DEBUG: index: {index}, row: {row}")
         cust_to_nodes[row["cust_id"]].append(row["node_id"])
 
     # Manually add second node for depots
@@ -480,7 +482,7 @@ def generate_dynamic_df(file: str, static: bool = False, print_data: bool = Fals
 
 def get_ids_of_time_slot(customer_df: pd.DataFrame, time_slot: int) -> list:
     """
-    Get the IDs of customers that call in the given time slot.
+    Get the customer IDs of customers that call in the given time slot.
     """
     assert time_slot >= 0, "Time slot must be a non-negative integer."
 
@@ -661,7 +663,7 @@ def dynamic_extended_df(data: Union[pd.DataFrame, str]) -> pd.DataFrame:
     new_df["node_id"] = range(len(new_df))
     new_df.insert(0, "node_id", new_df.pop("node_id"))
     new_df.reset_index(drop=True, inplace=True)
-    new_df.index += 1
+    # new_df.index += 1
     # new_df.fillna(-1, inplace=True)
     new_df = new_df.infer_objects(copy=False)
     new_df["route"] = new_df["route"].fillna(-1).astype(int)

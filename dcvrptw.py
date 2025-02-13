@@ -9,7 +9,7 @@ from alns.stop import MaxIterations
 from cvrptw.myvrplib.myvrplib import LOGGING_LEVEL
 from cvrptw.myvrplib.data_module import d_data as d_data
 from cvrptw.myvrplib.vrpstates import CvrptwState
-from cvrptw.initial_solutions.initial_solutions import nearest_neighbor_tw
+from cvrptw.initial_solutions.initial_solutions import nearest_neighbor
 from cvrptw.operators.destroy import *
 from cvrptw.operators.repair import *
 from cvrptw.operators.wang_operators import *
@@ -50,12 +50,13 @@ def main():
 
     data = pd.read_csv("./data/dynamic_df.csv")
 
-    init = CvrptwState(dataset=data, n_vehicles=args.n_vehicles, vehicle_capacity=args.vehicle_capacity)    
-    print(f"init.dataset: {init.dataset}")
-    print(f"init.nodes_df: {init.nodes_df}")
-    print(f"init.unassignes: {init.unassigned}")
+    init = CvrptwState(dataset=data, n_vehicles=args.n_vehicles, vehicle_capacity=args.vehicle_capacity)
 
-    initial_solution = nearest_neighbor_tw(state=init, initial_time_slot=False)
+    initial_solution = nearest_neighbor(state=init, initial_time_slot=True)
+
+    print(f"\n\nDEBUG: initial_solution routes:")
+    print(initial_solution.routes[0])
+    print(initial_solution.routes[1])
 
     select = RouletteWheel([25, 5, 1, 0], 0.8, 5, 2)
     # select = RandomSelect(num_destroy=4, num_repair=2)

@@ -13,8 +13,7 @@ class Route():
     Based on 'label' concept of: Wang et al (2024)
         Attributes:
             customers_list: list of int
-                List of customers' IDs in the route. The first time a customer appears in the list,
-                it is being picked up, and the second time it appears, it is the drop off.
+                List of node IDs in the route. Not customer IDs.
             vehicle: int
                 Vehicle used in the route.
             start_times: list of tuple

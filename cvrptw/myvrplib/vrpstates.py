@@ -94,7 +94,11 @@ class CvrptwState:
 
         # Change data format for twc and distances computation
         self.dataset = self.nodes_df
+        print(f"DEBUG: self.dataset: {self.dataset}")
         self.twc_format_nodes_df = dynamic_extended_df(self.nodes_df)
+
+        print(f"DEBUG: self.twc_format_nodes_df: {self.twc_format_nodes_df}")
+
         self.cust_to_nodes = create_cust_nodes_mapping(self.twc_format_nodes_df)
         if distances is not None:
             self.distances = distances
@@ -175,24 +179,29 @@ class CvrptwState:
         """
         route = self.routes[route_id].customers_list
         cost = 0
-        picked_up_customers = []
-        for idx, customer in enumerate(route[:-1]):
-            if customer not in picked_up_customers:
-                start_node = self.cust_to_nodes[customer][0]
-                picked_up_customers.append(customer)
-            else:
-                start_node = self.cust_to_nodes[customer][1]
-            next_customer = route[idx + 1]
-            if next_customer not in picked_up_customers:
-                next_node = self.cust_to_nodes[next_customer][0]
-                # add next_customer to picked_up_customers only
-                # when it is considered the current customer, not now
-            else:
-                next_node = self.cust_to_nodes[next_customer][1]
-
-            cost += self.distances[start_node][next_node]
-
+        for idx, node in enumerate(route[:-1]):
+            next_node = route[idx + 1]
+            cost += self.distances[node][next_node]
         return round(cost, 2)
+    
+        # picked_up_customers = []
+        # for idx, customer in enumerate(route[:-1]):
+        #     if customer not in picked_up_customers:
+        #         start_node = self.cust_to_nodes[customer][0]
+        #         picked_up_customers.append(customer)
+        #     else:
+        #         start_node = self.cust_to_nodes[customer][1]
+        #     next_customer = route[idx + 1]
+        #     if next_customer not in picked_up_customers:
+        #         next_node = self.cust_to_nodes[next_customer][0]
+        #         # add next_customer to picked_up_customers only
+        #         # when it is considered the current customer, not now
+        #     else:
+        #         next_node = self.cust_to_nodes[next_customer][1]
+
+        #     cost += self.distances[start_node][next_node]
+
+        # return round(cost, 2)
 
     def objective(self):
         """
@@ -296,62 +305,64 @@ class CvrptwState:
         Returns:
             None
         """
-        est = []
-        route = self.routes[route_index].customers_list
-        df = self.nodes_df
+        print(f"****************************************")
+        print(f"Missing implementation of update_est_lst")
+        # est = []
+        # route = self.routes[route_index].customers_list
+        # df = self.nodes_df
 
-        # If first element is a depot, then the earliest start time is 0
-        if route[0] in self.depots["depots_indices"]:
-            est.append(0)
-        else:
-            print(f"ERROR: first node {route[0]} in route {route_index} is not a depot, which are: {self.depots['depots_indices']}")
-            # TODO: This will have to be changed for dynamic case
-            raise AssertionError("First node in route is not a depot")
+        # # If first element is a depot, then the earliest start time is 0
+        # if route[0] in self.depots["depots_indices"]:
+        #     est.append(0)
+        # else:
+        #     print(f"ERROR: first node {route[0]} in route {route_index} is not a depot, which are: {self.depots['depots_indices']}")
+        #     # TODO: This will have to be changed for dynamic case
+        #     raise AssertionError("First node in route is not a depot")
 
-        # Implementation of formula 3b of Wang et al. (2024)
-        for i in range(1, len(route)-1):
-            current = route[i]
-            prev = route[i-1]
-            time = float(round(max(
-                est[i - 1]
-                + df.loc[prev, "service_time"].item()
-                + self.distances[current][prev],
-                df.loc[current, "start_time"].item(),
-            ), 2))
-            est.append(time)
+        # # Implementation of formula 3b of Wang et al. (2024)
+        # for i in range(1, len(route)-1):
+        #     current = route[i]
+        #     prev = route[i-1]
+        #     time = float(round(max(
+        #         est[i - 1]
+        #         + df.loc[prev, "service_time"].item()
+        #         + self.distances[current][prev],
+        #         df.loc[current, "start_time"].item(),
+        #     ), 2))
+        #     est.append(time)
 
-        if len(est) != len(route):
-            AssertionError("Error in calculating earliest start times")
+        # if len(est) != len(route):
+        #     AssertionError("Error in calculating earliest start times")
 
-        lst = [None] * len(route)
-        lst[-1] = END_OF_DAY
-        for i in reversed(range(len(route) - 1)):
-            next = route[i + 1]
-            current = route[i]
-            time = round(
-                min(
-                    lst[i + 1]
-                    - df.loc[current, "service_time"].item()
-                    - self.distances[current][next],
-                    df.loc[current, "end_time"].item()
-                ),
-                2,
-            )
-            lst[i] = float(time)
+        # lst = [None] * len(route)
+        # lst[-1] = END_OF_DAY
+        # for i in reversed(range(len(route) - 1)):
+        #     next = route[i + 1]
+        #     current = route[i]
+        #     time = round(
+        #         min(
+        #             lst[i + 1]
+        #             - df.loc[current, "service_time"].item()
+        #             - self.distances[current][next],
+        #             df.loc[current, "end_time"].item()
+        #         ),
+        #         2,
+        #     )
+        #     lst[i] = float(time)
 
-        if len(lst) != len(route):
-            AssertionError("Error in calculating latest start times")
+        # if len(lst) != len(route):
+        #     AssertionError("Error in calculating latest start times")
 
-        self.routes[route_index].start_times = list(zip(est, lst))
+        # self.routes[route_index].start_times = list(zip(est, lst))
 
     def calculate_planned_times(self, route_index:int):
         """
         Calculate the planned arrival and departure times for each customer in the route.
         """
         route = self.routes[route_index]
-        df = self.nodes_df
+        df = dynamic_extended_df(self.nodes_df)
         tw = []
-        first_customer = route.customers_list[1]
+        first_node = route.customers_list[1]
 
         tw.append(
             [
@@ -360,8 +371,8 @@ class CvrptwState:
                     round(
                         max(
                             0,
-                            df.loc[first_customer, "start_time"].item()
-                            - self.distances[0][first_customer]
+                            df.loc[first_node, "start_time"].item()
+                            - self.distances[0][first_node]
                         ),
                         2,
                     )
@@ -370,15 +381,15 @@ class CvrptwState:
         )
 
         last_departure = tw[0][1]
-        last_customer = route.customers_list[0]
+        last_node = route.customers_list[0]
         for customer in route.customers_list[1:]:
             # Planned arrival time at customer idx
             # Planned departure time is the planned arrival time + service time
-            arr = last_departure + self.distances[last_customer][customer]
+            arr = last_departure + self.distances[last_node][customer]
             dep = arr + df.loc[customer, "service_time"].item()
             tw.append([float(round(arr, 2)), float(round(dep, 2))])
             last_departure = dep
-            last_customer = customer
+            last_node = customer
         self.routes[route_index].planned_windows = tw
 
     def update_unassigned_list(self):
