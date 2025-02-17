@@ -48,7 +48,7 @@ def main():
     alns.add_repair_operator(greedy_repair_tw)
     alns.add_repair_operator(wang_greedy_repair)
 
-    data = pd.read_csv("./data/dynamic_df.csv")
+    data = pd.read_csv("./data/actv_dynamic_df.csv")
 
     init = CvrptwState(dataset=data, n_vehicles=args.n_vehicles, vehicle_capacity=args.vehicle_capacity)
 

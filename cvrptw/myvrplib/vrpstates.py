@@ -83,7 +83,7 @@ class CvrptwState:
             self.depots = dataset.loc[dataset["service_time"] == 0, "id"].tolist()
         else:
             raise ValueError("Dataset must be a dictionary or a DataFrame.")
-        
+
         self.routes = routes if routes is not None else []
         # Update self.nodes_df with the routes
         for idx, route in enumerate(self.routes):
@@ -97,7 +97,7 @@ class CvrptwState:
         print(f"DEBUG: self.dataset: {self.dataset}")
         self.twc_format_nodes_df = dynamic_extended_df(self.nodes_df)
 
-        print(f"DEBUG: self.twc_format_nodes_df: {self.twc_format_nodes_df}")
+        print(f"DEBUG: self.twc_format_nodes_df: \n{self.twc_format_nodes_df}")
 
         self.cust_to_nodes = create_cust_nodes_mapping(self.twc_format_nodes_df)
         if distances is not None:
@@ -122,6 +122,8 @@ class CvrptwState:
 
         assert len(self.routes) == len(self.routes_cost), "Routes and routes_cost must have the same length."
         self.n_vehicles = n_vehicles
+
+        print(f"DEBUG: self.nodes_df: \n{self.nodes_df}")
 
         self.depots = create_depots_dict(self.nodes_df, n_vehicles)
         if given_unassigned is not None:
@@ -183,7 +185,7 @@ class CvrptwState:
             next_node = route[idx + 1]
             cost += self.distances[node][next_node]
         return round(cost, 2)
-    
+
         # picked_up_customers = []
         # for idx, customer in enumerate(route[:-1]):
         #     if customer not in picked_up_customers:
@@ -279,7 +281,7 @@ class CvrptwState:
         Return the number of served customers.
         """
         served_customers = self.served_customers()
-        
+
         return len(served_customers)
 
     def served_customers(self):
@@ -290,7 +292,7 @@ class CvrptwState:
         for route in self.routes:
             for customer in route.customers_list[1:-1]:
                 served_customers.add(customer)
-        
+
         return list(served_customers)
 
         # TODO: Test this method

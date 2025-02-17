@@ -1,0 +1,35 @@
+FAVARO - (160) Pasqualigo Martiri direzione Ca' Solaro
+FAVARO - (230) Altinia Ca' Solaro direzione Marcon
+FAVARO - (231) Altinia Indri direzione Marcon
+FAVARO - (232) Altinia San Pietro direzione Marcon
+FAVARO - (233) Altinia Favaro Municipio direzione Marcon
+FAVARO - (277) De Nicola Chiesa direzione Borgoforte
+FAVARO - (283) Don Sturzo Vallon direzione Don Sturzo
+FAVARO - (284) Don Sturzo Pasqualigo direzione Don Sturzo
+FAVARO - (680) Ca' Solaro Osoppo direzione Ca' Solaro
+FAVARO - (681) Ca' Solaro Osoppo direzione Altinia
+FAVARO - (682) Ca' Solaro Pasqualigo direzione Ca' Solaro
+FAVARO - (683) Ca' Solaro Pasqualigo direzione Altinia
+FAVARO - (684) Vallon Borgoforte direzione Don Sturzo
+FAVARO - (686) Pasqualigo Braies direzione Ca' Solaro
+FAVARO - (687) Pasqualigo Braies direzione Don Sturzo
+FAVARO - (688) Vallon Forte Carpenedo direzione Don Sturzo
+FAVARO - (689) Vallon Forte Carpenedo direzione Borgoforte
+FAVARO - (690) Pasqualigo Ortisei direzione Ca' Solaro
+FAVARO - (691) Pasqualigo Ortisei direzione Don Sturzo
+FAVARO - (702) Ca' Solaro Chiesa direzione Pasqualigo
+FAVARO - (704) Ca' Solaro direzione Pasqualigo
+FAVARO - (705) Vallon Valdemare direzione Don Sturzo
+FAVARO - (706) Vallon Valdemare direzione Borgoforte
+FAVARO - (707) Vallon De Nicola direzione Don Sturzo
+FAVARO - (708) Vallon De Nicola direzione Borgoforte
+FAVARO - (709) Ca' Solaro Ca' Rezzonico direzione Ca' Solaro
+FAVARO - (710) Ca' Solaro Ca' Rezzonico direzione Altinia
+FAVARO - (720) Ca' Solaro Tarcento direzione Pasqualigo
+FAVARO - (1160) Pasqualigo Martiri direzione Don Sturzo
+FAVARO - (1230) Altinia Ca' Solaro direzione San Dona
+FAVARO - (1231) Altinia Indri direzione San Dona
+FAVARO - (1232) Altinia San Pietro direzione San Dona
+FAVARO - (1233) Altinia Municipio direzione San Dona
+FAVARO - (1284) Don Sturzo Pasqualigo direzione Ca' Solaro
+FAVARO - (3404) Triestina ulss 3 direzione 

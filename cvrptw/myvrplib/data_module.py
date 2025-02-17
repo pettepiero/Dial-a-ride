@@ -310,6 +310,8 @@ def calculate_depots(
         depots = data.loc[data["demand"] == 0, "id"].tolist()
 
     dict_depot_to_vehicles = {depot: [] for depot in depots}
+    print(f"DEBUG: dict_depot_to_vehicles: {dict_depot_to_vehicles}")
+    print(f"depots: {depots}")
     dict_vehicle_to_depot = {vehicle: None for vehicle in range(n_vehicles)}
     
     # vehicle i -> depot i
@@ -321,7 +323,7 @@ def calculate_depots(
     elif n_vehicles > n_depots:
         # Round robin assignment
         for vehicle in range(n_vehicles):
-            depot = vehicle % n_depots
+            depot = depots[vehicle % n_depots]
             dict_depot_to_vehicles[depot].append(vehicle)
             dict_vehicle_to_depot[vehicle] = depot
     else:
@@ -462,7 +464,6 @@ def dynamic_df_from_dict(
     data_df['id'] = data_df.index
     
     return data_df
-
 
 def generate_dynamic_df(file: str, static: bool = False, print_data: bool = False, n_steps = 20, seed = 0) -> pd.DataFrame:
     """
