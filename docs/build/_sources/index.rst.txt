@@ -14,5 +14,8 @@ Check out the :doc:`installation` section for further information, including how
    :maxdepth: 2
    :caption: Contents:
 
+   source/intro
+   source/vrp
    source/usage
+   source/nn_sol
 
