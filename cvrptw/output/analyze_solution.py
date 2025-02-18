@@ -24,7 +24,7 @@ def verify_time_windows(data: pd.DataFrame, sol: CvrptwState, percentage: bool =
     sum_late = 0
 
     for route in sol.routes:
-        for cust_idx, customer in enumerate(route.customers_list):
+        for cust_idx, customer in enumerate(route.nodes_list):
             start_time = data.loc[customer, "start_time"].item()
             end_time = data.loc[customer, "end_time"].item()
             if route.planned_windows[cust_idx][0] < start_time:

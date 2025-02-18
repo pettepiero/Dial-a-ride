@@ -187,8 +187,7 @@ def create_cust_nodes_mapping(twc_format_nodes_df: pd.DataFrame) -> dict:
     known_cols = ['node_id', 'cust_id', 'x', 'y', 'demand', 'start_time', 'end_time', 'service_time', 'call_in_time_slot', 'route', 'type']
     assert all([col in df_cols for col in known_cols]), "Dataframe columns do not match the expected columns."
 
-    cust_to_nodes = {cust: [] for cust in twc_format_nodes_df["cust_id"].unique()}
-    print(f"DEBUG: len(twc_format_nodes_df): {len(twc_format_nodes_df)}")
+    cust_to_nodes = {int(cust): [] for cust in twc_format_nodes_df["cust_id"].unique()}
     for index, row in twc_format_nodes_df.iterrows():
         # print(f"DEBUG: index: {index}, row: {row}")
         cust_to_nodes[row["cust_id"]].append(row["node_id"])
@@ -200,6 +199,23 @@ def create_cust_nodes_mapping(twc_format_nodes_df: pd.DataFrame) -> dict:
 
     return cust_to_nodes
 
+
+def create_nodes_cust_mapping(twc_format_nodes_df: pd.DataFrame) -> dict:
+    """
+    Creates a dict mapping node_ids to the customer ids in the dataframe.
+    The expected dataframe should be in the format given by dynamic_extended_df,
+    this condition is tested at the beginning.
+    """
+    df_cols = twc_format_nodes_df.columns.to_list()
+    known_cols = ['node_id', 'cust_id', 'x', 'y', 'demand', 'start_time', 'end_time', 'service_time', 'call_in_time_slot', 'route', 'type']
+    assert all([col in df_cols for col in known_cols]), "Dataframe columns do not match the expected columns."
+
+    nodes_to_cust = {int(node): None for node in twc_format_nodes_df["node_id"].unique()}
+    for index, row in twc_format_nodes_df.iterrows():
+        # print(f"DEBUG: index: {index}, row: {row}")
+        nodes_to_cust[row["node_id"]] = row["cust_id"]
+
+    return nodes_to_cust
 
 def cost_matrix_from_coords(coords: list, cordeau: bool=True) -> list:
     """
@@ -310,8 +326,7 @@ def calculate_depots(
         depots = data.loc[data["demand"] == 0, "id"].tolist()
 
     dict_depot_to_vehicles = {depot: [] for depot in depots}
-    print(f"DEBUG: dict_depot_to_vehicles: {dict_depot_to_vehicles}")
-    print(f"depots: {depots}")
+
     dict_vehicle_to_depot = {vehicle: None for vehicle in range(n_vehicles)}
     
     # vehicle i -> depot i
@@ -461,8 +476,7 @@ def dynamic_df_from_dict(
 
     # Preindexing the dataframe using 'id'
     data_df.set_index("id", inplace=True)
-    data_df['id'] = data_df.index
-    
+
     return data_df
 
 def generate_dynamic_df(file: str, static: bool = False, print_data: bool = False, n_steps = 20, seed = 0) -> pd.DataFrame:
@@ -517,13 +531,14 @@ def create_depots_dict(data: Union[dict, pd.DataFrame], num_vehicles: int=None) 
         depots_indices: list
             List with the indices of the dep
     """
+    df = dynamic_extended_df(data)
     if isinstance(data, pd.DataFrame):
         depots_dict = {
-            "num_depots": data["demand"].value_counts()[0],
+            "num_depots": df["demand"].value_counts()[0],
             "depot_to_vehicles": {},
             "vehicle_to_depot": {},
-            "coords": data.loc[data["demand"] == 0, ["x", "y"]].values,
-            "depots_indices": data.loc[data["demand"] == 0, "id"].tolist(),
+            "coords": df.loc[df["demand"] == 0, ["x", "y"]].values,
+            "depots_indices": df.loc[df["demand"] == 0, "node_id"].tolist(),
         }
 
         depots_dict["depot_to_vehicles"], depots_dict["vehicle_to_depot"] = (
@@ -539,6 +554,7 @@ def create_depots_dict(data: Union[dict, pd.DataFrame], num_vehicles: int=None) 
             "coords": data["node_coord"][data["dimension"] + 1 :],
             "depots_indices": data["depots"],
         }
+
     return depots_dict
 
 
@@ -670,6 +686,29 @@ def dynamic_extended_df(data: Union[pd.DataFrame, str]) -> pd.DataFrame:
     new_df["route"] = new_df["route"].fillna(-1).astype(int)
     # new_df = new_df.astype({"node_id": int, "cust_id": int, "demand": int, "start_time": int, "end_time": int, "service_time": int, "call_in_time_slot": int, "route": int})
 
+    new_df[
+        [
+            "node_id",
+            "cust_id",
+            "demand",
+            "start_time",
+            "end_time",
+            "service_time",
+            "call_in_time_slot",
+        ]
+    ] = new_df[
+        [
+            "node_id",
+            "cust_id",
+            "demand",
+            "start_time",
+            "end_time",
+            "service_time",
+            "call_in_time_slot",
+        ]
+    ].astype(
+        int
+    )
     return new_df
 
 

@@ -26,7 +26,7 @@ if __name__ == "__main__":
     print(f"twc_format_nodes_df: {twc_format_nodes_df}")
     print(twc_format_nodes_df.dtypes)
 
-    test_route = Route(customers_list=[22, 3, 6, 3, 6, 7, 7, 22])
+    test_route = Route(nodes_list=[22, 3, 6, 3, 6, 7, 7, 22])
     print("\n\nCreating state\n")
 
     state = CvrptwState(n_vehicles=2, vehicle_capacity=195, dataset=init_data, routes=[test_route])

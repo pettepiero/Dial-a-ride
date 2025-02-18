@@ -67,14 +67,14 @@ def main():
     for route in initial_solution.routes:
         customers = [
             cust
-            for cust in route.customers_list
+            for cust in route.nodes_list
             if cust not in init.depots["depots_indices"]
         ]
         served_customers += len(customers)
-        print(route.customers_list)
+        print(route.nodes_list)
 
     print(f"Total number of served customers: {served_customers}")
-    data_df = initial_solution.nodes_df
+    data_df = initial_solution.cust_df
     initial_solution_stats = verify_time_windows(data_df, initial_solution, percentage=False)
 
     print(f"\nIn the HEURISTIC SOLUTION there are {len(solution.routes)} routes")
@@ -82,11 +82,11 @@ def main():
     for route in solution.routes:
         customers = [
             cust
-            for cust in route.customers_list
+            for cust in route.nodes_list
             if cust not in solution.depots["depots_indices"]
         ]
         served_customers += len(customers)
-        print(route.customers_list)
+        print(route.nodes_list)
 
     print(f"Total number of served customers: {served_customers}")
     # Calculating the late, early, ontime and left out customers

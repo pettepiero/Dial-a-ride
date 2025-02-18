@@ -17,7 +17,7 @@ def solution_times_statistics(state) -> dict:
                 A dictionary containing the number of customers served late, early,
                  on-time, left-out customers, and the sum of late and early minutes.
     """
-    data_df = state.nodes_df
+    data_df = state.cust_df
 
     late, early, ontime = 0, 0, 0
     # To get customers in the solution, first remove all the depots
@@ -88,7 +88,7 @@ def route_time_window_check(state, route, start_index: int = 1) -> bool:
     """
     Check if the route satisfies time-window constraints. Ignores the depots as
     they are considered available 24h. Depots are first and last elements
-    according to Cordeau notation.
+    according to Cordeau notation. Starts checking from given index.
         Parameters:
             route: Route
                 The route to be checked.
@@ -98,11 +98,11 @@ def route_time_window_check(state, route, start_index: int = 1) -> bool:
             bool
                 True if the route satisfies time-window constraints, False otherwise.
     """
-    data_df = state.nodes_df
+    data_df = state.twc_format_nodes_df
     # check if planned arrival time is later than the due time
-    for idx, customer in enumerate(route.customers_list[start_index:-1]):
+    for idx, node in enumerate(route.nodes_list[start_index:-1]):
         idx += start_index
-        if route.planned_windows[idx][0] > data_df.loc[customer, "end_time"].item():
+        if route.planned_windows[idx][0] > data_df.loc[node, "end_time"].item():
             return False
     return True
 
@@ -113,24 +113,26 @@ def route_time_window_check(state, route, start_index: int = 1) -> bool:
 # Is the vehicle allowed to be early?
 # For now, yes. It will stay at the customer until the time window opens.
 def time_window_check(
-    prev_customer_time: float, prev_service_time: float, edge_time: float, candidate_end_time: float
+    prev_node_time: float, prev_service_time: float, edge_time: float, candidate_end_time: float
 ):
     """
-    Check if the candidate customer satisfies time-window constraints. Returns true if the
-    candidate customer is not served late. Notice that the vehicle can be early.
+    Check if the candidate node satisfies time-window constraints. Returns true if the
+    candidate node is not served late. Notice that the vehicle can be early.
         Parameters:
-            prev_customer_time: float
-                The arrival time of the previous customer.
-            prev_customer: int
-                The previous customer.
-            candidate_customer: int
-                The candidate customer.
+            prev_node_time: float
+                The arrival time of the previous node.
+            prev_service_time: float
+                The service time of the previous node.
+            edge_time: float
+                The travel time between the previous node and the candidate node.
+            candidate_end_time: float
+                The end time of the candidate node.
         Returns:
             bool
-                True if the candidate customer satisfies time-window constraints, False otherwise.
+                True if the candidate node satisfies time-window constraints, False otherwise.
     """
     return (
-        prev_customer_time
+        prev_node_time
         + prev_service_time
         + edge_time
         <= candidate_end_time

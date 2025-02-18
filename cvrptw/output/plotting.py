@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from typing import Union
+import plotly.express as px
 
 def plot_data(
     data: Union[dict, pd.DataFrame],
@@ -91,3 +92,10 @@ def plot_data(
     ax.set_xlabel("X-coordinate")
     ax.set_ylabel("Y-coordinate")
     ax.legend(frameon=False, ncol=3)
+
+
+
+    ########################################################################
+    # Map related plots
+
+    

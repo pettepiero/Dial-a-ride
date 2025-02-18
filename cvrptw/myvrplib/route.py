@@ -12,7 +12,7 @@ class Route():
     Class containing the route information and methods.
     Based on 'label' concept of: Wang et al (2024)
         Attributes:
-            customers_list: list of int
+            nodes_list: list of int
                 List of node IDs in the route. Not customer IDs.
             vehicle: int
                 Vehicle used in the route.
@@ -25,8 +25,8 @@ class Route():
                 Total demand of the route.
     """
 
-    def __init__(self, customers_list: list, vehicle: int=None, cost: float=None, start_times: list = None, planned_windows: list = [], vehicle_start_time:float = None):
-        self.customers_list = customers_list
+    def __init__(self, nodes_list: list, vehicle: int=None, cost: float=None, start_times: list = None, planned_windows: list = [], vehicle_start_time:float = None):
+        self.nodes_list = nodes_list
         self.vehicle = vehicle
         self.start_times = start_times if start_times is not None else []
         self.planned_windows = planned_windows   # List of tuples for each customer in route
@@ -36,36 +36,38 @@ class Route():
         self.demand = None
 
     def __str__(self):
-        return f"Route(customers_list={self.customers_list}, vehicle={self.vehicle}, start_times={self.start_times}, planned_windows={self.planned_windows})"
+        return f"Route(nodes_list={self.nodes_list}, vehicle={self.vehicle}, start_times={self.start_times}, planned_windows={self.planned_windows})"
 
     def __len__(self) -> int:
         """
         Returns the number of customers in the route, including the depot
         at the beginning and end.
         """
-        return len(self.customers_list)
+        return len(self.nodes_list)
 
     def copy(self):
         """
         Returns a deep copy of the route.
         """  
         return Route(copy.deepcopy(
-            self.customers_list
+            self.nodes_list
             ), 
             vehicle=self.vehicle, 
             start_times=copy.deepcopy(self.start_times),
             planned_windows=copy.deepcopy(self.planned_windows))
 
-    def remove(self, customer: int) -> None:
+    def remove(self, node: list) -> None:
         """
         Removes a customer from the route.
             Parameters:
-                - customer: int
-                    Customer to be removed from the route.
+                - node: lsit
+                    Customers to be removed from the route.
+                    NOTE: node refers to node IDs, not customer IDs
             Returns:
                 - None
         """
-        self.customers_list = list(filter(lambda a: a!=customer, self.customers_list))
+        for customer in node:
+            self.nodes_list = list(filter(lambda a: a!=customer, self.nodes_list))
 
     def insert(self, position: int, customer: int) -> None:
         """
@@ -78,5 +80,5 @@ class Route():
             Returns:
                 - None
         """
-        self.customers_list.insert(position, customer)
+        self.nodes_list.insert(position, customer)
 

@@ -33,12 +33,13 @@ def wang_greedy_repair(state: CvrptwState, rng: np.random) -> CvrptwState:
     while counter < n_unassigned:
         counter += 1
         customer = new_state.unassigned.pop()
+        start_node, end_node = state.cust_to_nodes[customer]
         logger.debug(f"Candidate customer: {customer}")
         route_idx, idx = wang_best_insert(customer, new_state)
 
         if route_idx is not None:
             new_state.routes[route_idx].insert(idx, customer)
-            new_state.nodes_df.loc[customer, "route"] = route_idx
+            new_state.cust_df.loc[customer, "route"] = route_idx
             new_state.update_times_attributes_routes(route_index=route_idx)
             new_state.routes_cost[route_idx] = new_state.route_cost_calculator(route_idx)
             new_state.compute_route_demand(route_idx)
@@ -58,7 +59,7 @@ def wang_greedy_repair(state: CvrptwState, rng: np.random) -> CvrptwState:
                     ),
                 )
             )
-            new_state.nodes_df.loc[customer, "route"] = len(new_state.routes) - 1
+            new_state.cust_df.loc[customer, "route"] = len(new_state.routes) - 1
             new_state.routes_cost = np.append(
                 new_state.routes_cost,
                 new_state.route_cost_calculator(len(new_state.routes) - 1),
@@ -72,8 +73,8 @@ def wang_greedy_repair(state: CvrptwState, rng: np.random) -> CvrptwState:
 
 def wang_best_insert(customer: int, state: CvrptwState) -> tuple:
     """
-    Finds the best feasible route and insertion idx for the customer.
-    Return (None, None) if no feasible route insertions are found.
+    Finds the best feasible route and insertion indices (pickup and delivery) for the customer.
+    Return (None, None, None) if no feasible route insertions are found.
     Only checks capacity constraints. Uses the Wang et al (2024) 
     insertion heuristics.
         Parameters:
@@ -83,15 +84,21 @@ def wang_best_insert(customer: int, state: CvrptwState) -> tuple:
                 The current solution state.
         Returns:
             tuple
-                The best route and insertion indices for the customer.
+                The best route and insertion indices for the customer (route_idx, pickup_idx,\
+                    delivery_idx).
     """
-    best_cost, best_route_idx, best_idx = None, None, None
+
+    print(f"DEBUG: Wang best insert for customer {customer}")
+    print(f"DEBUG: state.cust_df = \n{state.cust_df}")
+
+    best_cost, best_route_idx, best_idx_pickup, best_idx_delivery = None, None, None, None, None
     for route_idx, route in enumerate(state.routes):
+        # start by inserting pickup node
         for idx in range(1, len(route)):
+            start, end = state.cust_df.loc[route.nodes_list[idx], ["start_time", "end_time"]]
             # if can_insert(customer, route_number, idx, state):
-            start, tend = state.nodes_df.loc[route.customers_list[idx], ["start_time", "end_time"]]
-            if wang_can_insert(customer, route, idx, state.distances, start, tend):
-                cost = insert_cost(customer, route.customers_list, idx, state)
+            if wang_can_insert(customer, route, idx, state.distances, start, end):
+                cost = insert_cost(customer, route.nodes_list, idx, state)
 
                 if best_cost is None or cost < best_cost:
                     best_cost, best_route_idx, best_idx = cost, route_idx, idx
@@ -122,8 +129,8 @@ def wang_can_insert(customer: int, route: Route, mu: int, distances: np.ndarray,
     # NOTE: should we insert the service time too?
     if mu < 0 or mu >= len(route) - 2:
         return False
-    i_mu = route.customers_list[mu]
-    i_mu_plus_1 = route.customers_list[mu + 1]
+    i_mu = route.nodes_list[mu]
+    i_mu_plus_1 = route.nodes_list[mu + 1]
     est_mu = route.start_times[mu][0]
     tic = distances[i_mu][customer]
     a_c = tsart

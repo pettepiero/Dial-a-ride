@@ -6,7 +6,8 @@ from cvrptw.myvrplib.data_module import (
     create_depots_dict,
     dynamic_extended_df,
     generate_twc_matrix,
-    create_cust_nodes_mapping
+    create_cust_nodes_mapping,
+    create_nodes_cust_mapping,
 )
 from cvrptw.myvrplib.myvrplib import END_OF_DAY, UNASSIGNED_PENALTY, LOGGING_LEVEL
 from cvrptw.myvrplib.route import Route
@@ -32,9 +33,9 @@ class CvrptwState:
         cust_to_nodes: dict
             Dictionary mapping customer IDs to node IDs.
         unassigned: list
-            List of unassigned customers' IDs (note node IDs). 
+            List of unassigned customers' IDs (NOT node IDs). 
             To get node IDs use mapping cust_to_nodes.
-        nodes_df: pd.DataFrame
+        cust_df: pd.DataFrame
             DataFrame containing the customers data.
         seed: int
             Seed for the random number generator.
@@ -76,30 +77,28 @@ class CvrptwState:
         if isinstance(dataset, dict):
             self.dataset = dataset
             self.seed = seed
-            self.nodes_df = dynamic_df_from_dict(dataset, seed=seed)
+            self.cust_df = dynamic_df_from_dict(dataset, seed=seed)
         elif isinstance(dataset, pd.DataFrame):
-            self.nodes_df = dataset
+            self.cust_df = dataset
             self.seed = seed
             self.depots = dataset.loc[dataset["service_time"] == 0, "id"].tolist()
         else:
-            raise ValueError("Dataset must be a dictionary or a DataFrame.")
+            raise ValueError(f"Dataset must be a dictionary or a DataFrame. Passed: {type(dataset)}")
 
         self.routes = routes if routes is not None else []
-        # Update self.nodes_df with the routes
+        # Update self.cust_df with the routes
         for idx, route in enumerate(self.routes):
-            for customer in route.customers_list:
-                self.nodes_df.loc[self.nodes_df["id"] == customer, "route"] = int(idx)
+            for customer in route.nodes_list:
+                self.cust_df.loc[self.cust_df["id"] == customer, "route"] = int(idx)
 
         # # Initialize distances matrix
 
         # Change data format for twc and distances computation
-        self.dataset = self.nodes_df
-        print(f"DEBUG: self.dataset: {self.dataset}")
-        self.twc_format_nodes_df = dynamic_extended_df(self.nodes_df)
-
-        print(f"DEBUG: self.twc_format_nodes_df: \n{self.twc_format_nodes_df}")
-
+        self.dataset = self.cust_df
+        self.twc_format_nodes_df = dynamic_extended_df(self.cust_df)
         self.cust_to_nodes = create_cust_nodes_mapping(self.twc_format_nodes_df)
+        self.nodes_to_cust = create_nodes_cust_mapping(self.twc_format_nodes_df)
+
         if distances is not None:
             self.distances = distances
         else:
@@ -122,14 +121,11 @@ class CvrptwState:
 
         assert len(self.routes) == len(self.routes_cost), "Routes and routes_cost must have the same length."
         self.n_vehicles = n_vehicles
-
-        print(f"DEBUG: self.nodes_df: \n{self.nodes_df}")
-
-        self.depots = create_depots_dict(self.nodes_df, n_vehicles)
+        self.depots = create_depots_dict(self.cust_df, n_vehicles)
         if given_unassigned is not None:
             self.unassigned = given_unassigned
         else:
-            unassigned = self.nodes_df[["id", "route"]]
+            unassigned = self.cust_df[["id", "route"]]
             unassigned = unassigned.loc[pd.isna(unassigned["route"]), "id"].tolist()
             # filter out depots
             unassigned = [customer for customer in unassigned if customer not in self.depots["depots_indices"]]      
@@ -143,7 +139,7 @@ class CvrptwState:
             cordeau=False, #node indices start from 0 (cust indices start from 1 because of cordeau)
         )
 
-        del self.twc_format_nodes_df
+        # del self.twc_format_nodes_df
 
         self.current_time = current_time
 
@@ -154,23 +150,24 @@ class CvrptwState:
         )  # Note: maybe use only norm_tw in the future?
 
         self.n_vehicles = n_vehicles
-        self.n_customers = self.nodes_df.loc[
-            self.nodes_df["demand"] != 0
-        ].count() 
+        self.n_customers = self.cust_df.loc[
+            self.cust_df["demand"] != 0
+        ].shape[0]
         self.vehicle_capacity = vehicle_capacity
 
     def __str__(self):
-        return  f"Planned routes: {[route.customers_list for route in self.routes]}, \
+        return  f"Planned routes: {[route.nodes_list for route in self.routes]}, \
                 \nUnassigned customer IDs:  {self.unassigned}"
 
     def copy(self):
         return CvrptwState(
+            self.n_vehicles,
+            self.vehicle_capacity,
             [route.copy() for route in self.routes],  # Deep copy each Route
             self.routes_cost.copy(),
             self.dataset.copy(),
             self.unassigned.copy(),
             self.distances.copy(),
-            self.nodes_df.copy(deep=True),
             self.current_time,
             seed=self.seed
         )
@@ -179,7 +176,7 @@ class CvrptwState:
         """
         Compute the cost of a route.
         """
-        route = self.routes[route_id].customers_list
+        route = self.routes[route_id].nodes_list
         cost = 0
         for idx, node in enumerate(route[:-1]):
             next_node = route[idx + 1]
@@ -232,17 +229,25 @@ class CvrptwState:
         """
         assert customer >= 0, f"Customer ID must be non-negative, got {customer}."
         assert (
-            customer < self.nodes_df.shape[0]
-        ), f"Customer ID must be less than {self.nodes_df.shape[0]}, got {customer}."
+            customer <= self.cust_df.shape[0]
+        ), f"Customer ID must be leq than {self.cust_df.shape[0]}, got {customer}."
 
-        found = False
+        start_node, end_node = self.cust_to_nodes[customer]
+        found_start = False
+        found_end = False
         for idx, route in enumerate(self.routes):
-            if customer in route.customers_list:
-                found = True
-                return route, idx
-        if not found:
+            if start_node in route.nodes_list:
+                found_start = True
+                if end_node in route.nodes_list:
+                    found_end = True
+                    return route, idx
+                else:
+                    raise ValueError(f"Customer {customer} end node not found in \
+                                     route {idx} which contains start_node.")
+
+        if not found_start or not found_end:
             # raise ValueError(f"Customer {customer} not found in any route.")
-            print(f"Customer {customer} not found in any route.")
+            raise ValueError(f"Customer {customer} start and end nodes not both found in any route.")
 
     def find_index_in_route(self, customer, route: Route):
         """
@@ -250,8 +255,8 @@ class CvrptwState:
         (pick up index, delivery index)
         """
         assert route is not None, "Route must be provided."
-        if customer in route.customers_list:
-            return [i for i, x in enumerate(route.customers_list) if x == customer]
+        if customer in route.nodes_list:
+            return [i for i, x in enumerate(route.nodes_list) if x == customer]
 
         raise ValueError(f"Given route does not contain customer {customer}.")
 
@@ -274,7 +279,7 @@ class CvrptwState:
         """
         Get the maximum demand of any customer.
         """
-        return self.nodes_df["demand"].max()
+        return self.cust_df["demand"].max()
 
     def n_served_customers(self):
         """
@@ -290,10 +295,21 @@ class CvrptwState:
         """
         served_customers = set()
         for route in self.routes:
-            for customer in route.customers_list[1:-1]:
-                served_customers.add(customer)
+            for customer in route.nodes_list[1:-1]:
+                served_customers.add(self.nodes_to_cust[customer])
 
         return list(served_customers)
+
+    def served_nodes(self):
+        """
+        Return the list of served nodes.
+        """
+        served_nodes = set()
+        for route in self.routes:
+            for node in route.nodes_list[1:-1]:
+                served_nodes.add(node)
+
+        return list(served_nodes)
 
         # TODO: Test this method
 
@@ -307,64 +323,72 @@ class CvrptwState:
         Returns:
             None
         """
-        print(f"****************************************")
-        print(f"Missing implementation of update_est_lst")
-        # est = []
-        # route = self.routes[route_index].customers_list
-        # df = self.nodes_df
+        est = []
+        route = self.routes[route_index].nodes_list
+        # df = self.cust_df
+        df = dynamic_extended_df(self.cust_df)
 
-        # # If first element is a depot, then the earliest start time is 0
-        # if route[0] in self.depots["depots_indices"]:
-        #     est.append(0)
-        # else:
-        #     print(f"ERROR: first node {route[0]} in route {route_index} is not a depot, which are: {self.depots['depots_indices']}")
-        #     # TODO: This will have to be changed for dynamic case
-        #     raise AssertionError("First node in route is not a depot")
+        # If first element is a depot, then the earliest start time is 0
+        if route[0] in self.depots["depots_indices"]:
+            est.append(0)
+        else:
+            print(f"ERROR: first node {route[0]} in route {route_index} is not a depot, which are: {self.depots['depots_indices']}")
+            # TODO: This will have to be changed for dynamic case
+            raise AssertionError("First node in route is not a depot")
 
-        # # Implementation of formula 3b of Wang et al. (2024)
-        # for i in range(1, len(route)-1):
-        #     current = route[i]
-        #     prev = route[i-1]
-        #     time = float(round(max(
-        #         est[i - 1]
-        #         + df.loc[prev, "service_time"].item()
-        #         + self.distances[current][prev],
-        #         df.loc[current, "start_time"].item(),
-        #     ), 2))
-        #     est.append(time)
+        # Implementation of formula 3b of Wang et al. (2024)
+        for i in range(1, len(route)-1):
+            current_node = route[i]
+            # current_cust = self.nodes_to_cust[current_node]
+            prev_node = route[i-1]
+            # prev_cust = self.nodes_to_cust[prev_node]
+            time = float(
+                round(
+                    max(
+                        est[i - 1]
+                        + df.loc[prev_node, "service_time"].item()
+                        + self.distances[current_node][prev_node],
+                        df.loc[current_node, "start_time"].item(),
+                    ),
+                    2,
+                )
+            )
+            est.append(time)
 
-        # if len(est) != len(route):
-        #     AssertionError("Error in calculating earliest start times")
+        if len(est) != len(route):
+            AssertionError("Error in calculating earliest start times")
 
-        # lst = [None] * len(route)
-        # lst[-1] = END_OF_DAY
-        # for i in reversed(range(len(route) - 1)):
-        #     next = route[i + 1]
-        #     current = route[i]
-        #     time = round(
-        #         min(
-        #             lst[i + 1]
-        #             - df.loc[current, "service_time"].item()
-        #             - self.distances[current][next],
-        #             df.loc[current, "end_time"].item()
-        #         ),
-        #         2,
-        #     )
-        #     lst[i] = float(time)
+        lst = [None] * len(route)
+        lst[-1] = END_OF_DAY
+        for i in reversed(range(len(route) - 1)):
+            next_node = route[i + 1]
+            # next_cust = self.nodes_to_cust[next_node]
+            current_node = route[i]
+            # current_cust = self.nodes_to_cust[current_node]
+            time = round(
+                min(
+                    lst[i + 1]
+                    - df.loc[current_node, "service_time"].item()
+                    - self.distances[current_node][next_node],
+                    df.loc[current_node, "end_time"].item(),
+                ),
+                2,
+            )
+            lst[i] = float(time)
 
-        # if len(lst) != len(route):
-        #     AssertionError("Error in calculating latest start times")
+        if len(lst) != len(route):
+            AssertionError("Error in calculating latest start times")
 
-        # self.routes[route_index].start_times = list(zip(est, lst))
+        self.routes[route_index].start_times = list(zip(est, lst))
 
     def calculate_planned_times(self, route_index:int):
         """
         Calculate the planned arrival and departure times for each customer in the route.
         """
         route = self.routes[route_index]
-        df = dynamic_extended_df(self.nodes_df)
+        df = dynamic_extended_df(self.cust_df)
         tw = []
-        first_node = route.customers_list[1]
+        first_node = route.nodes_list[1]
 
         tw.append(
             [
@@ -383,8 +407,8 @@ class CvrptwState:
         )
 
         last_departure = tw[0][1]
-        last_node = route.customers_list[0]
-        for customer in route.customers_list[1:]:
+        last_node = route.nodes_list[0]
+        for customer in route.nodes_list[1:]:
             # Planned arrival time at customer idx
             # Planned departure time is the planned arrival time + service time
             arr = last_departure + self.distances[last_node][customer]
@@ -398,7 +422,7 @@ class CvrptwState:
         """
         Update the list of unassigned customers.
         """
-        self.unassigned = self.nodes_df.loc[pd.isna(self.nodes_df["route"]), "id"].tolist()
+        self.unassigned = self.cust_df.loc[pd.isna(self.cust_df["route"]), "id"].tolist()
         # filter out depots
         self.unassigned = [customer for customer in self.unassigned if customer not in self.depots["depots_indices"]]
 
@@ -412,6 +436,45 @@ class CvrptwState:
             None
         """
         demand = 0
-        for customer in self.routes[route_idx].customers_list:
-            demand += self.nodes_df.loc[customer, "demand"].item()
+        for node in self.routes[route_idx].nodes_list:
+            demand += self.twc_format_nodes_df.loc[node, "demand"].item()
         self.routes[route_idx].demand = demand
+
+    def insert_node_in_route_at_idx(self, node: int, route_idx: int, node_idx: int) -> None:
+        """
+        Insert a node in a given route. This means updating the route, the customer DataFrame, 
+        the twc_format_nodes_df, the route cost, the route demand, the planned times and
+        the unassigned list if the delivery node is already inserted.
+        Parameters:
+            node: int
+                The node to be inserted.
+            route_idx: int
+                The index of the route where the node will be inserted.
+            node_idx: int
+                The index where the node will be inserted.
+        Returns:
+            None
+        """
+        assert node >= 0, f"Node must be non-negative, got {node}."
+        assert 0 <= route_idx <= len(self.routes), f"Route index must be between 0 and {len(self.routes)}, got {route_idx}."
+        customer = self.nodes_to_cust[node] # corresponding customer ID
+        assert customer in self.unassigned, f"Customer {customer} is already assigned."
+
+        self.routes[route_idx].insert(node, node_idx)
+        self.cust_df.loc[customer, "route"] = route_idx
+        self.twc_format_nodes_df.loc[node, "route"] = route_idx
+        self.update_times_attributes_routes(route_idx)
+        self.routes_cost[route_idx] = self.route_cost_calculator(route_idx)
+        self.compute_route_demand(route_idx)
+        # if this is the delivery node, remove the customer from the unassigned list
+        if self.twc_format_nodes_df.loc[node, "type"] == "delivery":
+            self.unassigned.remove(customer)
+        else:
+            # get delivery node and see if it is in the route
+            delivery_node = self.cust_to_nodes[customer][1]
+            if delivery_node in self.routes[route_idx].nodes_list:
+                idx = self.routes[route_idx].nodes_list.index(delivery_node)
+                assert idx > node_idx, "Delivery node must be inserted after the pickup node."
+                self.unassigned.remove(customer)
+
+        

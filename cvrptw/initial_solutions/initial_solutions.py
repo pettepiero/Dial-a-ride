@@ -61,8 +61,8 @@ def pick_up_time_neighbours(state: CvrptwState, customer: int, df: pd.DataFrame)
     nodes = sorted(nodes, key=lambda x: x[1]) # sort and drop start times 
     nodes = [node for node in nodes if node != cust_pickup_node] # drop the customer itself
 
-    # locations = state.nodes_df[state.nodes_df['pstart_time'] > current_start_time][["id", "pstart_time"]].values.tolist()
-    # locations = [[loc, time] for loc, time in locations if state.distances[customer][loc] + current_start_time <= state.nodes_df.loc[loc, "pend_time"].item()]
+    # locations = state.cust_df[state.cust_df['pstart_time'] > current_start_time][["id", "pstart_time"]].values.tolist()
+    # locations = [[loc, time] for loc, time in locations if state.distances[customer][loc] + current_start_time <= state.cust_df.loc[loc, "pend_time"].item()]
     # locations = sorted(locations, key=lambda x: x[1])
     # locations = [loc for loc in locations if loc != customer]
 
@@ -72,7 +72,6 @@ def close_route(route: list, route_schedule: list, state: CvrptwState, df: pd.Da
     current = route[-1]
     current_time = route_schedule[-1]
     route.append(route[0])
-    print(f"route at point 1: {route}")
     dist = state.distances[current][route[0]].item()
     current_service_time = df.loc[current, "service_time"].item()
     # add to schedule sum of current time, service time and travel time
@@ -84,14 +83,10 @@ def nearest_neighbor(
     state: CvrptwState, cordeau: bool = True, initial_time_slot: bool = True
 ) -> CvrptwState:
 
-    print(f"\n\n********************************************************")
-    print(f"DEBUG: state.nodes_df at beginning of nearest neighbor:\n{state.nodes_df}")
-
     routes: list[Route] = []
-    df = dynamic_extended_df(state.nodes_df)
-    print(f"\ndf=\n{df}")
+    df = dynamic_extended_df(state.cust_df)
     if initial_time_slot:
-        visible_customers = get_ids_of_time_slot(state.nodes_df, 0)
+        visible_customers = get_ids_of_time_slot(state.cust_df, 0)
     else:
         AssertionError("Not implemented yet")
 
@@ -129,14 +124,11 @@ def nearest_neighbor(
         nearest_node, nearest_dist = candidates[0]
         if nearest_node is not None:
             route.append(nearest_node)
-            print(f"route at point 2: {route}")
-            print(f"unvisited nodes: {unvisited_nodes}")
             start_time, load, type = df.loc[nearest_node, ["start_time", "demand", "type"]].values.tolist()
             # add to schedule 'departure from depot' time and 'arrival at customer' time
             route_schedule.append(start_time - nearest_dist) #departure from depot
             route_schedule.append(start_time) # arrival at customer
             vehicle_load += load
-            print("vehicle load1: ", vehicle_load)
             assert vehicle_load <= state.vehicle_capacity, f"Vehicle load is \
                     bigger than allowed: {vehicle_load}"
             remaining_pick_up_nodes.remove(nearest_node)
@@ -171,7 +163,6 @@ def nearest_neighbor(
             nearest_node, nearest_dist = candidates[0]
             if nearest_node is not None:
                 route.append(nearest_node)
-                print(f"route at point 3: {route}")
                 start_time, demand, type = df.loc[nearest_node, ["start_time", "demand", "type"]].values.tolist()
                 current_time = route_schedule[-1]
                 current_service_time = df.loc[current, "service_time"].item()
@@ -182,13 +173,11 @@ def nearest_neighbor(
                 # TODO: add proper check for vehicle capacity
                 if type == "pickup":
                     vehicle_load += demand
-                    print("vehicle load2: ", vehicle_load)
                     assert vehicle_load <= state.vehicle_capacity, f"Vehicle load is \
                           bigger than allowed: {vehicle_load}"
                     unvisited_nodes.remove(nearest_node)
                 elif type == "delivery":
                     vehicle_load -= df.loc[nearest_node, "demand"].item()
-                    print("vehicle load3: ", vehicle_load)
                     assert vehicle_load >= 0, f"Vehicle load is negative: {vehicle_load}"
                 remaining_pick_up_nodes.remove(nearest_node)
             else:
@@ -228,7 +217,6 @@ def nearest_neighbor(
                 nearest_node, nearest_dist = candidates[0]
                 if nearest_node is not None:
                     route.append(nearest_node)
-                    print(f"route at point 4: {route}")
                     start_time, demand = df.loc[nearest_node, ["start_time", "demand"]].values.tolist()
                     current_time = route_schedule[-1]
                     current_service_time = df.loc[current, "service_time"].item()
@@ -237,7 +225,6 @@ def nearest_neighbor(
                     route_schedule.append(planned_time)
                     # update vehicle load
                     vehicle_load -= demand
-                    print("vehicle load4: ", vehicle_load)
                     assert vehicle_load >= 0, f"Vehicle load is negative: {vehicle_load}"
                     remaining_delivery_nodes.remove(nearest_node)
                 else:
@@ -246,26 +233,25 @@ def nearest_neighbor(
             route, route_schedule = close_route(route, route_schedule, state, df)
             routes.append(Route(route, len(routes)))
 
-    # assign route to customers in nodes_df
+    # assign route to customers in cust_df
     for route_idx, route in enumerate(routes):
-        for customer in route.customers_list:
-            state.nodes_df.loc[state.nodes_df["id"] == customer, "route"] = route_idx
+        for customer in route.nodes_list:
+            state.cust_df.loc[state.cust_df["id"] == customer, "route"] = route_idx
 
     print(f"\n\n********************************************************")
-    print(f"DEBUG: state.nodes_df after nearest neighbor:\n{state.nodes_df}")
 
     # Create the solution object of type CvrptwState
     solution = CvrptwState(
         routes=routes,
         n_vehicles=state.n_vehicles,
         vehicle_capacity=state.vehicle_capacity,
-        dataset=state.nodes_df,
+        dataset=state.cust_df,
     )
     # Update the time and cost attributes of the solution
     for route_idx in range(len(solution.routes)):
         solution.update_times_attributes_routes(route_idx)
-        for customer in solution.routes[route_idx].customers_list:
-            solution.nodes_df.loc[solution.nodes_df["id"] == customer, "route"] = route_idx
+        for customer in solution.routes[route_idx].nodes_list:
+            solution.cust_df.loc[solution.cust_df["id"] == customer, "route"] = route_idx
     return solution
 
 
@@ -291,15 +277,15 @@ def nearest_neighbor_tw(state: CvrptwState, cordeau:bool = True, initial_time_sl
     """
 
     routes: list[Route] = []
-    df = dynamic_extended_df(state.nodes_df)
+    df = dynamic_extended_df(state.cust_df)
     print(f"dynamic df:\n{df}")
 
     start_idx = 1 if cordeau else 0
     if initial_time_slot:
-        valid_customers = get_ids_of_time_slot(state.nodes_df, 0)
+        valid_customers = get_ids_of_time_slot(state.cust_df, 0)
         unvisited = valid_customers
     else:
-        unvisited = set(range(start_idx, len(state.nodes_df["demand"])))
+        unvisited = set(range(start_idx, len(state.cust_df["demand"])))
 
     vehicle = 0
 
@@ -344,17 +330,17 @@ def nearest_neighbor_tw(state: CvrptwState, cordeau:bool = True, initial_time_sl
             )
 
             unvisited.remove(nearest)
-            route_demands += state.nodes_df.loc[nearest, "demand"].item()
+            route_demands += state.cust_df.loc[nearest, "demand"].item()
 
         route.append(route[0])  # Return to the depot
         route = Route(route, vehicle)
         routes.append(route)
         vehicle += 1
 
-    # Assign routes to customers in nodes_df
+    # Assign routes to customers in cust_df
     for route_num, route in enumerate(routes):
-        for customer in route.customers_list:
-            state.nodes_df.loc[customer, "route"] = route_num
+        for customer in route.nodes_list:
+            state.cust_df.loc[customer, "route"] = route_num
 
     # Create the solution object of type CvrptwState
     solution = CvrptwState(
@@ -366,6 +352,6 @@ def nearest_neighbor_tw(state: CvrptwState, cordeau:bool = True, initial_time_sl
     # Update the time and cost attributes of the solution
     for route_idx in range(len(solution.routes)):
         solution.update_times_attributes_routes(route_idx)
-        for customer in solution.routes[route_idx].customers_list:
-            solution.nodes_df.loc[customer, "route"] = route_idx
+        for customer in solution.routes[route_idx].nodes_list:
+            solution.cust_df.loc[customer, "route"] = route_idx
     return solution

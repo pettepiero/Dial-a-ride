@@ -157,7 +157,7 @@ class TestCRR(unittest.TestCase):
 
         for route in self.state.routes:
             path = []
-            for cust in route.customers_list:
+            for cust in route.nodes_list:
                 path.append(self.nodes_dict[cust])
             print(f'{path}\n')
         np.testing.assert_allclose(self.state.routes_cost, np.array([148.98, 170.71]), rtol=0.01)
@@ -166,7 +166,7 @@ class TestCRR(unittest.TestCase):
         print(f"After: {self.state.routes_cost}")
         for route in self.state.routes:
             path = []
-            for cust in route.customers_list:
+            for cust in route.nodes_list:
                 path.append(self.nodes_dict[cust])
             print(f"{path}\n")
 
@@ -174,7 +174,7 @@ class TestCRR(unittest.TestCase):
         print(f"After: {self.state.routes_cost}")
         for route in self.state.routes:
             path = []
-            for cust in route.customers_list:
+            for cust in route.nodes_list:
                 path.append(self.nodes_dict[cust])
             print(f"{path}\n")
 
@@ -182,7 +182,7 @@ class TestCRR(unittest.TestCase):
         print(f"After: {self.state.routes_cost}")
         for route in self.state.routes:
             path = []
-            for cust in route.customers_list:
+            for cust in route.nodes_list:
                 path.append(self.nodes_dict[cust])
             print(f"{path}\n")
 
