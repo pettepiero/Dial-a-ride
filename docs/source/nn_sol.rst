@@ -5,6 +5,7 @@ Initial Solution
 .. _vrp:
 .. _installation:
 .. _nn_sol:
+.. _removal_ops:
 
 
 Description

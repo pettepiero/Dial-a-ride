@@ -2,3 +2,5 @@ outputs/
 **/__pycache__/
 docs/build/
 data/DataSetActvAut*.csv
+data/actv_copy.csv
+data/actv (copy).csv

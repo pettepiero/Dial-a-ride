@@ -39,12 +39,12 @@ def main():
     alns = ALNS(rnd.default_rng())
 
     alns.add_destroy_operator(random_removal)
-    # alns.add_destroy_operator(random_route_removal)
+    alns.add_destroy_operator(random_route_removal)
     # alns.add_destroy_operator(cost_reducing_removal)
     # alns.add_destroy_operator(worst_removal)
 
     # alns.add_destroy_operator(exchange_reducing_removal)  # to be implemented
-    # alns.add_destroy_operator(shaw_removal)   #to be implemented
+    alns.add_destroy_operator(shaw_removal)   #to be implemented
 
     alns.add_repair_operator(greedy_repair_tw)
     # alns.add_repair_operator(wang_greedy_repair)
@@ -62,13 +62,12 @@ def main():
     print(f"DEBUG: state.twc_format_nodes_df = \n{initial_solution.twc_format_nodes_df}")
     check_solution(initial_solution)
 
-    select = RouletteWheel([25, 5, 1, 0], 0.8, 1, 1)
+    select = RouletteWheel([25, 5, 1, 0], 0.8, 3, 1)
     # select = RandomSelect(num_destroy=4, num_repair=2)
     accept = RecordToRecordTravel.autofit(
         initial_solution.objective(), 0.02, 0, NUM_ITERATIONS
     )
     stop = MaxIterations(NUM_ITERATIONS)
-
 
     print(f"DEBUG: depots = {initial_solution.depots["depots_indices"]}")
 
@@ -83,34 +82,16 @@ def main():
     print(f"Best heuristic objective is {objective}.")
 
     print(f"\nIn the INITIAL SOLUTION there were {len(initial_solution.routes)} routes")
-    served_customers = 0
-    for route in initial_solution.routes:
-        customers = [
-            cust
-            for cust in route.nodes_list
-            if cust not in init.depots["depots_indices"]
-        ]
-        served_customers += len(customers)
-        print(route.nodes_list)
 
-    print(f"Total number of served customers: {served_customers}")
+    print(f"Total number of planned customers: {initial_solution.n_planned_customers}")
     data_df = initial_solution.twc_format_nodes_df
     initial_solution_stats = verify_time_windows(
         data_df, initial_solution, percentage=False
     )
 
     print(f"\nIn the HEURISTIC SOLUTION there are {len(solution.routes)} routes")
-    served_customers = 0
-    for route in solution.routes:
-        customers = [
-            cust
-            for cust in route.nodes_list
-            if cust not in solution.depots["depots_indices"]
-        ]
-        served_customers += len(customers)
-        print(route.nodes_list)
 
-    print(f"Total number of served customers: {served_customers}")
+    print(f"Total number of planned customers: {solution.n_planned_customers}")
     # Calculating the late, early, ontime and left out customers
     solution_stats = verify_time_windows(data_df, solution, percentage=False)
 

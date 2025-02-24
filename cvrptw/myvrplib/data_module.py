@@ -3,7 +3,7 @@ import numpy.random as rnd
 import copy
 import pandas as pd
 from typing import Union
-
+import pathlib
 
 END_OF_DAY = 1000
 SEED = 1234
@@ -17,7 +17,7 @@ def read_cordeau_data(file: str, print_data: bool = False) -> dict:
     """
     Read the Cordeau et al. (2001) benchmark data.
     """
-    filename = file.split("/")[-1]
+    filename = str(file).split("/")[-1]
     data_file = open(file, "r")
     if print_data:
         print("Reading data from file: ", filename)
@@ -712,15 +712,12 @@ def dynamic_extended_df(data: Union[pd.DataFrame, str]) -> pd.DataFrame:
     return new_df
 
 
+this_file_path = pathlib.Path(__file__).parent.resolve()
+data_file_path = this_file_path / "../../data/c-mdvrptw/pr12"
+
 data = read_cordeau_data(
-    "./data/c-mdvrptw/pr12", print_data=False
+    str(data_file_path), print_data=False
 )
 # bks = read_solution_format("./data/c-mdvrptw-sol/pr02.res", print_data=True)
-test_data = read_cordeau_data(
-    "./data/c-mdvrptw/pr12",
-    print_data=False,
-)
-
-d_data = generate_dynamic_df(
-    "./data/c-mdvrptw/pr12", print_data=False, seed=0
-)
+test_data = read_cordeau_data(str(data_file_path), print_data=False)
+d_data = generate_dynamic_df(data_file_path, print_data=False, seed=0)

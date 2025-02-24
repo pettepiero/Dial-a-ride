@@ -26,9 +26,13 @@ def random_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
     customers_to_remove = int(destroyed.n_customers * degree_of_destruction)
 
     # list of customers in solution
-    solution_customers = state.served_customers()
+    solution_customers = state.planned_customers()
     assert len(solution_customers) > 0, "No customers in solution."
-    for customer in rng.choice(solution_customers, customers_to_remove, replace=False):
+    for customer in rng.choice(
+        solution_customers,
+        min(customers_to_remove, state.n_planned_customers),
+        replace=False,
+    ):
         customer = customer.item()
         start_node, end_node = state.cust_to_nodes[customer]
         assert (
@@ -53,7 +57,7 @@ def random_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
             logger.debug(
                 f"Error: customer {customer} not found in any route but picked from served customers."
             )
-    destroyed.update_unassigned_list()
+
     return remove_empty_routes(destroyed)
 
 
@@ -106,33 +110,36 @@ def random_route_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
     customers_to_remove = int(destroyed.n_customers * degree_of_destruction)
     for route_idx in rng.choice(
         range(len(destroyed.routes)),
-        min(customers_to_remove, state.n_served_customers()),
+        min(customers_to_remove, state.n_planned_customers),
         replace=True,
     ):
         route = destroyed.routes[route_idx]
         # for route in rng.choice(destroyed.routes, customers_to_remove, replace=True):
         if len(route.nodes_list[1:-1]) != 0:
-            customer = rng.choice(route.nodes_list[1:-1], 1, replace=False)
-            destroyed.unassigned.append(customer.item())
-            destroyed.routes[route_idx].remove(customer)
+            sampled_node = rng.choice(route.nodes_list[1:-1], 1, replace=False)
+            cust = destroyed.nodes_to_cust[sampled_node.item()]
+            start_node, end_node = destroyed.cust_to_nodes[cust]
+            destroyed.routes[route_idx].remove([start_node, end_node])
             # Update df
-            destroyed.cust_df.loc[customer.item(), "route"] = None
-            destroyed.cust_df.loc[customer.item(), "done"] = False
+            destroyed.cust_df.loc[cust, "route"] = None
+            destroyed.cust_df.loc[cust, "done"] = False
+            destroyed.unassigned.append(cust)
             if len(destroyed.routes[route_idx]) != 2:
                 destroyed.update_times_attributes_routes(route_idx)
                 destroyed.routes_cost[route_idx] = destroyed.route_cost_calculator(
                     route_idx
                 )
-
-    destroyed.update_unassigned_list()
     return remove_empty_routes(destroyed)
 
 
-def relatedness_function(state: CvrptwState, i: int, j: int) -> float:
+def relatedness_function(state: CvrptwState, cust_i: int, cust_j: int) -> float:
     """
     Calculates how related two requests are. The lower the value, the more related.
     Based on (Wang et. al, 2024), formula (4), which is itself based on the work of
-    Shaw (1997) and Ropke and Pisinger (2006).
+    Shaw (1997) and Ropke and Pisinger (2006). The formula is modified for the pickup
+    and delivery problem, and the relatedness value is calculated as the sum of the
+    relatedness between pickup nodes and the relatedness between delivery nodes.
+    The weights a1, a2 and a3 are given by Wang et. al, 2024.
         Parameters:
             state: CvrptwState
                 The solution from which to remove customers.
@@ -147,28 +154,54 @@ def relatedness_function(state: CvrptwState, i: int, j: int) -> float:
     a1 = 0.4
     a2 = 0.8
     a3 = 0.3
-    i_route, _ = state.find_route(i)
-    j_route, _ = state.find_route(j)
 
+    print(
+        f"Looking for customers {cust_i} -> ({state.cust_to_nodes[cust_i]}) and {cust_j} -> ({state.cust_to_nodes[cust_j]})"
+    )
+    print(f"Routes:")
+    for route in state.routes:
+        print(route.nodes_list)
+    print("\n\n")
+
+    i_route, _ = state.find_route(cust_i)
+    j_route, _ = state.find_route(cust_j)
+
+    # Pikcup
+    i = state.cust_to_nodes[cust_i][0]
+    j = state.cust_to_nodes[cust_j][0]
     i_index_in_route = state.find_index_in_route(i, i_route)
     j_index_in_route = state.find_index_in_route(j, j_route)
     e_i = i_route.start_times[i_index_in_route][0]
     e_j = j_route.start_times[j_index_in_route][0]
-    q_i = state.cust_df.loc[i, "demand"].item()
-    q_j = state.cust_df.loc[j, "demand"].item()
-    value = (
+    q_i = state.cust_df.loc[cust_i, "demand"].item()
+    q_j = state.cust_df.loc[cust_j, "demand"].item()
+    value_pickup = (
+        a1 * (state.distances[i][j] / state.dmax)
+        + a2 * (abs(e_i - e_j) / END_OF_DAY)
+        + a3 * (abs(q_i - q_j) / state.qmax)
+    )
+    # Delivery
+    i = state.cust_to_nodes[cust_i][1]
+    j = state.cust_to_nodes[cust_j][1]
+    i_index_in_route = state.find_index_in_route(i, i_route)
+    j_index_in_route = state.find_index_in_route(j, j_route)
+    e_i = i_route.start_times[i_index_in_route][0]
+    e_j = j_route.start_times[j_index_in_route][0]
+    q_i = state.cust_df.loc[cust_i, "demand"].item()
+    q_j = state.cust_df.loc[cust_j, "demand"].item()
+    value_delivery = (
         a1 * (state.distances[i][j] / state.dmax)
         + a2 * (abs(e_i - e_j) / END_OF_DAY)
         + a3 * (abs(q_i - q_j) / state.qmax)
     )
 
-    return value
+    return value_delivery + value_pickup
 
 
 def shaw_removal(state: CvrptwState, rng) -> CvrptwState:
     """
     Based on (Wang et. al, 2024), formula (4), which is itself based on the work of
-    Shaw (1997) and Ropke and Pisinger (2006). This operator removes a customer_to_remove
+    Shaw (1997) and Ropke and Pisinger (2006). This operator removes a single
     customers from the solution by selecting the most related ones, according to the formula.
         Parameters:
             state: CvrptwState
@@ -186,59 +219,59 @@ def shaw_removal(state: CvrptwState, rng) -> CvrptwState:
     route_star_idx = None
 
     # Search phase
-    # Randomly select seed customer to remove from the solution
-    route_i_idx = rng.choice(range(len(destroyed.routes)), 1).item()
-    route_i = destroyed.routes[route_i_idx]
-    first_customer = rng.choice(route_i.nodes_list[1:-1], 1, replace=False).item()
+    # Randomly select seed customer
+    # route_i_idx = rng.choice(range(len(destroyed.routes)), 1).item()
+    # route_i = destroyed.routes[route_i_idx]
+    # Set of both planned and not planned yet customers
+    first_customer = rng.choice(destroyed.planned_customers(), 1, replace=False).item()
 
-    i_selection = [first_customer]
+    # i_selection = [first_customer]
 
-    for route_idx, route_j in enumerate(destroyed.routes):
-        for j in route_j.nodes_list[1:-1]:
-            if j in i_selection:
-                continue
-            if first_customer == j and route_i == route_j:
-                continue
-            value = relatedness_function(
-                state, first_customer, j
-            )  # NOTE: maybe use dynamic programming to store values
-            if value < min_value:
-                min_value = value
-                j_star = j
-                route_star_idx = route_idx
+    for j in destroyed.planned_customers():
+        # if j in i_selection:
+        #     continue
+        value = relatedness_function(
+            state, first_customer, j
+        )
+        if value < min_value:
+            min_value = value
+            j_star = j
+            route_star_idx = destroyed.find_route(j)[1]
 
     if j_star is None:
         print(f"\nFinished checking all customers and no j_star found")
         print(f"Left routes: {[route.nodes_list for route in destroyed.routes]}")
         return destroyed
 
+    start_j, end_j = destroyed.cust_to_nodes[j_star]
+
     # Modify phase
-    destroyed.routes[route_star_idx].remove(j_star)
+    destroyed.routes[route_star_idx].remove([start_j, end_j])
     # Update df
-    destroyed.cust_df.loc[j_star.item(), "route"] = None
-    destroyed.cust_df.loc[j_star.item(), "done"] = False
+    destroyed.cust_df.loc[j_star, "route"] = None
+    destroyed.cust_df.loc[j_star, "done"] = False
+    destroyed.unassigned.append(j_star)
     if len(destroyed.routes[route_star_idx]) != 2:
         destroyed.update_times_attributes_routes(route_star_idx)
         destroyed.routes_cost[route_star_idx] = destroyed.route_cost_calculator(
             route_star_idx
         )
-    i_selection.append(j_star)
-    destroyed.unassigned.append(j_star)
-    j_star = None
-    min_value = np.inf
-    route_star_idx = None
+    # i_selection.append(j_star)
 
-    route_i.remove(first_customer)
     # Update df
-    destroyed.cust_df.loc[first_customer.item(), "route"] = None
-    destroyed.cust_df.loc[first_customer.item(), "done"] = False
-    if len(route_i) != 2:
-        destroyed.update_times_attributes_routes(route_i_idx)
-        destroyed.routes_cost[route_i_idx] = destroyed.route_cost_calculator(
-            route_i_idx
-        )
+    if first_customer in destroyed.planned_customers():
+        start_i, end_i = destroyed.cust_to_nodes[first_customer]
+        route_i, route_i_idx = destroyed.find_route(first_customer)
+        destroyed.routes[route_i_idx].remove([start_i, end_i])
+        destroyed.unassigned.append(first_customer)
+        destroyed.cust_df.loc[first_customer, "route"] = None
+        destroyed.cust_df.loc[first_customer, "done"] = False
+        if len(route_i) != 2:
+            destroyed.update_times_attributes_routes(route_i_idx)
+            destroyed.routes_cost[route_i_idx] = destroyed.route_cost_calculator(
+                route_i_idx
+            )
 
-    destroyed.update_unassigned_list()
     return remove_empty_routes(destroyed)
 
 

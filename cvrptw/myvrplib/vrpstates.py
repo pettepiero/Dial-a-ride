@@ -250,16 +250,20 @@ class CvrptwState:
             # raise ValueError(f"Customer {customer} not found in any route.")
             raise ValueError(f"Customer {customer} start and end nodes not both found in any route.")
 
-    def find_index_in_route(self, customer, route: Route):
+    def find_index_in_route(self, node, route: Route):
         """
-        Return the tuple containing indices of the customer in the route.
-        (pick up index, delivery index)
+        Return index of the node in the route.
+            Arguments:
+                node: int
+                    The node to find.
+                route: Route
+                    The route where to find the node.
         """
         assert route is not None, "Route must be provided."
-        if customer in route.nodes_list:
-            return [i for i, x in enumerate(route.nodes_list) if x == customer]
+        if node in route.nodes_list:
+            return route.nodes_list.index(node)
 
-        raise ValueError(f"Given route does not contain customer {customer}.")
+        raise ValueError(f"Given route does not contain customer {node}.")
 
     def update_times_attributes_routes(self, route_index: int):
         """
@@ -282,35 +286,34 @@ class CvrptwState:
         """
         return self.cust_df["demand"].max()
 
-    def n_served_customers(self):
+    @property
+    def n_planned_customers(self):
         """
         Return the number of served customers.
         """
-        served_customers = self.served_customers()
+        return len(self.planned_customers())
 
-        return len(served_customers)
-
-    def served_customers(self):
+    def planned_customers(self):
         """
         Return the list of served customers.
         """
-        served_customers = set()
+        planned_customers = set()
         for route in self.routes:
             for node in route.nodes_list[1:-1]:
                 if self.twc_format_nodes_df.loc[node, "type"] == "pickup":
                     cust = self.nodes_to_cust[node]
                     end_node = self.cust_to_nodes[cust][1]
                     if end_node in route.nodes_list:
-                        served_customers.add(cust)
+                        planned_customers.add(cust)
                 elif self.twc_format_nodes_df.loc[node, "type"] == "delivery":
                     cust = self.nodes_to_cust[node]
                     start_node = self.cust_to_nodes[cust][0]
                     if start_node in route.nodes_list:
-                        served_customers.add(cust)
+                        planned_customers.add(cust)
                 elif self.twc_format_nodes_df.loc[node, "type"] == "depot":
                     AssertionError ("Depot should not be in the route")
 
-        return list(served_customers)
+        return list(planned_customers)
 
     def served_nodes(self):
         """

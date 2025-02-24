@@ -7,7 +7,7 @@ dial-a-ride documentation
 =========================
 Dial a ride project documentation. 
 ----------------------------------
-Check out the :doc:`installation` section for further information, including how to
+Check out the :doc:`source/usage` section for further information, including how to
 :ref:`install <installation>` the project. 
 
 .. toctree::
@@ -18,4 +18,10 @@ Check out the :doc:`installation` section for further information, including how
    source/vrp
    source/usage
    source/nn_sol
+   source/removal_ops
 
+
+
+.. rubric:: References
+
+.. [WaSH24] Wang, S.; Sun, W.; Huang, M.; An adaptive large neighborhood search for the multi-depot dynamic vehicle routing problem with time window `https://doi.org/10.1016/j.cie.2024.110122`_

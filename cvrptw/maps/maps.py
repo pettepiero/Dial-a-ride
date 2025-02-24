@@ -90,10 +90,10 @@ df_filtered = df[
     & (df["lat_a"] >= lat_min)
     & (df["lat_a"] <= lat_max)  # End point latitude
 ]
-print(df_filtered)
+# print(df_filtered)
 # Create a long-form DataFrame for Plotly (each segment as a line)
 plot_data = []
-for _, row in df.iterrows():
+for _, row in df_filtered.iterrows():
     plot_data.append(
         {"lat": row["lat_da"], "lon": row["lon_da"], "segment": row["CODSEGMENTO"]}
     )
