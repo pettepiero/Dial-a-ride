@@ -5,6 +5,7 @@ from alns import ALNS
 from alns.accept import RecordToRecordTravel
 from alns.select import *
 from alns.stop import MaxIterations
+from alns.My_plot import plot_solution
 
 from cvrptw.myvrplib.myvrplib import LOGGING_LEVEL
 from cvrptw.myvrplib.data_module import d_data as d_data
@@ -13,7 +14,7 @@ from cvrptw.initial_solutions.initial_solutions import nearest_neighbor
 from cvrptw.operators.destroy import *
 from cvrptw.operators.repair import *
 from cvrptw.operators.wang_operators import *
-from cvrptw.output.analyze_solution import verify_time_windows
+from cvrptw.output.analyze_solution import verify_time_windows, check_solution
 from cvrptw.myvrplib.input_output import print_results_dict, parse_options
 from cvrptw.output.video import generate_video
 
@@ -54,10 +55,12 @@ def main():
     init = CvrptwState(dataset=data, n_vehicles=args.n_vehicles, vehicle_capacity=args.vehicle_capacity)
 
     initial_solution = nearest_neighbor(state=init, initial_time_slot=True)
+    print(f"DEBUG: initial solution:\n")
+    for route in initial_solution.routes:
+        print(route.nodes_list)
 
-    print(f"\n\nDEBUG: initial_solution routes:")
-    print(initial_solution.routes[0])
-    print(initial_solution.routes[1])
+    print(f"DEBUG: state.twc_format_nodes_df = \n{initial_solution.twc_format_nodes_df}")
+    check_solution(initial_solution)
 
     select = RouletteWheel([25, 5, 1, 0], 0.8, 1, 1)
     # select = RandomSelect(num_destroy=4, num_repair=2)
@@ -66,11 +69,14 @@ def main():
     )
     stop = MaxIterations(NUM_ITERATIONS)
 
-    print(f"DEBUG: state.twc_format_nodes_df = \n{initial_solution.twc_format_nodes_df}")
+
+    print(f"DEBUG: depots = {initial_solution.depots["depots_indices"]}")
 
     result, *_ = alns.iterate(
         initial_solution, select, accept, stop, data=data, save_plots=args.video
     )
+    # Testing solution validity after iterations
+    check_solution(initial_solution)
 
     solution = result.best_state
     objective = round(solution.objective(), 2)
@@ -88,7 +94,7 @@ def main():
         print(route.nodes_list)
 
     print(f"Total number of served customers: {served_customers}")
-    data_df = initial_solution.cust_df
+    data_df = initial_solution.twc_format_nodes_df
     initial_solution_stats = verify_time_windows(
         data_df, initial_solution, percentage=False
     )
@@ -140,6 +146,9 @@ def main():
     }
 
     print_results_dict(results_dict)
+
+    plot_solution(solution=solution, name="Final-solution", save=True, figsize=(8,8))
+    plot_solution(solution=initial_solution, name="Initial-solution", save=True, figsize=(8,8))
 
     if args.video:
         generate_video(

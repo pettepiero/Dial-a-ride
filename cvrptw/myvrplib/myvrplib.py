@@ -3,6 +3,8 @@ import pandas as pd
 from .data_module import END_OF_DAY
 
 UNASSIGNED_PENALTY = 50
+LATE_PENALTY = 50
+EARLY_PENALTY = 50
 LOGGING_LEVEL = logging.ERROR
 
 def solution_times_statistics(state) -> dict:

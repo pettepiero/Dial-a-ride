@@ -1,11 +1,9 @@
-from cvrptw.myvrplib.data_module import data
-from cvrptw.myvrplib.vrpstates import CvrptwState
 from alns import Result
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
-def verify_time_windows(data: pd.DataFrame, sol: CvrptwState, percentage: bool = False) -> dict:
+def verify_time_windows(data: pd.DataFrame, sol, percentage: bool = False) -> dict:
     """
     Verifies the time windows of the solution and returns the early/late/ontime counts.
     If percentage is True, then the counts are returned as percentages of served customers.
@@ -24,15 +22,15 @@ def verify_time_windows(data: pd.DataFrame, sol: CvrptwState, percentage: bool =
     sum_late = 0
 
     for route in sol.routes:
-        for cust_idx, customer in enumerate(route.nodes_list):
-            start_time = data.loc[customer, "start_time"].item()
-            end_time = data.loc[customer, "end_time"].item()
-            if route.planned_windows[cust_idx][0] < start_time:
+        for node_idx, node in enumerate(route.nodes_list):
+            start_time = data.loc[node, "start_time"].item()
+            end_time = data.loc[node, "end_time"].item()
+            if route.planned_windows[node_idx][0] < start_time:
                 early += 1
-                sum_early += start_time - route.planned_windows[cust_idx][0]
-            elif route.planned_windows[cust_idx][0] > end_time:
+                sum_early += start_time - route.planned_windows[node_idx][0]
+            elif route.planned_windows[node_idx][0] > end_time:
                 late += 1
-                sum_late += route.planned_windows[cust_idx][1] - end_time
+                sum_late += route.planned_windows[node_idx][1] - end_time
             else:
                 ontime += 1
     total = early + late + ontime
@@ -51,6 +49,51 @@ def verify_time_windows(data: pd.DataFrame, sol: CvrptwState, percentage: bool =
         "sum_late": round(sum_late, 2)
     }
     return stats
+
+
+def check_solution(state) -> None:
+    """
+    Checks if the solution is valid.
+        Parameters:
+            state: CvrptwState
+                The solution to be checked.
+    """
+    assert len(state.routes) > 0, "No routes in the solution."
+    for route in state.routes:
+        nodes_list = route.nodes_list
+        assert len(nodes_list) > 2, "Route must contain at least one customer."
+        assert (
+            nodes_list[0] in state.depots["depots_indices"]
+        ), "First node must be a depot."
+        assert (
+            nodes_list[-1] in state.depots["depots_indices"]
+        ), "Last node must be a depot."
+        assert nodes_list[0] == nodes_list[-1], "First and last nodes must be the same."
+        opened_custs = []
+        for node in nodes_list[1:-1]:
+            cust = state.nodes_to_cust[node]
+            if state.twc_format_nodes_df.loc[node, "type"] == "pickup":
+                assert (
+                    cust not in opened_custs
+                ), f"Customer {cust} is already picked up."
+                opened_custs.append(cust)
+            elif state.twc_format_nodes_df.loc[node, "type"] == "delivery":
+                start_node = state.cust_to_nodes[cust][0]
+                assert (
+                    start_node in nodes_list
+                ), f"Customer {cust} is not picked up before drop off node."
+                assert (
+                    cust in opened_custs
+                ), f"Customer {cust} has already been removed from opened_custs."
+                opened_custs.remove(cust)
+            else:
+                assert (
+                    state.twc_format_nodes_df.loc[node, "type"] == "depot"
+                ), f"Node {node} must be a depot."
+
+        assert (
+            len(opened_custs) == 0
+        ), f"Opened customers list is not empty: {opened_custs}."
 
 
 def plot_n_removals(destruction_counts: np.ndarray, d_operators: dict) -> None:

@@ -9,7 +9,8 @@ from cvrptw.myvrplib.data_module import (
     create_cust_nodes_mapping,
     create_nodes_cust_mapping,
 )
-from cvrptw.myvrplib.myvrplib import END_OF_DAY, UNASSIGNED_PENALTY, LOGGING_LEVEL
+from cvrptw.output.analyze_solution import verify_time_windows
+from cvrptw.myvrplib.myvrplib import END_OF_DAY, UNASSIGNED_PENALTY, LOGGING_LEVEL, LATE_PENALTY, EARLY_PENALTY
 from cvrptw.myvrplib.route import Route
 import numpy as np
 import pandas as pd
@@ -295,8 +296,19 @@ class CvrptwState:
         """
         served_customers = set()
         for route in self.routes:
-            for customer in route.nodes_list[1:-1]:
-                served_customers.add(self.nodes_to_cust[customer])
+            for node in route.nodes_list[1:-1]:
+                if self.twc_format_nodes_df.loc[node, "type"] == "pickup":
+                    cust = self.nodes_to_cust[node]
+                    end_node = self.cust_to_nodes[cust][1]
+                    if end_node in route.nodes_list:
+                        served_customers.add(cust)
+                elif self.twc_format_nodes_df.loc[node, "type"] == "delivery":
+                    cust = self.nodes_to_cust[node]
+                    start_node = self.cust_to_nodes[cust][0]
+                    if start_node in route.nodes_list:
+                        served_customers.add(cust)
+                elif self.twc_format_nodes_df.loc[node, "type"] == "depot":
+                    AssertionError ("Depot should not be in the route")
 
         return list(served_customers)
 
@@ -333,6 +345,7 @@ class CvrptwState:
             est.append(0)
         else:
             print(f"ERROR: first node {route[0]} in route {route_index} is not a depot, which are: {self.depots['depots_indices']}")
+            print(f"Passed route: {route}") 
             # TODO: This will have to be changed for dynamic case
             raise AssertionError("First node in route is not a depot")
 
@@ -482,8 +495,9 @@ class CvrptwState:
         assert 0 <= route_idx <= len(self.routes), f"Route index must be between 0 and {len(self.routes)}, got {route_idx}."
         customer = self.nodes_to_cust[node] # corresponding customer ID
         assert customer in self.unassigned, f"Customer {customer} (node {node}) is not in unassigned list: \n{self.unassigned}."
+        assert 0 < node_idx < len(self.routes[route_idx].nodes_list), f"Node index must be between 0 and {len(self.routes[route_idx].nodes_list)}, got {node_idx}."
 
-        self.routes[route_idx].insert(node, node_idx)
+        self.routes[route_idx].insert(position=node_idx, node=node)
         self.cust_df.loc[customer, "route"] = route_idx
         self.twc_format_nodes_df.loc[node, "route"] = route_idx
         self.update_times_attributes_routes(route_idx)
@@ -499,34 +513,3 @@ class CvrptwState:
                 idx = self.routes[route_idx].nodes_list.index(delivery_node)
                 assert idx > node_idx, "Delivery node must be inserted after the pickup node."
                 self.unassigned.remove(customer)
-
-
-
-
-def test_solution(state: CvrptwState):
-    """
-    """
-    assert len(state.routes) > 0, "No routes in the solution."
-    for route in state.routes:
-        nodes_list = route.nodes_list
-        assert len(nodes_list) > 2, "Route must contain at least one customer."
-        assert nodes_list[0] in state.depots["depots_indices"], "First node must be a depot."
-        assert nodes_list[-1] in state.depots["depots_indices"], "Last node must be a depot."
-        assert nodes_list[0] == nodes_list[-1], "First and last nodes must be the same."
-        opened_custs = []
-        for node in nodes_list[1:-1]:
-            cust = state.nodes_to_cust[node]
-            if state.twc_format_nodes_df.loc[node, 'type'] == "pickup":
-                assert cust not in opened_custs, f"Customer {cust} is already picked up."
-                opened_custs.append(cust)
-            elif state.twc_format_nodes_df.loc[node, 'type'] == "delivery":
-                start_node = state.cust_to_nodes[cust][0]
-                assert start_node in nodes_list, f"Customer {cust} is not picked up before drop off node."
-                assert cust in opened_custs, f"Customer {cust} has already been removed from opened_custs."
-                opened_custs.remove(cust)
-            else:
-                assert state.twc_format_nodes_df.loc[node, 'type'] == 'depot', f"Node {node} must be a depot."
-        
-        assert len(opened_custs) == 0, f"Opened customers list is not empty: {opened_custs}."
-
-

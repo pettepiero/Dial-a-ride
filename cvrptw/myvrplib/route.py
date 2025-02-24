@@ -60,7 +60,7 @@ class Route():
         """
         Removes a customer from the route.
             Parameters:
-                - node: lsit
+                - node: list
                     Customers to be removed from the route.
                     NOTE: node refers to node IDs, not customer IDs
             Returns:
@@ -69,16 +69,15 @@ class Route():
         for customer in node:
             self.nodes_list = list(filter(lambda a: a!=customer, self.nodes_list))
 
-    def insert(self, position: int, customer: int) -> None:
+    def insert(self, position: int, node: int) -> None:
         """
         Inserts a customer in a given position in the route
             Parameters:
                 - position: int
                     Position where the customer will be inserted.
-                - customer: int
-                    Customer to be inserted in the route.
+                - node: int
+                    node id to be inserted in the route.
             Returns:
                 - None
         """
-        self.nodes_list.insert(position, customer)
-
+        self.nodes_list.insert(position, node)
