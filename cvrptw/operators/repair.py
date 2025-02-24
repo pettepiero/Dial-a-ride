@@ -90,15 +90,20 @@ def greedy_repair_tw(state: CvrptwState, rng: np.random) -> CvrptwState:
     n_unassigned = len(new_state.unassigned)
     rng.shuffle(new_state.unassigned)
 
-    while counter < n_unassigned:
-        counter += 1
+    while counter < n_unassigned:   # At most loop over n_unassigned customers
+        counter += 1    
         customer = new_state.unassigned[-1]
-        print(f"DEBUG: considering customer {customer}\n unassigned = {new_state.unassigned}")
         start_node, end_node = new_state.cust_to_nodes[customer]
         # try placing the start node
         route_idx, pickup_idx = best_insert_tw(start_node, new_state)
 
         if route_idx is not None:
+            # remove the end node from solution if present
+            if end_node in new_state.routes[route_idx].nodes_list:
+                new_state.routes[route_idx].remove([end_node])
+                new_state.update_times_attributes_routes(route_idx)
+                new_state.routes_cost[route_idx] = new_state.route_cost_calculator(route_idx)
+
             # insert the start node
             new_state.insert_node_in_route_at_idx(start_node, route_idx, pickup_idx)
             # new_state.routes[route_idx].insert(pickup_idx, start_node)
@@ -111,7 +116,7 @@ def greedy_repair_tw(state: CvrptwState, rng: np.random) -> CvrptwState:
             done = False
             for idx in range(pickup_idx, len(new_state.routes[route_idx].nodes_list) - 1):
                 if can_insert_tw(end_node, route_idx, idx, new_state):
-                    # insert the end nodeù
+                    # insert the end node
                     new_state.insert_node_in_route_at_idx(end_node, route_idx, idx)
                     # new_state.routes[route_idx].insert(idx, end_node)
                     # new_state.update_times_attributes_routes(route_idx)
@@ -121,14 +126,14 @@ def greedy_repair_tw(state: CvrptwState, rng: np.random) -> CvrptwState:
                     done = True
                     break
             if not done: # remove the start node from new_state
-                new_state.unassigned.insert(0, customer)
+                # new_state.unassigned.insert(0, customer)
                 new_state.routes[route_idx].remove([start_node])
                 new_state.update_times_attributes_routes(route_idx)
                 new_state.routes_cost[route_idx] = new_state.route_cost_calculator(route_idx)
                 new_state.compute_route_demand(route_idx)
                 new_state.cust_df.loc[customer, "route"] = None
 
-            # Check if the number of routes is less than the number of vehicles
+        # Check if the number of routes is less than the number of vehicles
         elif len(new_state.routes) < new_state.n_vehicles:
             # Initialize a new route and corresponding timings
             depot = new_state.depots["vehicle_to_depot"]
@@ -152,7 +157,8 @@ def greedy_repair_tw(state: CvrptwState, rng: np.random) -> CvrptwState:
             new_state.update_times_attributes_routes(len(new_state.routes) - 1)
 
         else:
-            new_state.unassigned.insert(0, customer)
+            if customer not in new_state.unassigned:
+                new_state.unassigned.insert(0, customer)
 
     new_state.update_unassigned_list()
     return new_state

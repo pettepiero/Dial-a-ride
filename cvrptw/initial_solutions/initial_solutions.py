@@ -230,7 +230,8 @@ def nearest_neighbor(
                 else:
                     AssertionError("Could not serve all remaining delivery nodes")
             # Close the route
-            route, route_schedule = close_route(route, route_schedule, state, df)
+            if route[0] != route[-1]:
+                route, route_schedule = close_route(route, route_schedule, state, df)
             routes.append(Route(route, len(routes)))
 
     # assign route to customers in cust_df

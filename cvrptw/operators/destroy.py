@@ -30,12 +30,16 @@ def random_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
     assert len(solution_customers) > 0, "No customers in solution."
     for customer in rng.choice(solution_customers, customers_to_remove, replace=False):
         customer = customer.item()
+        start_node, end_node = state.cust_to_nodes[customer]
         assert (
-            customer not in destroyed.depots["depots_indices"]
+            start_node not in destroyed.depots["depots_indices"]
         ), "Depot selected for removal."
+        assert (
+            end_node not in destroyed.depots["depots_indices"]
+        ), "Depot selected for removal."
+
         route, idx = destroyed.find_route(customer)
         if route is not None:
-            start_node, end_node = state.cust_to_nodes[customer]
             destroyed.routes[idx].remove([start_node, end_node])
             # Update df
             destroyed.cust_df.loc[customer, "route"] = None
