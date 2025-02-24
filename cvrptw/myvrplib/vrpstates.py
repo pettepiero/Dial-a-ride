@@ -422,9 +422,32 @@ class CvrptwState:
         """
         Update the list of unassigned customers.
         """
-        self.unassigned = self.cust_df.loc[pd.isna(self.cust_df["route"]), "id"].tolist()
+        # check that both start and end node are assigned
+        for route in self.routes:
+            for node in route.nodes_list:
+                if self.twc_format_nodes_df.loc[node, "type"] == "pickup":
+                    cust = self.nodes_to_cust[node]
+                    end_node = self.cust_to_nodes[cust][1]
+                    if end_node not in route.nodes_list:
+                        if cust not in self.unassigned:
+                            self.unassigned.append(cust)
+                    else:
+                        if cust in self.unassigned:
+                            self.unassigned.remove(cust)
+                elif self.twc_format_nodes_df.loc[node, "type"] == "delivery":
+                    cust = self.nodes_to_cust[node]
+                    start_node = self.cust_to_nodes[cust][0]
+                    if start_node not in route.nodes_list:
+                        if cust not in self.unassigned:
+                            self.unassigned.append(cust)
+                    else:
+                        if cust in self.unassigned:
+                            self.unassigned.remove(cust)
+
+        # self.unassigned = self.cust_df.loc[pd.isna(self.cust_df["route"]), "id"].tolist()
         # filter out depots
-        self.unassigned = [customer for customer in self.unassigned if customer not in self.depots["depots_indices"]]
+        depots_ids = [self.nodes_to_cust[cust_id] for cust_id in self.depots["depots_indices"]]
+        self.unassigned = [customer for customer in self.unassigned if customer not in depots_ids]
 
     def compute_route_demand(self, route_idx: int) -> None:
         """
@@ -458,7 +481,7 @@ class CvrptwState:
         assert node >= 0, f"Node must be non-negative, got {node}."
         assert 0 <= route_idx <= len(self.routes), f"Route index must be between 0 and {len(self.routes)}, got {route_idx}."
         customer = self.nodes_to_cust[node] # corresponding customer ID
-        assert customer in self.unassigned, f"Customer {customer} is already assigned."
+        assert customer in self.unassigned, f"Customer {customer} (node {node}) is not in unassigned list: \n{self.unassigned}."
 
         self.routes[route_idx].insert(node, node_idx)
         self.cust_df.loc[customer, "route"] = route_idx
@@ -477,4 +500,33 @@ class CvrptwState:
                 assert idx > node_idx, "Delivery node must be inserted after the pickup node."
                 self.unassigned.remove(customer)
 
+
+
+
+def test_solution(state: CvrptwState):
+    """
+    """
+    assert len(state.routes) > 0, "No routes in the solution."
+    for route in state.routes:
+        nodes_list = route.nodes_list
+        assert len(nodes_list) > 2, "Route must contain at least one customer."
+        assert nodes_list[0] in state.depots["depots_indices"], "First node must be a depot."
+        assert nodes_list[-1] in state.depots["depots_indices"], "Last node must be a depot."
+        assert nodes_list[0] == nodes_list[-1], "First and last nodes must be the same."
+        opened_custs = []
+        for node in nodes_list[1:-1]:
+            cust = state.nodes_to_cust[node]
+            if state.twc_format_nodes_df.loc[node, 'type'] == "pickup":
+                assert cust not in opened_custs, f"Customer {cust} is already picked up."
+                opened_custs.append(cust)
+            elif state.twc_format_nodes_df.loc[node, 'type'] == "delivery":
+                start_node = state.cust_to_nodes[cust][0]
+                assert start_node in nodes_list, f"Customer {cust} is not picked up before drop off node."
+                assert cust in opened_custs, f"Customer {cust} has already been removed from opened_custs."
+                opened_custs.remove(cust)
+            else:
+                assert state.twc_format_nodes_df.loc[node, 'type'] == 'depot', f"Node {node} must be a depot."
         
+        assert len(opened_custs) == 0, f"Opened customers list is not empty: {opened_custs}."
+
+
