@@ -1,13 +1,7 @@
 Initial Solution
 ================
 
-.. _introduction:
-.. _vrp:
-.. _installation:
-.. _nn_sol:
-.. _removal_ops:
-
-
+-----------
 Description
 -----------
 The provided initial solution is an extension of the nearest neighbour solution. 

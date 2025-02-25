@@ -1,18 +1,22 @@
 Removal operators
 =================
 
-.. _introduction:
-.. _vrp:
-.. _installation:
-.. _nn_sol:
-.. _removal_ops:
-
 -----------
 Description
 -----------
 
 Removal operators destroy a solution by removing a set of customers from the solution. 
 This page documents the different heuristics to do this.
+The heuristics that are implemented are based on [WaSH24]_ and are the following:
+
+- :ref:`random_removal`
+- :ref:`random_route_removal`
+- :ref:`shaw_removal`
+- :ref:`worst_removal`
+- :ref:`cost_reducing_removal`
+
+The *Exchange reducing removal* heuristic is currently not implemented as it is not
+trivial to adapt to the pickup and delivery problem.
 
 The algorithms are implemented in ``cvrptw/operators/removal.py`` 
 and ``cvrptw/operators/wang_operators.py``. All the algorithms go through the same procedure
@@ -24,31 +28,33 @@ of the removal procedure:
    :align: center
    :alt: Removal procedure flow chart
 
+.. _random_removal:
 --------------
 Random removal
 --------------
 .. autofunction:: cvrptw.operators.destroy.random_removal
 
-The following flow chart shows the random removal heuristic:
+The following flow chart shows the *random removal* heuristic:
 
 .. image:: ../figures/random_removal.svg
    :width: 400px
    :align: center
    :alt: Random removal flow chart
 
-
+.. _random_route_removal:
 --------------------
 Random route removal
 --------------------
 .. autofunction:: cvrptw.operators.destroy.random_route_removal
 
-The following flow chart shows the random route removal heuristic:
+The following flow chart shows the *random route removal* heuristic:
 
 .. image:: ../figures/random_route_removal.svg
    :width: 400px
    :align: center
    :alt: Random route removal flow chart
 
+.. _shaw_removal:
 ------------
 Shaw removal
 ------------
@@ -61,7 +67,7 @@ instead of the union of planned and unassigned customers. This is because only t
 customers have the earliest start times available. In the future, it would be interesting to
 consider the unassigned customers as well.
 
-Following the notation of reference [WaSH24], the relatedness function is given by formula (4) of reference [WaSH24]:
+Following the notation of reference [WaSH24]_, the relatedness function is given by formula (4) of reference [WaSH24]_:
 
 .. math::
 
@@ -76,7 +82,7 @@ For the pickup and delivery problem, the equation above is evaluated first for t
 nodes, then for the delivery nodes, and the two values are summed up. The customer *j* that
 is removed is the one with the smallest sum.
 
-The following flow chart shows the random route removal heuristic:
+The following flow chart shows the *Shaw removal* heuristic:
 
 
 .. image:: ../figures/shaw-removal.svg
@@ -84,7 +90,38 @@ The following flow chart shows the random route removal heuristic:
    :align: center
    :alt: Shaw removal flow chart
 
+.. _worst_removal:
+-------------
+Worst removal
+-------------
 
+The worst removal heuristic is based on calculating a cost associated with each customer,
+and removing the customer with the highest cost. In our case, **the cost is calculated as the 
+increase in the objective function value when the customer is inserted in the arc it is already
+currently in**. For example, if the considered customer is customer :math:`i` and which is 
+currently between nodes :math:`(j, k)`, then the cost measure is given by:
+
+.. math::
+
+    \text{cost}(i) = d_{ji} + d_{ik} - d_{jk}
+
+Where :math:`d_{ij}` is the distance between nodes :math:`i` and :math:`j`, and so on.
+
+.. image:: ../figures/distance.svg
+   :width: 200px
+   :align: center
+   :alt: Distances between nodes
+
+.. autofunction:: cvrptw.operators.destroy.worst_removal
+
+The following flow chart shows the *worst removal* heuristic:
+
+.. image:: ../figures/worst_removal.svg
+   :width: 400px
+   :align: center
+   :alt: Worst removal flow chart
+
+.. _cost_reducing_removal:
 ---------------------
 Cost reducing removal
 ---------------------
@@ -99,8 +136,9 @@ following nodes or preceding nodes of *v*, depending on whether *v* is a pickup 
 Furthermore, this check is not necessary if the partner node is in a valid position, because this
 would already be a better solution than the starting one.
 
+The following flow chart shows the *cost reducing removal* heuristic:
+
 .. image:: ../figures/cost_reducing_removal.svg
    :width: 400px
    :align: center
    :alt: Cost reducing removal flow chart
-

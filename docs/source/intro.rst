@@ -1,12 +1,7 @@
 The project
 =======================
 
-.. _introduction:
-.. _vrp:
-.. _installation:
-.. _nn_sol:
-.. _removal_ops:
-
+-----------------
 About the project
 -----------------
 This work was developed by myself, Piero Pettenà, for the internship of **Data Science and
