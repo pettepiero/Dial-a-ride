@@ -43,6 +43,17 @@ To install requirements, run
 pip install -r requirements.txt
 ```
 
+### Building the docs
+The documentation can be generated using ```sphinx```. This project was built using version
+8.1.3 of ```sphinx```.
+To generate the documentation simply run the following commands
+
+```
+cd docs
+make html
+```
+And the documentation will be available at ``_build/html``.
+
 ## How to execute the code
 An instance of the static problem can be obtained by executing cvrptw.py, with the desired command line options. 
 ```
