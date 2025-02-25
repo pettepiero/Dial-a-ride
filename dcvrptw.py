@@ -40,7 +40,7 @@ def main():
 
     alns.add_destroy_operator(random_removal)
     alns.add_destroy_operator(random_route_removal)
-    # alns.add_destroy_operator(cost_reducing_removal)
+    alns.add_destroy_operator(cost_reducing_removal)
     # alns.add_destroy_operator(worst_removal)
 
     # alns.add_destroy_operator(exchange_reducing_removal)  # to be implemented
@@ -62,7 +62,7 @@ def main():
     print(f"DEBUG: state.twc_format_nodes_df = \n{initial_solution.twc_format_nodes_df}")
     check_solution(initial_solution)
 
-    select = RouletteWheel([25, 5, 1, 0], 0.8, 3, 1)
+    select = RouletteWheel([25, 5, 1, 0], 0.8, 4, 1)
     # select = RandomSelect(num_destroy=4, num_repair=2)
     accept = RecordToRecordTravel.autofit(
         initial_solution.objective(), 0.02, 0, NUM_ITERATIONS

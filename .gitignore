@@ -3,4 +3,5 @@ outputs/
 docs/build/
 data/DataSetActvAut*.csv
 data/actv_copy.csv
+docs/_build
 data/actv (copy).csv

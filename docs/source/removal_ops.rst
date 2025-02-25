@@ -1,5 +1,5 @@
 Removal operators
-================
+=================
 
 .. _introduction:
 .. _vrp:
@@ -15,7 +15,14 @@ Removal operators destroy a solution by removing a set of customers from the sol
 This page documents the different heuristics to do this.
 
 The algorithms are implemented in ``cvrptw/operators/removal.py`` 
-and ``cvrptw/operators/wang_operators.py``.
+and ``cvrptw/operators/wang_operators.py``. All the algorithms go through the same procedure
+when removing customers from the solution. The following figure shows the general flow chart
+of the removal procedure:
+
+.. image:: ../figures/removal_procedure.svg
+   :width: 400px
+   :align: center
+   :alt: Removal procedure flow chart
 
 --------------
 Random removal
@@ -27,7 +34,7 @@ The following flow chart shows the random removal heuristic:
 .. image:: ../figures/random_removal.svg
    :width: 400px
    :align: center
-   :alt: Nearest Neighbour Heuristic
+   :alt: Random removal flow chart
 
 
 --------------------
@@ -40,7 +47,7 @@ The following flow chart shows the random route removal heuristic:
 .. image:: ../figures/random_route_removal.svg
    :width: 400px
    :align: center
-   :alt: Nearest Neighbour Heuristic
+   :alt: Random route removal flow chart
 
 ------------
 Shaw removal
@@ -75,4 +82,25 @@ The following flow chart shows the random route removal heuristic:
 .. image:: ../figures/shaw-removal.svg
    :width: 400px
    :align: center
-   :alt: Nearest Neighbour Heuristic
+   :alt: Shaw removal flow chart
+
+
+---------------------
+Cost reducing removal
+---------------------
+
+.. autofunction:: cvrptw.operators.destroy.cost_reducing_removal
+
+The following **confusing** flow chart shows the cost reducing removal process, adapted to 
+pickup and delivery problem. In this figure, *partner node* refers to the corresponding
+pickup or delivery node of a customer. The decision block containing the condition
+'Can *w* be inserted in some arch at lower cost in the same route?' hides a loop over either 
+following nodes or preceding nodes of *v*, depending on whether *v* is a pickup or delivery node.
+Furthermore, this check is not necessary if the partner node is in a valid position, because this
+would already be a better solution than the starting one.
+
+.. image:: ../figures/cost_reducing_removal.svg
+   :width: 400px
+   :align: center
+   :alt: Cost reducing removal flow chart
+

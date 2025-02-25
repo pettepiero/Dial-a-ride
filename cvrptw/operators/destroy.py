@@ -13,14 +13,15 @@ def random_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
     """
     Removes customers_to_remove randomly selected customers from the passed-in solution.
     Ignores first and last customers in the routes because they are depots.
-        Parameters:
-            state: CvrptwState
-                The solution from which to remove customers.
-            rng: np.random
-                Random number generator.
-        Returns:
-            CvrptwState
-                The solution after applying the destroy operator.
+        
+    Parameters:
+        state: CvrptwState
+            The solution from which to remove customers.
+        rng: np.random
+            Random number generator.
+    Returns:
+        CvrptwState
+            The solution after applying the destroy operator.
     """
     destroyed: CvrptwState = state.copy()
     customers_to_remove = int(destroyed.n_customers * degree_of_destruction)
@@ -65,12 +66,13 @@ def remove_empty_routes(state: CvrptwState) -> CvrptwState:
     """
     Remove empty routes and corresponding cost after applying the destroy operator.
     Cordeau dataset notation is followed, so empty routes ar those with two elements.
-        Parameters:
-            state: CvrptwState
-                The solution from which to remove empty routes.
-        Returns:
-            CvrptwState
-                The solution after removing empty routes.
+        
+    Parameters:
+        state: CvrptwState
+            The solution from which to remove empty routes.
+    Returns:
+        CvrptwState
+            The solution after removing empty routes.
     """
     for idx, route in enumerate(state.routes):
         if len(route) == 2:
@@ -97,14 +99,15 @@ def random_route_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
     """
     Based on (Wang et. al, 2024). This operator randomly selects customers_to_remove
     routes from a given solution and then removes a random customer from each route.
-        Parameters:
-            state: CvrptwState
-                The solution from which to remove customers.
-            rng: np.random
-                Random number generator.
-        Returns:
-            CvrptwState
-                The solution after applying the destroy operator.
+        
+    Parameters:
+        state: CvrptwState
+            The solution from which to remove customers.
+        rng: np.random
+            Random number generator.
+    Returns:
+        CvrptwState
+            The solution after applying the destroy operator.
     """
     destroyed: CvrptwState = state.copy()
     customers_to_remove = int(destroyed.n_customers * degree_of_destruction)
@@ -140,16 +143,17 @@ def relatedness_function(state: CvrptwState, cust_i: int, cust_j: int) -> float:
     and delivery problem, and the relatedness value is calculated as the sum of the
     relatedness between pickup nodes and the relatedness between delivery nodes.
     The weights a1, a2 and a3 are given by Wang et. al, 2024.
-        Parameters:
-            state: CvrptwState
-                The solution from which to remove customers.
-            i: int
-                The first customer.
-            j: int
-                The second customer.
-        Returns:
-            float
-                The relatedness value between the two customers.
+
+    Parameters:
+        state: CvrptwState
+            The solution from which to remove customers.
+        i: int
+            The first customer.
+        j: int
+            The second customer.
+    Returns:
+        float
+            The relatedness value between the two customers.
     """
     a1 = 0.4
     a2 = 0.8
@@ -203,14 +207,15 @@ def shaw_removal(state: CvrptwState, rng) -> CvrptwState:
     Based on (Wang et. al, 2024), formula (4), which is itself based on the work of
     Shaw (1997) and Ropke and Pisinger (2006). This operator removes a single
     customers from the solution by selecting the most related ones, according to the formula.
-        Parameters:
-            state: CvrptwState
-                The solution from which to remove customers.
-            rng: np.random
-                Random number generator.
-        Returns:
-            CvrptwState
-                The solution after applying the destroy operator.
+    
+    Parameters:
+        state: CvrptwState
+            The solution from which to remove customers.
+        rng: np.random
+            Random number generator.
+    Returns:
+        CvrptwState
+            The solution after applying the destroy operator.
     """
 
     destroyed: CvrptwState = state.copy()
@@ -278,47 +283,51 @@ def shaw_removal(state: CvrptwState, rng) -> CvrptwState:
 def cost_reducing_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
     """
     Cost reducing removal operator based on (Wang et al, 2024). Identifies
-    customers that can be inserted into a solution route at a lower cost.
+    customers that can be inserted into a solution route at a lower cost. This
+    includes testing both nodes for the selected customer. The first better solution 
+    is selected, which means that there might be better solutions that are not found.
     A limit on iterations is proposed to terminate the search for potential
     customers using this operator.
-        Parameters:
-            state: CvrptwState
-                The solution from which to remove customers.
-            rng: np.random
-                Random number generator.
-        Returns:
-            CvrptwState
-                The solution after applying the destroy operator.
+
+    Parameters:
+        state: CvrptwState
+            The solution from which to remove customers.
+        rng: np.random
+            Random number generator.
+    Returns:
+        CvrptwState
+            The solution after applying the destroy operator.
     """
 
     # TODO: Implement the limit on the iterations for this operator
 
     logger.debug(f"In cost reducing removal")
     destroyed = state.copy()
+    initial_cost = destroyed.objective()
 
     iterations = 10
     for i in range(iterations):
         for first_route_index in rng.choice(len(state.routes), 1):
-            customers = state.routes[first_route_index].nodes_list
+            nodes = state.routes[first_route_index].nodes_list
             if (
-                len(customers) <= 2
+                len(nodes) <= 2
             ):  # route has only depot and customer :TODO: what to do in this case?
                 break
-            for v in customers[1:-1]:
-                i1 = customers[customers.index(v) - 1]  # previous customer
-                j1 = customers[customers.index(v) + 1]  # next customer
+            for v in nodes[1:-1]:
+                i1 = nodes[nodes.index(v) - 1]  # previous customer
+                j1 = nodes[nodes.index(v) + 1]  # next customer
 
                 # DEBUG
-                # logger.debug(f"\n\nv: {v}, i1: {i1}, j1: {j1}, customers: {customers}")
+                # logger.debug(f"\n\nv: {v}, i1: {i1}, j1: {j1}, nodes: {nodes}")
                 di1v = state.distances[i1][v]
                 dvj1 = state.distances[v][j1]
                 di1j1 = state.distances[i1][j1]
 
                 for second_route_index in list(range(len(state.routes))):
-                    customers2 = state.routes[second_route_index].nodes_list
-                    for i2 in customers2[:-2]:  # first customer of insertion arc
-                        i2_idx = customers2.index(i2)
-                        j2 = customers2[i2_idx + 1]  # second customer of insertion arc
+                    nodes2 = state.routes[second_route_index].nodes_list
+                    for i2 in nodes2[:-2]:  # first customer of insertion arc
+                        i2_idx = nodes2.index(i2)
+                        j2 = nodes2[i2_idx + 1]  # second customer of insertion arc
                         if state.twc[v][i2] != -np.inf and state.twc[v][j2] != -np.inf:
                             di2j2 = state.distances[i2][j2]
                             di2v = state.distances[i2][v]
@@ -326,34 +335,72 @@ def cost_reducing_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
                             logger.debug(
                                 f"Checking if {di1v} + {dvj1} + {di2j2} > {di1j1} + {di2v} + {dvj2}"
                             )
-                            if di1v + dvj1 + di2j2 > di1j1 + di2v + dvj2:
-                                # Remove v from first route and insert into second
-                                destroyed.routes[first_route_index].remove(v)
+                            if di1v + dvj1 + di2j2 > di1j1 + di2v + dvj2: # Check if cost is lower
+                                # Now we have to check is partner node is valid or has to be inserted
+                                # in a new position and if the obtained cost is lower
 
-                                # Update df
-                                destroyed.cust_df.loc[v, "route"] = None
-                                destroyed.cust_df.loc[v, "done"] = False
-                                if len(destroyed.routes[first_route_index]) != 2:
-                                    destroyed.update_times_attributes_routes(
-                                        first_route_index
-                                    )
-                                    destroyed.routes_cost[first_route_index] = (
-                                        destroyed.route_cost_calculator(
-                                            first_route_index
-                                        )
-                                    )
+                                cust = state.nodes_to_cust[v]
+                                if state.twc_format_nodes_df.loc[v, "type"] == "pickup":
+                                    partner_node = state.cust_to_nodes[cust][1]
+                                    goto = "after"
+                                elif state.twc_format_nodes_df.loc[v, "type"] == "delivery":
+                                    partner_node = state.cust_to_nodes[cust][0]
+                                    goto = "before"
+                                else:
+                                    raise ValueError("Customer type is wrong.")
 
-                                # SHOULD I STAY OR SHOULD I GO?
-                                # destroyed.routes[second_route_index].insert(
-                                #     customers2.index(j2), v
-                                # )
+                                # Check if partner node is in the same route
+                                if partner_node in nodes:
+                                    partner_node_idx = nodes.index(partner_node)
+                                    if goto == "after":
+                                        if partner_node_idx > i2_idx+1:
+                                            # Then partner delivery is correctly placed
+                                            # after pickup node and a better solution is found
+                                            
+                                            removal_procedure(destroyed, cust)
+                                            return remove_empty_routes(destroyed)
+                                        
+                                        else:
+                                            # the position of partner node is not valid.
+                                            # We need to find a valid position after the pickup node
+                                            start_idx = i2_idx + 1
+                                            end_idx = len(nodes2) - 1
+                                            valid_position = None
+                                            for idx in range(start_idx, end_idx):
+                                                valid_position = find_valid_position(
+                                                    state=state, start_idx=start_idx, end_idx=end_idx, route_idx=second_route_index, node_id=partner_node
+                                                )
+                                                if valid_position is None:
+                                                    break
+                                                else:
+                                                    removal_procedure(destroyed, cust)
+                                                    return remove_empty_routes(destroyed)
+                                            # No valid position was possible, abort search for
+                                            # customer v in this route and continue with the next route
+                                            break
+                                    elif goto == "before":
+                                        if partner_node_idx < i2_idx:
+                                            removal_procedure(destroyed, cust)
+                                            return remove_empty_routes(destroyed)
+                                        else:
+                                            # the position of partner node is not valid.
+                                            # We need to find a valid position before the pickup node
+                                            start_idx = 1
+                                            end_idx = i2_idx
+                                            valid_position = None
+                                            for idx in range(start_idx, end_idx):
+                                                valid_position = find_valid_position(
+                                                    state=state, start_idx=start_idx, end_idx=end_idx, route_idx=second_route_index, node_id=partner_node
+                                                )
+                                                if valid_position is None:
+                                                    break
+                                                else:
+                                                    removal_procedure(destroyed, cust)
+                                                    return remove_empty_routes(destroyed)
+                                            # No valid position was possible, abort search for
+                                            # customer v in this route and continue with the next route
+                                            break
 
-                                destroyed.unassigned.append(v)
-                                logger.debug(
-                                    f"\nRemoved customer {v} from route {first_route_index} and inserted\
-                                    in position {customers2.index(j2)} of route {second_route_index}."
-                                )
-                                return remove_empty_routes(destroyed)
                             else:
                                 logger.debug(f"No customer found to remove.")
                         # else:
@@ -363,18 +410,70 @@ def cost_reducing_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
     print(f"Finished")
     return remove_empty_routes(destroyed)
 
+def find_valid_position(state: CvrptwState, start_idx: int, end_idx: int, route_idx: int, node_id: int) -> int:
+    """
+    Find a valid position to insert a node in a route. The node is inserted after the
+    start_idx and before the end_idx. The route is given by route_idx and the node by node_id.
+
+    Parameters:
+        state: CvrptwState
+            The solution from which to remove customers.
+        start_idx: int
+            The index of the node after which the node is to be inserted.
+        end_idx: int
+            The index of the node before which the node is to be inserted.
+        route_idx: int
+            The index of the route in which the node is to be inserted.
+        node_id: int
+            The id of the node to be inserted.
+    Returns:
+        int
+            The index of the node after which the node is to be inserted.
+    """
+    nodes = state.routes[route_idx].nodes_list
+    for i in range(start_idx, end_idx):
+        if state.twc[nodes[i]][node_id] != -np.inf and state.twc[node_id][nodes[i+1]] != -np.inf:
+            return i
+    return None
+
+
+def removal_procedure(state: CvrptwState, cust_id: int):
+    """
+    Performs the removal procedure as descibed by the documentation.
+
+    Parameters:
+        state: CvrptwState
+            The solution from which to remove customers.
+        cust_id: int
+            The id of the customer to be removed.
+
+    Returns:
+        None
+    """
+    start_node, end_node = state.cust_to_nodes[cust_id]
+    route, route_idx = state.find_route(cust_id)
+
+    state.routes[route_idx].remove([start_node, end_node])
+    state.unassigned.append(cust_id)
+    state.cust_df.loc[cust_id, "route"] = None
+    state.cust_df.loc[cust_id, "done"] = False
+    if len(state.routes[route_idx]) != 2:
+        state.update_times_attributes_routes(route_idx)
+        state.routes_cost[route_idx] = state.route_cost_calculator(route_idx)
+    
 
 def worst_removal(state: CvrptwState, rng: np.random.Generator) -> CvrptwState:
     """
     Removes customers in decreasing order of service cost.
-        Parameters:
-            state: CvrptwState
-                The solution from which to remove customers.
-            rng: np.random.Generator
-                Random number generator.
-        Returns:
-            CvrptwState
-                The solution after applying the destroy operator.
+        
+    Parameters:
+        state: CvrptwState
+            The solution from which to remove customers.
+        rng: np.random.Generator
+            Random number generator.
+    Returns:
+        CvrptwState
+            The solution after applying the destroy operator.
     """
     destroyed = state.copy()
     max_service_cost = 0
@@ -412,14 +511,15 @@ def exchange_reducing_removal(
     """
     Variation of the cost-reducing removal based on Wang et. al (2024). Selects
     customers in pairs, allowing one customer to be replaced by another simultaneously.
-        Parameters:
-            state: CvrptwState
-                The solution from which to remove customers.
-            rng: np.random.Generator
-                Random number generator.
-        Returns:
-            CvrptwState
-                The solution after applying the destroy operator.
+        
+    Parameters:
+        state: CvrptwState
+            The solution from which to remove customers.
+        rng: np.random.Generator
+            Random number generator.
+    Returns:
+        CvrptwState
+            The solution after applying the destroy operator.
     """
 
     destroyed = state.copy()
