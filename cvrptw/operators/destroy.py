@@ -35,17 +35,17 @@ def random_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
         replace=False,
     ):
         customer = customer.item()
-        start_node, end_node = state.cust_to_nodes[customer]
+        pickup_node, delivery_node = state.cust_to_nodes[customer]
         assert (
-            start_node not in destroyed.depots["depots_indices"]
+            pickup_node not in destroyed.depots["depots_indices"]
         ), "Depot selected for removal."
         assert (
-            end_node not in destroyed.depots["depots_indices"]
+            delivery_node not in destroyed.depots["depots_indices"]
         ), "Depot selected for removal."
 
         route, idx = destroyed.find_route(customer)
         if route is not None:
-            destroyed.routes[idx].remove([start_node, end_node])
+            destroyed.routes[idx].remove([pickup_node, delivery_node])
             # Update df
             destroyed.cust_df.loc[customer, "route"] = None
             destroyed.cust_df.loc[customer, "done"] = False
@@ -121,8 +121,8 @@ def random_route_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
         if len(route.nodes_list[1:-1]) != 0:
             sampled_node = rng.choice(route.nodes_list[1:-1], 1, replace=False)
             cust = destroyed.nodes_to_cust[sampled_node.item()]
-            start_node, end_node = destroyed.cust_to_nodes[cust]
-            destroyed.routes[route_idx].remove([start_node, end_node])
+            pickup_node, delivery_node = destroyed.cust_to_nodes[cust]
+            destroyed.routes[route_idx].remove([pickup_node, delivery_node])
             # Update df
             destroyed.cust_df.loc[cust, "route"] = None
             destroyed.cust_df.loc[cust, "done"] = False
@@ -158,14 +158,6 @@ def relatedness_function(state: CvrptwState, cust_i: int, cust_j: int) -> float:
     a1 = 0.4
     a2 = 0.8
     a3 = 0.3
-
-    print(
-        f"Looking for customers {cust_i} -> ({state.cust_to_nodes[cust_i]}) and {cust_j} -> ({state.cust_to_nodes[cust_j]})"
-    )
-    print(f"Routes:")
-    for route in state.routes:
-        print(route.nodes_list)
-    print("\n\n")
 
     i_route, _ = state.find_route(cust_i)
     j_route, _ = state.find_route(cust_j)
@@ -410,57 +402,6 @@ def cost_reducing_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
     print(f"Finished")
     return remove_empty_routes(destroyed)
 
-def find_valid_position(state: CvrptwState, start_idx: int, end_idx: int, route_idx: int, node_id: int) -> int:
-    """
-    Find a valid position to insert a node in a route. The node is inserted after the
-    start_idx and before the end_idx. The route is given by route_idx and the node by node_id.
-
-    Parameters:
-        state: CvrptwState
-            The solution from which to remove customers.
-        start_idx: int
-            The index of the node after which the node is to be inserted.
-        end_idx: int
-            The index of the node before which the node is to be inserted.
-        route_idx: int
-            The index of the route in which the node is to be inserted.
-        node_id: int
-            The id of the node to be inserted.
-    Returns:
-        int
-            The index of the node after which the node is to be inserted.
-    """
-    nodes = state.routes[route_idx].nodes_list
-    for i in range(start_idx, end_idx):
-        if state.twc[nodes[i]][node_id] != -np.inf and state.twc[node_id][nodes[i+1]] != -np.inf:
-            return i
-    return None
-
-
-def removal_procedure(state: CvrptwState, cust_id: int):
-    """
-    Performs the removal procedure as descibed by the documentation.
-
-    Parameters:
-        state: CvrptwState
-            The solution from which to remove customers.
-        cust_id: int
-            The id of the customer to be removed.
-
-    Returns:
-        None
-    """
-    start_node, end_node = state.cust_to_nodes[cust_id]
-    route, route_idx = state.find_route(cust_id)
-
-    state.routes[route_idx].remove([start_node, end_node])
-    state.unassigned.append(cust_id)
-    state.cust_df.loc[cust_id, "route"] = None
-    state.cust_df.loc[cust_id, "done"] = False
-    if len(state.routes[route_idx]) != 2:
-        state.update_times_attributes_routes(route_idx)
-        state.routes_cost[route_idx] = state.route_cost_calculator(route_idx)
-    
 
 def worst_removal(state: CvrptwState, rng: np.random.Generator) -> CvrptwState:
     """
@@ -487,21 +428,12 @@ def worst_removal(state: CvrptwState, rng: np.random.Generator) -> CvrptwState:
             )
             if service_cost > max_service_cost:
                 max_service_cost = service_cost
-                worst_customer = i
+                worst_node = i
                 worst_route = route_idx
-    # Removes the worst customer
-    destroyed.routes[worst_route].remove(worst_customer)
-    # Update df
-    destroyed.cust_df.loc[worst_customer, "route"] = None
-    destroyed.cust_df.loc[worst_customer, "done"] = False
-    if len(destroyed.routes[worst_route]) != 2:
-        destroyed.update_times_attributes_routes(worst_route)
-        destroyed.routes_cost[worst_route] = destroyed.route_cost_calculator(
-            worst_route
-        )
-    destroyed.unassigned.append(worst_customer)
 
-    destroyed.update_unassigned_list()
+    # Removes the customer associated with worst node
+    worst_customer = state.nodes_to_cust[worst_node]
+    removal_procedure(destroyed, worst_customer)
     return destroyed
 
 
@@ -591,3 +523,60 @@ def exchange_reducing_removal(
                                 return remove_empty_routes(destroyed)
 
     return remove_empty_routes(destroyed)
+
+
+def find_valid_position(
+    state: CvrptwState, start_idx: int, end_idx: int, route_idx: int, node_id: int
+) -> int:
+    """
+    Find a valid position to insert a node in a route. The node is inserted after the
+    start_idx and before the end_idx. The route is given by route_idx and the node by node_id.
+
+    Parameters:
+        state: CvrptwState
+            The solution from which to remove customers.
+        start_idx: int
+            The index of the node after which the node is to be inserted.
+        end_idx: int
+            The index of the node before which the node is to be inserted.
+        route_idx: int
+            The index of the route in which the node is to be inserted.
+        node_id: int
+            The id of the node to be inserted.
+    Returns:
+        int
+            The index of the node after which the node is to be inserted.
+    """
+    nodes = state.routes[route_idx].nodes_list
+    for i in range(start_idx, end_idx):
+        if (
+            state.twc[nodes[i]][node_id] != -np.inf
+            and state.twc[node_id][nodes[i + 1]] != -np.inf
+        ):
+            return i
+    return None
+
+
+def removal_procedure(state: CvrptwState, cust_id: int):
+    """
+    Performs the removal procedure as descibed by the documentation.
+
+    Parameters:
+        state: CvrptwState
+            The solution from which to remove customers.
+        cust_id: int
+            The id of the customer to be removed.
+
+    Returns:
+        None
+    """
+    pickup_node, delivery_node = state.cust_to_nodes[cust_id]
+    route, route_idx = state.find_route(cust_id)
+
+    state.routes[route_idx].remove([pickup_node, delivery_node])
+    state.unassigned.append(cust_id)
+    state.cust_df.loc[cust_id, "route"] = None
+    state.cust_df.loc[cust_id, "done"] = False
+    if len(state.routes[route_idx]) != 2:
+        state.update_times_attributes_routes(route_idx)
+        state.routes_cost[route_idx] = state.route_cost_calculator(route_idx)
