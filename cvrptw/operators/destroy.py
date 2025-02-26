@@ -399,7 +399,6 @@ def cost_reducing_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
                         # print(f"Time window check failed.")
 
     destroyed.update_unassigned_list()
-    print(f"Finished")
     return remove_empty_routes(destroyed)
 
 

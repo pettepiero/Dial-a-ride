@@ -109,14 +109,13 @@ def greedy_repair_tw(state: CvrptwState, rng: np.random) -> CvrptwState:
             new_state.insert_node_in_route_at_idx(pickup_node, route_idx, pickup_idx)
 
             # check if the end node can be inserted in the same route but after pickup
-
             cost, idx = best_insert_given_route(
                 node=delivery_node, 
                 route_idx=route_idx,
                 start_idx=pickup_idx + 1,
                 end_idx=len(new_state.routes[route_idx].nodes_list) - 1,
                 state=new_state)
-            
+
             if cost is not None and cost != np.inf:
                 new_state.insert_node_in_route_at_idx(delivery_node, route_idx, idx)
             else:
@@ -125,7 +124,6 @@ def greedy_repair_tw(state: CvrptwState, rng: np.random) -> CvrptwState:
                 new_state.routes_cost[route_idx] = new_state.route_cost_calculator(route_idx)
                 new_state.cust_df.loc[customer, "route"] = None
                 new_state.compute_route_demand(route_idx)
-
 
             # done = False
             # for idx in range(pickup_idx, len(new_state.routes[route_idx].nodes_list) - 1):
@@ -144,7 +142,8 @@ def greedy_repair_tw(state: CvrptwState, rng: np.random) -> CvrptwState:
         # Check if the number of routes is less than the number of vehicles
         elif len(new_state.routes) < new_state.n_vehicles:
             # Initialize a new route and corresponding timings
-            depot = new_state.depots["vehicle_to_depot"]
+            depot = new_state.depots["vehicle_to_depot"][len(new_state.routes)]
+            depot = state.cust_to_nodes[depot][0]
             new_state.routes.append(
                 Route(
                     [depot, pickup_node, delivery_node, depot],
@@ -159,7 +158,6 @@ def greedy_repair_tw(state: CvrptwState, rng: np.random) -> CvrptwState:
                 new_state.route_cost_calculator(len(new_state.routes) - 1),
             )
             new_state.update_times_attributes_routes(len(new_state.routes) - 1)
-
         else:
             if customer not in new_state.unassigned:
                 new_state.unassigned.insert(0, customer)

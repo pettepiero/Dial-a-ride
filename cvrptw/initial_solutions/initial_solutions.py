@@ -251,8 +251,11 @@ def nearest_neighbor(
     # Update the time and cost attributes of the solution
     for route_idx in range(len(solution.routes)):
         solution.update_times_attributes_routes(route_idx)
+        print(f"DEBUG: route {route_idx}:\n cost = {solution.routes_cost[route_idx]}")
         for customer in solution.routes[route_idx].nodes_list:
             solution.cust_df.loc[solution.cust_df["id"] == customer, "route"] = route_idx
+
+    print(f"DEBUG: solution.objective() :\n{solution.objective()}")
     return solution
 
 

@@ -19,7 +19,7 @@ from cvrptw.myvrplib.input_output import print_results_dict, parse_options
 from cvrptw.output.video import generate_video
 
 SEED = 1234
-NUM_ITERATIONS = 30
+NUM_ITERATIONS = 200
 
 # logging setup
 import logging
@@ -47,12 +47,15 @@ def main():
     alns.add_destroy_operator(shaw_removal)   #to be implemented
 
     alns.add_repair_operator(greedy_repair_tw)
-    # alns.add_repair_operator(wang_greedy_repair)
+    alns.add_repair_operator(wang_greedy_repair)
 
     data = pd.read_csv("./data/actv_dynamic_df.csv")
     data.index +=1 # align index to ids
 
     init = CvrptwState(dataset=data, n_vehicles=args.n_vehicles, vehicle_capacity=args.vehicle_capacity)
+
+
+    print(f"init.depots['vehicle_to_depot'] = {init.depots['vehicle_to_depot']}")
 
     initial_solution = nearest_neighbor(state=init, initial_time_slot=True)
     print(f"DEBUG: initial solution:\n")
@@ -62,7 +65,7 @@ def main():
     print(f"DEBUG: state.twc_format_nodes_df = \n{initial_solution.twc_format_nodes_df}")
     check_solution(initial_solution)
 
-    select = RouletteWheel([25, 5, 1, 0], 0.8, 5, 1)
+    select = RouletteWheel([25, 5, 1, 0], 0.8, 5, 2)
     # select = RandomSelect(num_destroy=4, num_repair=2)
     accept = RecordToRecordTravel.autofit(
         initial_solution.objective(), 0.02, 0, NUM_ITERATIONS
@@ -74,6 +77,7 @@ def main():
     result, *_ = alns.iterate(
         initial_solution, select, accept, stop, data=data, save_plots=args.video
     )
+
     # Testing solution validity after iterations
     check_solution(initial_solution)
 
@@ -137,6 +141,7 @@ def main():
             default_output_folder="./outputs/videos",
             desidered_fps=12,
         )
+
 
 
 if __name__ == "__main__":

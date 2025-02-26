@@ -9,7 +9,7 @@ def verify_time_windows(data: pd.DataFrame, sol, percentage: bool = False) -> di
     If percentage is True, then the counts are returned as percentages of served customers.
         Parameters:
             data: pd.DataFrame
-                The data dataframe.
+                The data dataframe in twc format.
             sol: CvrptwState
                 The solution to be verified.
             percentage: bool
@@ -21,7 +21,7 @@ def verify_time_windows(data: pd.DataFrame, sol, percentage: bool = False) -> di
     sum_early = 0
     sum_late = 0
 
-    for route in sol.routes:
+    for i, route in enumerate(sol.routes):
         for node_idx, node in enumerate(route.nodes_list):
             start_time = data.loc[node, "start_time"].item()
             end_time = data.loc[node, "end_time"].item()

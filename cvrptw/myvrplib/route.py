@@ -1,5 +1,6 @@
 import copy
 import logging
+import pandas as pd
 
 from cvrptw.myvrplib.data_module import data, d_data
 from cvrptw.myvrplib.myvrplib import END_OF_DAY, LOGGING_LEVEL
@@ -23,6 +24,10 @@ class Route():
                 including the depot.
             demand: int
                 Total demand of the route.
+            sum_late: float
+                Sum of late minutes in the route.
+            sum_early: float
+                Sum of early minutes in the route.
     """
 
     def __init__(self, nodes_list: list, vehicle: int=None, cost: float=None, start_times: list = None, planned_windows: list = [], vehicle_start_time:float = None):
@@ -33,7 +38,9 @@ class Route():
         # first value is the planned arrival time
         # second value is the planned departure time
         # NOTE: maybe only planned arrival time is sufficient
-        self.demand = None
+        self.demand = 0
+        self.sum_late = 0
+        self.sum_early = 0
 
     def __str__(self):
         return f"Route(nodes_list={self.nodes_list}, vehicle={self.vehicle}, start_times={self.start_times}, planned_windows={self.planned_windows})"
@@ -81,3 +88,33 @@ class Route():
                 - None
         """
         self.nodes_list.insert(position, node)
+
+    def compute_late_sum(self, twc_format_nodes_df: pd.DataFrame) -> None:
+        """
+        Computes the sum of late minutes in the route.
+            Parameters:
+                - twc_format_nodes_df: pd.DataFrame
+                    DataFrame containing the time windows for each customer.
+            Returns:
+                - None
+        """
+        self.sum_late = 0
+        for node_idx, node in enumerate(self.nodes_list):
+            end_time = self.planned_windows[node_idx][1]
+            if end_time > twc_format_nodes_df.loc[node, "end_time"].item():
+                self.sum_late += end_time - twc_format_nodes_df.loc[node, "end_time"]
+
+    def compute_early_sum(self, twc_format_nodes_df: pd.DataFrame) -> None:
+        """
+        Computes the sum of early minutes in the route.
+            Parameters:
+                - twc_format_nodes_df: pd.DataFrame
+                    DataFrame containing the time windows for each customer.
+            Returns:
+                - None
+        """
+        self.sum_early = 0
+        for node_idx, node in enumerate(self.nodes_list):
+            start_time = self.planned_windows[node_idx][0]
+            if start_time < twc_format_nodes_df.loc[node, "start_time"].item():
+                self.sum_early += twc_format_nodes_df.loc[node, "start_time"] - start_time

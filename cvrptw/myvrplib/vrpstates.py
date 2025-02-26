@@ -31,6 +31,9 @@ class CvrptwState:
             List of costs of each route.
         dataset: dict or pd.DataFrame
             Dictionary or pd.DataFrame containing the dataset.
+        twc_format_nodes_df: pd.DataFrame
+            DataFrame containing the dataset in the format used \ 
+            for time window compatibility matrix computation.
         cust_to_nodes: dict
             Dictionary mapping customer IDs to node IDs.
         unassigned: list
@@ -209,7 +212,11 @@ class CvrptwState:
         """
         assert len(self.routes) == len(self.routes_cost), "Routes and routes_cost must have the same length."
         unassigned_penalty = UNASSIGNED_PENALTY * len(self.unassigned)
-        return sum([self.routes_cost[idx] for idx in range(len(self.routes))]) + unassigned_penalty
+        late_penalty = LATE_PENALTY * sum([route.sum_late for route in self.routes])
+        early_penalty = EARLY_PENALTY * sum([route.sum_early for route in self.routes])
+
+        return sum([self.routes_cost[idx] for idx in range(len(self.routes))])  \
+            + unassigned_penalty + late_penalty + early_penalty
 
     @property
     def cost(self):
@@ -272,6 +279,8 @@ class CvrptwState:
         self.update_est_lst(route_index)
         # TODO udpate planned windows
         self.calculate_planned_times(route_index)
+        self.routes[route_index].compute_early_sum(self.twc_format_nodes_df)
+        self.routes[route_index].compute_late_sum(self.twc_format_nodes_df)
 
     def get_dmax(self):
         """
