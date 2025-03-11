@@ -17,6 +17,7 @@ from cvrptw.operators.wang_operators import *
 from cvrptw.output.analyze_solution import verify_time_windows, check_solution
 from cvrptw.myvrplib.input_output import print_results_dict, parse_options
 from cvrptw.output.video import generate_video
+from cvrptw.maps.maps import setup
 
 SEED = 1234
 NUM_ITERATIONS = 200
@@ -28,6 +29,17 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=LOGGING_LEVEL)
 
 degree_of_destruction = 0.05
+
+
+def load_map_data(
+    stops_file: str = "./data/DataSetActvAut(Fermate).csv",
+) -> pd.DataFrame:
+    if stops_file is None:
+        graph, stops_df, segments_df = setup()
+    else:
+        graph, stops_df, segments_df = setup(stops_file)
+
+    # create distances matrix
 
 
 def main():
@@ -49,11 +61,15 @@ def main():
     alns.add_repair_operator(greedy_repair_tw)
     alns.add_repair_operator(wang_greedy_repair)
 
-    data = pd.read_csv("./data/actv_dynamic_df.csv")
+    data = pd.read_csv("./data/dynamic_df_new_format.csv")
     data.index +=1 # align index to ids
 
-    init = CvrptwState(dataset=data, n_vehicles=args.n_vehicles, vehicle_capacity=args.vehicle_capacity)
-
+    init = CvrptwState(
+        dataset=data,
+        n_vehicles=args.n_vehicles,
+        vehicle_capacity=args.vehicle_capacity,
+        map_file="./data/DataSetActvAut(Fermate).csv",
+    )
 
     print(f"init.depots['vehicle_to_depot'] = {init.depots['vehicle_to_depot']}")
 
@@ -141,7 +157,6 @@ def main():
             default_output_folder="./outputs/videos",
             desidered_fps=12,
         )
-
 
 
 if __name__ == "__main__":

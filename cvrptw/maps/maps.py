@@ -1,71 +1,140 @@
 import plotly.express as px
 import utm
 import pandas as pd
-import matplotlib.pyplot as plt
 import numpy as np
 import re
 import networkx as nx
-import geopy.distance
 
-def get_stops():
-    stops_df = pd.read_csv("./data/DataSetActvAut(Fermate).csv")
-    zone = 32
+
+def get_stops(
+        data: str = "./data/DataSetActvAut(Fermate).csv",
+        valid_stops: str = "./data/fermate_chiamata_actv.txt",
+        utm_zone: int = 32,
+        output_file: str = "./data/actv_stops.csv",
+    ) -> pd.DataFrame:
+    """
+    Get the stops from the CSV file and convert the UTM coordinates to lat/lon. Drops 
+    unnecessary columns and filters stops on the Favaro dial a ride area. Saves the 
+    filtered stops DataFrame to a CSV file. The list of valid stops is read from the 
+    specified text file. Default values are provided for all arguments.
+
+    Parameters:
+    data: str
+        Path to the CSV file containing the stops data.
+    valid_stops: str
+        Path to the text file containing the valid stops.
+    utm_zone: int
+        UTM zone for the region. (32 for Venezia/Mestre area)
+
+    Returns:
+    stops_df: pd.DataFrame
+        DataFrame containing the stops data.
+        Attributes:
+            - CODFERMATA: Stop ID
+            - X: UTM X coordinate
+            - Y: UTM Y coordinate
+            - centroid_lat: Latitude
+            - centroid_lon: Longitude
+            - node_id: Node ID for graph
+    """
+
+    stops_df = pd.read_csv(data, delimiter=",")
     # convert from utm to lat/lon
     stops_df["centroid_lat"] = stops_df.apply(
-        lambda x: utm.to_latlon(x["X"], x["Y"], zone, northern=True)[0], axis=1
+        lambda x: utm.to_latlon(x["X"], x["Y"], utm_zone, northern=True)[0], axis=1
     )
     stops_df["centroid_lon"] = stops_df.apply(
-        lambda x: utm.to_latlon(x["X"], x["Y"], zone, northern=True)[1], axis=1
+        lambda x: utm.to_latlon(x["X"], x["Y"], utm_zone, northern=True)[1], axis=1
     )
 
     # Filtering stops on Favaro dial a ride area
-    with open('./data/fermate_chiamata_actv.txt', 'r', encoding='utf-8') as file:
+    with open(valid_stops, 'r', encoding='utf-8') as file:
         content = file.readlines()
     valid_stops = [int(match) for line in content for match in re.findall(r'\((\d+)\)', line)]
-    # drop cols
+    # drop cols that I don't need
     cols_to_drop = ["CODPRGFERMATA", "NODO", "ARCO", "DENOMINAZIONE", "UBICAZIONE", "COMUNE", "TIPOLOGIA", "ZONATARIFFARIA", "INDFERMATA", "INDPROXFERMATA", "NETWORKVERSION"]
     stops_df = stops_df.drop(columns=cols_to_drop)
     # filter valid stops
     stops_df = stops_df.loc[stops_df["CODFERMATA"].isin(valid_stops)]
-    stops_df.to_csv("./data/actv_stops.csv", index=False)
+    stops_df["node_id"] = stops_df.index +1
+    stops_df.reset_index(drop=True, inplace=True)
+    stops_df.to_csv(output_file, index=False)
 
     return stops_df
 
 
-def add_manual_arcs(list_of_arcs: list):
-    # Manually include the arcs that are wrongly tagged
-    arcs_to_include = [1299, 1314, 1315, 1316, 1254, 1253, 1175, 1174, 1176, 2304, 2183, 2500, 2502, 332, 232, 1061, 1058, 449, 1046, 234, 1255,
-       311, 233, 314, 1062, 1059, 439, 313, 235, 342, 341, 312, 237, 236, 256, 2190, 2187, 
-       2189, 2188, 1256, 889, 212, 210, 1169]
-    list_of_arcs = np.append(list_of_arcs, arcs_to_include)
+def manual_arcs(
+        starting_list: list, 
+        arcs_to_add: list = None, 
+        arcs_to_remove: list = None
+    ) -> list:
+    """
+    Function to manually add or remove arcs to the list of arcs to include in the network. This 
+    is useful for datasets where some arcs are misteriously missing for some reason. The default
+    list is hand picked for the dataset used in this project.
 
-    return list_of_arcs
+    Parameters:
+    starting_list: list
+        List of arcs to include in the network.
+    arcs_to_add: list
+        List of arcs to add to the network.
+    arcs_to_remove: list
+        List of arcs to remove from the network.
 
-def remove_manual_arcs(list_of_arcs: list):
-    # Manually remove the arcs that are wrongly tagged
-    arcs_to_remove = [1237, 1238, 1243, 1244, 1161, 1172, 1163, 1162, 1000, 1312, 1311, 
-                      1310, 2185, 342, 1295, 1294, 2179, 2184, 730, 2300]
-    list_of_arcs = np.setdiff1d(list_of_arcs, arcs_to_remove)
+    Returns:
+    list_of_arcs: list
+        List of arcs to include in the network.
+    """
+    if arcs_to_add is not None:
+        result = np.append(starting_list, arcs_to_add)
+    else:
+        arcs_to_include = [1299, 1314, 1315, 1316, 1254, 1253, 1175, 1174, 1176, 2304, 2183, 2500, 2502, 332, 232, 1061, 1058, 449, 1046, 234, 1255,
+        311, 233, 314, 1062, 1059, 439, 313, 235, 342, 341, 312, 237, 236, 256, 2190, 2187, 
+        2189, 2188, 1256, 889, 212, 210, 1169, 1049, 1669, 1682, 1050, 1169, 1053, 2587, 2580, 2579, 2199, 
+        1681, 1682, 2584, ]
+        result = np.append(starting_list, arcs_to_include)
+    
+    if arcs_to_remove is not None:
+        result = np.setdiff1d(result, arcs_to_remove)
+    else:
+        arcs_to_remove = [1237, 1238, 1243, 1244, 1161, 1172, 1163, 1162, 1000, 1312, 1311, 
+                        1310, 2185, 342, 1295, 1294, 2179, 2184, 730, 2300, 2186, 2585]
+        result = np.setdiff1d(result, arcs_to_remove)
+    
+    return result
 
-    return list_of_arcs
+def get_arcs(
+        list_of_stops: list, 
+        arcs_data: str = "./data/DataSetActvAut(Archi).csv", 
+        all_arcs: bool=False) -> list:
+    """
+    Get the list of arc ids that connect the stops in the given 
+    list. The arcs are read from the CSV file and filtered to only
+    include the arcs that connect the stops in the list. The 
+    default arcs data file is provided. It is possible to return 
+    all arcs in the dataset by setting the all_arcs parameter to 
+    True.
 
-def get_arcs(list_of_stops: list):
-    arcs_df = pd.read_csv("./data/DataSetActvAut(Archi).csv", delimiter=",")
+    Parameters:
+    list_of_stops: list
+        List of stop IDs to connect.
+    arcs_data: str
+        Path to the CSV file containing the arcs data.
+    all_arcs: bool
+        If True, returns all arcs in the dataset.
+
+    Returns:
+    list_of_arcs: list
+        List of arc IDs that connect the stops in the list.
+    """
+    arcs_df = pd.read_csv(arcs_data, delimiter=",")
     # filter arcs that only connect the stops in the list
     filtered_arcs_df = arcs_df.loc[arcs_df["FERMDA"].isin(list_of_stops)]
-    filtered_arcs_df = filtered_arcs_df.loc[filtered_arcs_df["FERMAA"].isin(list_of_stops)]
-
-########################################################################
-
-
     list_of_arcs = filtered_arcs_df["CODPRGARCOFERMATA"].unique()
-    # list_of_arcs = arcs_df["CODPRGARCOFERMATA"].unique()
-
-
-    ##################################################################
-
-    list_of_arcs = add_manual_arcs(list_of_arcs)
-    list_of_arcs = remove_manual_arcs(list_of_arcs)
+    filtered_arcs_df = filtered_arcs_df.loc[filtered_arcs_df["FERMAA"].isin(list_of_stops)]
+    list_of_arcs = np.append(list_of_arcs, filtered_arcs_df["CODPRGARCOFERMATA"].unique())
+    if all_arcs:
+        list_of_arcs = arcs_df["CODPRGARCOFERMATA"].unique()
 
     return list_of_arcs
 
@@ -102,7 +171,7 @@ def filter_geographically(segments_df: pd.DataFrame, stops_df: pd.DataFrame):
     # lat_min = 45.490074
     # lat_max = 45.52111
     # epsilon = 0.002
-    epsilon = 0.005
+    epsilon = 0.01
 
     long_min = stops_df["centroid_lon"].min() - epsilon
     long_max = stops_df["centroid_lon"].max() + epsilon
@@ -122,7 +191,11 @@ def filter_geographically(segments_df: pd.DataFrame, stops_df: pd.DataFrame):
     return df_filtered
 
 
-def plot_map(segments_df: pd.DataFrame, stops_df: pd.DataFrame, nodes: list=None):
+def plot_map(
+        segments_df: pd.DataFrame, 
+        stops_df: pd.DataFrame, 
+        nodes: list=None,
+        show: bool=True):
 
     # Create a long-form DataFrame for Plotly (each segment as a line)
     plot_data = []
@@ -175,8 +248,9 @@ def plot_map(segments_df: pd.DataFrame, stops_df: pd.DataFrame, nodes: list=None
     #             marker=dict(size=8, color="blue"),
     #             hovertext="node",
     #         )
-
-    fig.show()
+    if show:
+        fig.show()
+    return fig
 
 
 def coordinates_in_nodes(coords, nodes):
@@ -271,17 +345,14 @@ def create_graph(segments_df: pd.DataFrame, stops_df: pd.DataFrame) -> pd.DataFr
     # compute real arcs from segments
     # create graph with stops and real arcs
 
-    print(stops_df.head())
-    print(segments_df.head())
-
     nodes = get_dict_of_nodes(segments_df)
     list_of_nodes = list(nodes.keys())
 
-    print(f"list_of_nodes:\n {list_of_nodes}\n")
-
-    graph = nx.DiGraph()
     list_of_stops = stops_df["CODFERMATA"].unique()
     list_of_arcs = get_arcs(list_of_stops)
+    list_of_arcs = manual_arcs(list_of_arcs)
+
+    graph = nx.DiGraph()
     for arc in list_of_arcs:
         graph.add_edge(
             segments_df.loc[segments_df["CODPRGARCOFERMATA"] == arc, "CODPUNTODA"].values[0],
@@ -291,11 +362,11 @@ def create_graph(segments_df: pd.DataFrame, stops_df: pd.DataFrame) -> pd.DataFr
 
     return graph
 
-
-def main():
+def create_visualization():
     stops_df = get_stops()
     list_of_stops = stops_df["CODFERMATA"].unique()
     list_of_arcs = get_arcs(list_of_stops)
+    list_of_arcs = manual_arcs(list_of_arcs)
     segments_df = get_segments(list_of_arcs)
     # manually add segment from stop 702 to stop 720
     segments_df = pd.concat(
@@ -321,13 +392,100 @@ def main():
     )
 
     segments_df = filter_geographically(segments_df, stops_df)
+    fig = plot_map(segments_df=segments_df, stops_df=stops_df, show=False)
+    return fig
 
-    graph = create_graph(segments_df, stops_df)
+
+def get_shortest_path(graph, node_a, node_b, stops_df, segments_df):
+    predecessors, shortest_paths = nx.floyd_warshall_predecessor_and_distance(
+        graph, weight="weight"
+    )
+
+    # Convert to a fast lookup dictionary
+    distance_lookup = {
+        (src, dst): shortest_paths[src][dst]
+        for src in graph.nodes
+        for dst in graph.nodes
+    }
+
+    stops_to_node = get_dict_of_stops(stops_df, segments_df)
+    nodes_to_stop = {v: k for k, v in stops_to_node.items()}
+    print(stops_to_node)
+    print(f"Distance between nodes {node_a} and {node_b}:")
+    print(distance_lookup[(stops_to_node[node_a], stops_to_node[node_b])])
+    print("Path between nodes:")
+    path = nx.reconstruct_path(
+        stops_to_node[node_a], stops_to_node[node_b], predecessors
+    )
+    path = [int(nodes_to_stop[el]) for el in path]
+    print(path)
+
+
+def manual_segments(segments_df: pd.DataFrame) -> pd.DataFrame:
+    # manually add segment from stop 702 to stop 720
+    segments_df = pd.concat(
+        [
+            segments_df,
+            pd.DataFrame(
+                {
+                    "CODSEGMENTO": [-1],
+                    "CODPRGARCOFERMATA": [-1],
+                    "CODPUNTODA": [-1],
+                    "CODPUNTOA": [-2],
+                    "XDA": [755156.74],
+                    "YDA": [5046248.55],
+                    "XA": [755230.03],
+                    "YA": [5046578.2],
+                    "lat_da": [45.52302648],
+                    "lon_da": [12.2672934],
+                    "lat_a": [45.52596203],
+                    "lon_a": [12.26840207],
+                }
+            ),
+        ]
+    )
+
+    return segments_df
+
+
+def setup(stops_data: str = "./data/DataSetActvAut(Fermate).csv"):
+    stops_df = get_stops(stops_data)
+    # # Manually add the depot node
+    # stops_df = pd.concat(
+    #     [
+    #         pd.DataFrame(
+    #             {
+    #                 "CODFERMATA": [3404],
+    #                 "X": [756701.38],
+    #                 "Y": [5044192.23],
+    #                 "centroid_lat": [45.503981],
+    #                 "centroid_lon": [12.285963],
+    #                 "node_id": [0],
+    #             }
+    #         ),
+    #         stops_df,
+    #     ],
+    #     ignore_index=True,
+    # )
+    print(f"stops_df in setup: \n{stops_df}")
+
+    list_of_stops = stops_df["CODFERMATA"].unique()
+    list_of_arcs = get_arcs(list_of_stops, all_arcs=False)
+    list_of_arcs = manual_arcs(list_of_arcs)
+    segments_df = get_segments(list_of_arcs)
+    segments_df = manual_segments(segments_df)
+    segments_df = filter_geographically(segments_df, stops_df)
+
     # plot_map(segments_df, stops_df)
-    print(graph)
-    print(f"Running shortest path algorithm...")
+    graph = create_graph(segments_df, stops_df)
+    return graph, stops_df, segments_df
+
+
+def main():
+
+    graph, stops_df, segments_df = setup()
+
     predecessors, shortest_paths = nx.floyd_warshall_predecessor_and_distance(graph, weight="weight")
-    print(f"Done.")
 
     # Convert to a fast lookup dictionary
     distance_lookup = {
@@ -336,7 +494,6 @@ def main():
 
     stops_to_node = get_dict_of_stops(stops_df, segments_df)
     nodes_to_stop = {v: k for k, v in stops_to_node.items()}
-    print(stops_to_node)
 
     node_a = 277
     node_b = 684

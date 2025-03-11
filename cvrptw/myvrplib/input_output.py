@@ -79,8 +79,8 @@ def parse_options():
     parser.add_argument(
         "--n_vehicles",
         type=int,
-        default=2,
-        help="Number of vehicles (default: 2).",
+        default=1,
+        help="Number of vehicles (default: 1).",
     )
     parser.add_argument(
         "--vehicle_capacity",

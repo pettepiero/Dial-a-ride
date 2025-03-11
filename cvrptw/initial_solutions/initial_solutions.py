@@ -106,6 +106,10 @@ def nearest_neighbor(
     while len(routes) < state.n_vehicles and remaining_pick_up_nodes:
         # Initialize route
         initial_depot_id = state.depots["vehicle_to_depot"][len(routes)] # depot for the current vehicle
+        print("\n\n")
+        print(state.depots)
+        print(f"DEBUG: initial_depot_id = {initial_depot_id}")
+        print(f"DEBUG: state.cust_to_nodes = {state.cust_to_nodes}")
         depot_node = state.cust_to_nodes[initial_depot_id][0] # depot node
         route = [depot_node]
         route_schedule = []

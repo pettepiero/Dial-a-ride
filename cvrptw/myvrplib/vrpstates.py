@@ -6,8 +6,9 @@ from cvrptw.myvrplib.data_module import (
     create_depots_dict,
     dynamic_extended_df,
     generate_twc_matrix,
-    create_cust_nodes_mapping,
+    create_cust_stops_mapping,
     create_nodes_cust_mapping,
+    create_cust_nodes_mapping,
 )
 from cvrptw.output.analyze_solution import verify_time_windows
 from cvrptw.myvrplib.myvrplib import END_OF_DAY, UNASSIGNED_PENALTY, LOGGING_LEVEL, LATE_PENALTY, EARLY_PENALTY
@@ -16,6 +17,8 @@ import numpy as np
 import pandas as pd
 import logging
 from typing import Union
+from cvrptw.maps.maps import setup, get_dict_of_stops
+import networkx as nx
 
 logger = logging.getLogger(__name__)
 logger.setLevel(LOGGING_LEVEL)
@@ -24,92 +27,124 @@ logger.setLevel(LOGGING_LEVEL)
 class CvrptwState:
     """
     Class representing the state of the CVRPTW problem.
-    Attributes:
-        routes: list
-            List of routes in the state.
-        routes_cost: list
-            List of costs of each route.
-        dataset: dict or pd.DataFrame
-            Dictionary or pd.DataFrame containing the dataset.
-        twc_format_nodes_df: pd.DataFrame
-            DataFrame containing the dataset in the format used \ 
-            for time window compatibility matrix computation.
-        cust_to_nodes: dict
-            Dictionary mapping customer IDs to node IDs.
-        unassigned: list
-            List of unassigned customers' IDs (NOT node IDs). 
-            To get node IDs use mapping cust_to_nodes.
-        cust_df: pd.DataFrame
-            DataFrame containing the customers data.
-        seed: int
-            Seed for the random number generator.
-        distances: np.ndarray
-            Matrix of distances between each pair of customers.
-        twc: np.ndarray
-            Time window compatibility matrix.
-        qmax: float
-            Maximum demand of any customer.
-        dmax: float
-            Maximum distance between any two customers.
-        norm_tw: np.ndarray
-            Normalized time window compatibility matrix.
-        n_vehicles: int
-            Number of vehicles in the dataset.
-        depots: dict
-            Dictionary containing the depots information
-        n_customers: int
-            Number of customers in the dataset.
-        vehicle_capacity: int
-            Capacity of the vehicles in the dataset.
-        current_time: int
-            Current time of the simulation.
-    """
 
+    Attributes:
+
+    routes: list
+        List of routes in the state.
+    routes_cost: list
+        List of costs of each route.
+    dataset: dict or pd.DataFrame
+        Dictionary or pd.DataFrame containing the dataset.
+    twc_format_nodes_df: pd.DataFrame
+        DataFrame containing the dataset in the format used 
+        for time window compatibility matrix computation.
+    cust_to_nodes: dict
+        Dictionary mapping customer IDs to node IDs.
+    unassigned: list
+        List of unassigned customers' IDs (NOT node IDs). 
+        To get node IDs use mapping cust_to_nodes.
+    cust_df: pd.DataFrame
+        DataFrame containing the customers data.
+    seed: int
+        Seed for the random number generator.
+    distances: np.ndarray
+        Matrix of distances between each pair of customers.
+    twc: np.ndarray
+        Time window compatibility matrix.
+    qmax: float
+        Maximum demand of any customer.
+    dmax: float
+        Maximum distance between any two customers.
+    norm_tw: np.ndarray
+        Normalized time window compatibility matrix.
+    n_vehicles: int
+        Number of vehicles in the dataset.
+    depots: dict
+        Dictionary containing the depots information
+    n_customers: int
+        Number of customers in the dataset.
+    vehicle_capacity: int
+        Capacity of the vehicles in the dataset.
+    current_time: int
+        Current time of the simulation.
+    """
     def __init__(
         self,
         n_vehicles: int,
         vehicle_capacity: int,
+        map_file: str,
         routes: list[Route] = None,
         routes_cost: list = None,
-        dataset: Union[dict, pd.DataFrame] = data,
+        dataset: Union[dict, pd.DataFrame, str] = data,
         given_unassigned: list = None,
         distances: np.ndarray = None,
         current_time: int = 0,
         seed: int = 0,
     ):
+        # Set up map information
+        graph, stops_df, segments_df = setup(map_file)
+        self.predecessors, shortest_paths = nx.floyd_warshall_predecessor_and_distance(
+            graph, weight="weight"
+        )
 
+        print(f"DEBUG: stops_df = \n{stops_df}")
+        stop_id_to_node = get_dict_of_stops(stops_df, segments_df)
+        nodes_to_stop = {v: k for k, v in stop_id_to_node.items()}
+
+        stop_nodes = [node_id for node_id in stops_df["node_id"]]
+
+        # # Initialize distances matrix
+        # Convert to a fast lookup dictionary
+        self.distances = {
+            (src, dst): shortest_paths[src][dst]
+            for src in stop_nodes
+            for dst in stop_nodes
+        }
+
+        # Set up requests information
         if isinstance(dataset, dict):
+            print("from dict")
             self.dataset = dataset
             self.seed = seed
             self.cust_df = dynamic_df_from_dict(dataset, seed=seed)
         elif isinstance(dataset, pd.DataFrame):
+            print("From dataframe")
             self.cust_df = dataset
             self.seed = seed
-            self.depots = dataset.loc[dataset["service_time"] == 0, "id"].tolist()
+            self.depots = dataset.loc[dataset["service_time"] == 0, "cust_id"].tolist()
         else:
             raise ValueError(f"Dataset must be a dictionary or a DataFrame. Passed: {type(dataset)}")
 
         self.routes = routes if routes is not None else []
         # Update self.cust_df with the routes
+        self.cust_df["route"] = None
+        # TODO: check if this is actually doing anything
         for idx, route in enumerate(self.routes):
-            for customer in route.nodes_list:
-                self.cust_df.loc[self.cust_df["id"] == customer, "route"] = int(idx)
-
-        # # Initialize distances matrix
+            for node in route.nodes_list:
+                customer_id = self.nodes_to_cust[node]
+                self.cust_df.loc[self.cust_df["cust_id"] == customer_id, "route"] = int(idx)
 
         # Change data format for twc and distances computation
         self.dataset = self.cust_df
-        self.twc_format_nodes_df = dynamic_extended_df(self.cust_df)
-        self.cust_to_nodes = create_cust_nodes_mapping(self.twc_format_nodes_df)
-        self.nodes_to_cust = create_nodes_cust_mapping(self.twc_format_nodes_df)
+        # self.twc_format_nodes_df = dynamic_extended_df(self.cust_df)
+        self.twc_format_nodes_df = self.cust_df.loc[self.cust_df["demand"] != 0] # simply exclude depots?
+        self.cust_to_stops = create_cust_stops_mapping(self.cust_df)
+        self.cust_to_nodes = create_cust_nodes_mapping(cust_to_stops=self.cust_to_stops, stop_id_to_node=stop_id_to_node)
 
-        if distances is not None:
-            self.distances = distances
-        else:
-            self.distances = cost_matrix_from_coords(
-                coords=self.twc_format_nodes_df[["x", "y"]].values,
-                cordeau=False
-            )
+        print(f"Cust to stops: {self.cust_to_stops}")
+        print(f"Cust to nodes: {self.cust_to_nodes}")
+        # self.nodes_to_cust = create_nodes_cust_mapping(self.cust_df)
+
+        # self.requests_df =
+
+        # if distances is not None:
+        #     self.distances = distances
+        # else:
+        #     self.distances = cost_matrix_from_coords(
+        #         coords=self.twc_format_nodes_df[["x", "y"]].values,
+        #         cordeau=False
+        #     )
 
         if routes_cost is not None:
             self.routes_cost = routes_cost
@@ -118,19 +153,23 @@ class CvrptwState:
         else:
             self.routes_cost = np.array([self.route_cost_calculator(idx) for idx in range(len(self.routes))])
             logger.debug(f"Calculated len(routes_cost): {len(self.routes_cost)}")
+        print(f"cost of routes: {self.routes_cost}")
 
         # self.routes_cost = routes_cost if routes_cost is not None else [self.route_cost_calculator(idx) for idx in range(len(self.routes))]
         # logger.debug(f"len(routes_cost): {len(self.routes_cost)}")
         # logger.debug(f"len(self.routes) = {len(self.routes)}")
 
+        print(f"DEBUG: self.cust_df = \n{self.cust_df}")
+
         assert len(self.routes) == len(self.routes_cost), "Routes and routes_cost must have the same length."
         self.n_vehicles = n_vehicles
-        self.depots = create_depots_dict(self.cust_df, n_vehicles)
+        self.depots = create_depots_dict(cust_df=self.cust_df, cust_to_nodes=self.cust_to_nodes,num_vehicles=n_vehicles)
+
         if given_unassigned is not None:
             self.unassigned = given_unassigned
         else:
-            unassigned = self.cust_df[["id", "route"]]
-            unassigned = unassigned.loc[pd.isna(unassigned["route"]), "id"].tolist()
+            unassigned = self.cust_df.loc[self.cust_df["demand"] != 0, ["cust_id", "route"]]
+            unassigned = unassigned.loc[pd.isna(unassigned["route"]), "cust_id"].tolist()
             # filter out depots
             unassigned = [customer for customer in unassigned if customer not in self.depots["depots_indices"]]      
 
@@ -138,8 +177,10 @@ class CvrptwState:
 
         # Initialize time window compatibility matrix
         self.twc = generate_twc_matrix(
-            self.twc_format_nodes_df[["start_time", "end_time"]].values.tolist(),
+            self.cust_df,
+            # self.twc_format_nodes_df[["start_time", "end_time"]].values.tolist(),
             self.distances,
+            stop_to_nodes=stop_id_to_node,
             cordeau=False, #node indices start from 0 (cust indices start from 1 because of cordeau)
         )
 
@@ -149,9 +190,14 @@ class CvrptwState:
 
         self.qmax = self.get_qmax()
         self.dmax = self.get_dmax()
-        self.norm_tw = (
-            self.twc / self.dmax
-        )  # Note: maybe use only norm_tw in the future?
+        # normalize dict
+        self.norm_tw = {
+            couple: self.twc[couple] / self.dmax 
+            for couple in self.twc.keys()
+        }
+        # self.norm_tw = (
+        #     self.twc / self.dmax
+        # )  # Note: maybe use only norm_tw in the future?
 
         self.n_vehicles = n_vehicles
         self.n_customers = self.cust_df.loc[
@@ -184,7 +230,7 @@ class CvrptwState:
         cost = 0
         for idx, node in enumerate(route[:-1]):
             next_node = route[idx + 1]
-            cost += self.distances[node][next_node]
+            cost += self.distances[(node, next_node)]
         return round(cost, 2)
 
         # picked_up_customers = []
@@ -287,7 +333,7 @@ class CvrptwState:
         Get the maximum distance between any two customers.
         """
         # return np.max(self.dataset["edge_weight"])
-        return np.max(self.distances)
+        return max(self.distances.values())
 
     def get_qmax(self):
         """

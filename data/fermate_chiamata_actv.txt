@@ -33,3 +33,5 @@ FAVARO - (1232) Altinia San Pietro direzione San Dona
 FAVARO - (1233) Altinia Municipio direzione San Dona
 FAVARO - (1284) Don Sturzo Pasqualigo direzione Ca' Solaro
 FAVARO - (3404) Triestina ulss 3 direzione 
+PERTINI - (1259) Pertini Chiesa
+PERTINI - (259) Pertini Chiesa
