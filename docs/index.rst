@@ -21,4 +21,5 @@ Dial a ride project documentation.
    source/nn_sol
    source/removal_ops
    source/repair_ops
+   source/vrpstates
    source/references
