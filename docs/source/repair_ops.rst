@@ -86,3 +86,8 @@ If the above condition is verified, then node :math:`c` can be inserted in the a
 It is recommended to read [WaSH24]_ for a better intuition of the heuristic, based on formula
 (15) of the paper. The flow chart of *Wang greedy repair* is identical to 
 :ref:`greedy-repair-flow`, since only the check of best solution is different.
+
+
+
+.. toctree::
+   :maxdepth: 2

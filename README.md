@@ -59,7 +59,7 @@ An instance of the static problem can be obtained by executing cvrptw.py, with t
 ```
 python cvrptw.py
 ```
-A description of these options is available running the following command, but most of there are still work in progress..
+A description of these options is available running the following command, but most of these are still work in progress..
 
 ```
 python cvrptw.py --help
@@ -69,7 +69,8 @@ For example, it should be possible to create a video of the running algorithm by
 
 The implementation of the article [(Wang et al., 2024)](https://www.sciencedirect.com/science/article/abs/pii/S0360835224002432) is also available in a *Jupyter notebook* format in `cvrptw/wang-2024.ipynb`. This should be ready to run with the mentioned requirements. As opposed to `cvrptw.py`, it also produces useful plots of the statistics on the operators.
 
-The notebook can also be run on colab, without installing anything through [this link](https://colab.research.google.com/github/pettepiero/Dial-a-ride/blob/main/wang-2024.ipynb). To execute it, uncomment the first cell and set the recommended data_file path in cell before *Solution state*. **Note:** This notebook might produce some errors on `plot_solution function`.
+The notebook can also be run on colab, without installing anything through [this link](https://colab.research.google.com/github/pettepiero/Dial-a-ride/blob/main/wang-2024.ipynb). To execute it the first time, uncomment the first cell and set the recommended data_file path in cell before *Solution state*. **Note:** This notebook might produce some errors on `plot_solution function`.
+
 ## Plots and videos
 Running `cvrptw/wang-2024.ipynb` will save plots inside `outputs/plots/[foldername]` where `foldername` is given by the year, month, day, hour, minute and seconds of execution. Therefore, **it is recommended to remove these folders to save space after some executions**.
 

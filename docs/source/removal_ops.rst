@@ -15,7 +15,7 @@ The heuristics that are implemented are based on [WaSH24]_ and are the following
 - :ref:`worst_removal`
 - :ref:`cost_reducing_removal`
 
-The *Exchange reducing removal* heuristic is currently not implemented as it is not
+The *Exchange reducing removal* heuristic, described in [WaSH24]_, is currently not implemented as it is not
 trivial to adapt to the pickup and delivery problem.
 
 The algorithms are implemented in ``cvrptw/operators/removal.py`` 
@@ -142,3 +142,7 @@ The following flow chart shows the *cost reducing removal* heuristic:
    :width: 400px
    :align: center
    :alt: Cost reducing removal flow chart
+
+
+.. toctree::
+   :maxdepth: 2

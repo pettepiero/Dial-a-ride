@@ -49,3 +49,7 @@ has to be installed and then it is sufficient to run the following commands:
 
 The documentation will be available in the ``docs/build/html`` folder. Open the
 ``index.html`` file in a browser to view the documentation.
+
+
+.. toctree::
+   :maxdepth: 2
