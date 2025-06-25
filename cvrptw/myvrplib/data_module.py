@@ -13,7 +13,7 @@ SEED = 1234
 cust_row = lambda id, pickup: id * 2 - 1 if pickup else id * 2
 
 
-def read_cordeau_data(file: str, print_data: bool = False) -> dict:
+def read_cordeau_data(file: str, depot_ids: list, print_data: bool = False) -> dict:
     """
     Read the Cordeau et al. (2001) benchmark data.
     """
@@ -99,8 +99,9 @@ def read_cordeau_data(file: str, print_data: bool = False) -> dict:
     data_dict["service_time"] += [int(row[3]) for row in customers]
     data_dict["service_time"] += [int(row[3]) for row in depots]
     data_dict["edge_weight"] = cost_matrix_from_coords(data_dict["node_coord"])
-    data_dict["depot_to_vehicles"], data_dict["vehicle_to_depot"] = calculate_depots(
-        data_dict, n_vehicles=data_dict["vehicles"]
+    data_dict["depot_to_vehicles"], 
+    data_dict["vehicle_to_depot"] = calculate_depots(
+        n_depots=t, depots=[depot_ids], n_vehicles=data_dict["vehicles"]
     )
 
     if print_data:
@@ -110,6 +111,7 @@ def read_cordeau_data(file: str, print_data: bool = False) -> dict:
         print("Number of days/depots/vehicle types: ", t)
 
     return data_dict
+
 
 def read_solution_format(file: str, print_data: bool = False) -> dict:
     """
@@ -177,7 +179,7 @@ def read_solution_format(file: str, print_data: bool = False) -> dict:
 # data = read_solution_format("path_to_file.txt", print_data=True)
 
 
-def create_cust_stops_mapping(cust_df: pd.DataFrame) -> dict:
+def create_cust_stops_mapping(cust_df: pd.DataFrame, list_of_depot_stops: list) -> dict:
     """
     Creates a dict mapping customer ids to the stop ids in the dataframe.
     The expected dataframe should be in the format given by dynamic_extended_df,
@@ -193,11 +195,14 @@ def create_cust_stops_mapping(cust_df: pd.DataFrame) -> dict:
     #     # print(f"DEBUG: index: {index}, row: {row}")
     #     cust_to_nodes[row["cust_id"]].append(row["node_id"])
     cust_to_nodes = {int(row["cust_id"]): [int(row["from_stop_id"]), int(row["to_stop_id"])] for _, row in cust_df.iterrows()}
-
+    for dep in list_of_depot_stops:
+        cust_to_nodes[dep] = [dep, dep]
     # Manually add second node for depots
     # depots_list = twc_format_nodes_df.loc[twc_format_nodes_df["type"] == "depot", "cust_id"].tolist()
     # for depot in depots_list:
     #     cust_to_nodes[depot].append(cust_to_nodes[depot][0])
+
+    print(f"DEBUG: cust_df: \n{cust_df}")
 
     return cust_to_nodes
 
@@ -208,9 +213,7 @@ def create_cust_nodes_mapping(cust_to_stops: dict, stop_id_to_node: dict) -> dic
     The expected dataframe should be in the format given by dynamic_extended_df,
     this condition is tested at the beginning.
     """
-    print(
-        f"==================================\nDEBUG: stop_id_to_node = {stop_id_to_node}"
-    )
+
     # filter the depot (from_stop_id = 0)
     # cust_to_stops = {cust: stops for cust, stops in cust_to_stops.items() if stops[0] != 0}
     cust_to_nodes = {cust: [stop_id_to_node[stop] for stop in stops] for cust, stops in cust_to_stops.items()}
@@ -372,7 +375,8 @@ def time_window_compatibility(tij: float, twi: tuple, twj: tuple) -> float:
 
 
 def calculate_depots(
-    data: Union[dict, pd.DataFrame], 
+    n_depots: int,
+    depots: list, 
     n_vehicles: int,
     rng: np.random.Generator = rnd.default_rng(SEED),
 ) -> tuple:
@@ -383,20 +387,13 @@ def calculate_depots(
     assignment is used, but load balancing between depots is guaranteed. The mapping is stored in the data
     dictionaries "depot_to_vehicles" and "vehicle_to_depot".
     Parameters:
-        data (dict or pd.DataFrame): Data dictionary or DataFrame.
+        n_depots (int): Number of depots.
+        depots (list): List of depot indices.
         rng (np.random.Generator): Random number generator.
         n_vehicles (int): Number of vehicles.
     Returns:
         tuple: Tuple of dicts (depot_to_vehicles, vehicle_to_depot).
     """
-    if isinstance(data, dict):
-        print("DICT**********************************************")
-        n_depots = data["n_depots"]
-        depots = data["depots"]
-    elif isinstance(data, pd.DataFrame):
-        print("DATAFRAME**********************************************")
-        n_depots = data.loc[data["demand"] == 0, "cust_id"].count()
-        depots = data.loc[data["demand"] == 0, "cust_id"].tolist()
 
     dict_depot_to_vehicles = {depot: [] for depot in depots}
     dict_vehicle_to_depot = {vehicle: None for vehicle in range(n_vehicles)}
@@ -404,7 +401,7 @@ def calculate_depots(
     # vehicle i -> depot i
     if n_vehicles == n_depots:
         for i, depot in enumerate(depots):
-            dict_depot_to_vehicles[depot].append(depot)
+            dict_depot_to_vehicles[depot].append(i)
             dict_vehicle_to_depot[i] = depot
 
     elif n_vehicles > n_depots:
@@ -562,6 +559,10 @@ def generate_dynamic_df(file: str, static: bool = False, print_data: bool = Fals
         n_steps (int): Number of time steps.
         seed (int): Random seed.
     """
+    print(f"&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n")
+    print(f"&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n")
+    print(f"&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n")
+
     data = read_cordeau_data(file, print_data=print_data)
     return dynamic_df_from_dict(
         data, static=static, n_steps=n_steps, seed=seed
@@ -590,29 +591,41 @@ def get_initial_data(cust_df: pd.DataFrame) -> pd.DataFrame:
 
 
 def create_depots_dict(
+    list_of_depot_stops: list,
     cust_df: pd.DataFrame,
     cust_to_nodes: dict,
     num_vehicles: int = None,
 ) -> dict:
     """
     Create a dictionary with depot information.
-    Attributes:
-        num_depots: int
-            Number of depots.
-        depot_to_vehicles: dict
-            Dictionary mapping depots to vehicles.
-        vehicle_to_depot: dict
-            Dictionary mapping vehicles to depots.
-        coords: np.array
-            Array with the coordinates of the depots.
-        depots_indices: list
-            List with the indices of the dep (customer indices)
+    list_of_depot_stop: list
+        List of depot stops.
+    cust_df: pd.DataFrame
+        DataFrame with customer information.
+    cust_to_nodes: dict
+        Dictionary mapping customer ids to node ids.
+    num_vehicles: int
+        Number of vehicles.
+    Returns:
+        depots_dict: dict
+    Dictionary with depot information. Attributes:
+    num_depots: int
+        Number of depots.
+    depot_to_vehicles: dict
+        Dictionary mapping depots to vehicles.
+    vehicle_to_depot: dict
+        Dictionary mapping vehicles to depots.
+    coords: np.array
+        Array with the coordinates of the depots.
+    depots_indices: list
+        List with the indices of the dep (customer indices)
     """
     if isinstance(cust_df, pd.DataFrame):
-        depots_cust_idx = cust_df.loc[cust_df["demand"] == 0, "cust_id"].tolist()
+        # depots_cust_idx = cust_df.loc[cust_df["demand"] == 0, "cust_id"].tolist()
+        depots_cust_idx = list_of_depot_stops
         print(f"DEBUG_ depots_cust_idx = {depots_cust_idx}")
         depots_dict = {
-            "num_depots": cust_df["demand"].value_counts()[0],
+            "num_depots": len(list_of_depot_stops),
             "depot_to_vehicles": {},
             "vehicle_to_depot": {},
             # "coords": df.loc[df["demand"] == 0, ["x", "y"]].values,
@@ -620,11 +633,17 @@ def create_depots_dict(
         }
 
         depots_dict["depot_to_vehicles"], depots_dict["vehicle_to_depot"] = (
-            calculate_depots(cust_df, n_vehicles=num_vehicles)
+            calculate_depots(
+                n_depots=len(list_of_depot_stops),
+                depots=[cust for cust in depots_cust_idx],
+                n_vehicles=num_vehicles,
+            )
         )
 
         print(f"DEBUG: depots_dict = {depots_dict}")
         return depots_dict
+    else:
+        raise ValueError("Data must be a DataFrame.")
 
     # elif isinstance(data, dict):
     #     depots_dict = {
@@ -666,6 +685,7 @@ def dynamic_extended_df(data: Union[pd.DataFrame, str]) -> pd.DataFrame:
     for _, row in sub_df.iterrows():
         pickup_series = pd.Series(
             [
+                row["from_stop_id"],
                 row["cust_id"],
                 # row["x"],
                 # row["y"],
@@ -678,6 +698,7 @@ def dynamic_extended_df(data: Union[pd.DataFrame, str]) -> pd.DataFrame:
                 "pickup",
             ],
             index=[
+                "stop_id",
                 "cust_id",
                 # "x",
                 # "y",
@@ -693,6 +714,7 @@ def dynamic_extended_df(data: Union[pd.DataFrame, str]) -> pd.DataFrame:
 
         delivery_series = pd.Series(
             [
+                row["to_stop_id"],
                 row["cust_id"],
                 # row["dx"],
                 # row["dy"],
@@ -705,6 +727,7 @@ def dynamic_extended_df(data: Union[pd.DataFrame, str]) -> pd.DataFrame:
                 "delivery",
             ],
             index=[
+                "stop_id",
                 "cust_id",
                 # "x",
                 # "y",
@@ -722,45 +745,45 @@ def dynamic_extended_df(data: Union[pd.DataFrame, str]) -> pd.DataFrame:
         new_df_list.append(delivery_series)
 
     new_df = pd.concat(new_df_list, axis=1).T.reset_index(drop=True)
-    # depots series
-    depots_sub_df = init_data.loc[init_data["demand"] == 0]
-    depots_list = []
-    for _, row in depots_sub_df.iterrows():
-        depot_series = pd.Series(
-            [
-                row["cust_id"],
-                # row["x"],
-                # row["y"],
-                row["demand"],
-                row["from_time_start"],
-                row["from_time_end"],
-                row["service_time"],
-                row["call_in_time_slot"],
-                row["route"],
-                "depot",
-            ],
-            index=[
-                "cust_id",
-                # "x",
-                # "y",
-                "demand",
-                "start_time",
-                "end_time",
-                "service_time",
-                "call_in_time_slot",
-                "route",
-                "type",
-            ],
-        )
-        depots_list.append(depot_series)
+    # # depots series
+    # depots_sub_df = init_data.loc[init_data["demand"] == 0]
+    # depots_list = []
+    # for _, row in depots_sub_df.iterrows():
+    #     depot_series = pd.Series(
+    #         [
+    #             row["cust_id"],
+    #             # row["x"],
+    #             # row["y"],
+    #             row["demand"],
+    #             row["from_time_start"],
+    #             row["from_time_end"],
+    #             row["service_time"],
+    #             row["call_in_time_slot"],
+    #             row["route"],
+    #             "depot",
+    #         ],
+    #         index=[
+    #             "cust_id",
+    #             # "x",
+    #             # "y",
+    #             "demand",
+    #             "start_time",
+    #             "end_time",
+    #             "service_time",
+    #             "call_in_time_slot",
+    #             "route",
+    #             "type",
+    #         ],
+    #     )
+    #     depots_list.append(depot_series)
 
-    depots_df = pd.concat(depots_list, axis=1).T.reset_index(drop=True)
+    # depots_df = pd.concat(depots_list, axis=1).T.reset_index(drop=True)
 
-    new_df = pd.concat([new_df, depots_df])
+    # new_df = pd.concat([new_df, depots_df])
 
-    new_df["node_id"] = range(len(new_df))
-    new_df.insert(0, "node_id", new_df.pop("node_id"))
-    new_df.reset_index(drop=True, inplace=True)
+    # new_df.insert(0, "node_id", new_df.pop("node_id"))
+    new_df.set_index("stop_id", inplace=True)
+    # new_df.reset_index(drop=True, inplace=True)
     # new_df.index += 1
     # new_df.fillna(-1, inplace=True)
     new_df = new_df.infer_objects(copy=False)
@@ -769,7 +792,6 @@ def dynamic_extended_df(data: Union[pd.DataFrame, str]) -> pd.DataFrame:
 
     new_df[
         [
-            "node_id",
             "cust_id",
             "demand",
             "start_time",
@@ -779,7 +801,6 @@ def dynamic_extended_df(data: Union[pd.DataFrame, str]) -> pd.DataFrame:
         ]
     ] = new_df[
         [
-            "node_id",
             "cust_id",
             "demand",
             "start_time",
@@ -788,16 +809,15 @@ def dynamic_extended_df(data: Union[pd.DataFrame, str]) -> pd.DataFrame:
             "call_in_time_slot",
         ]
     ].astype(int)
-    print(f"DEBUG: new_df = \n{new_df}")
     return new_df
 
 
 this_file_path = pathlib.Path(__file__).parent.resolve()
 data_file_path = this_file_path / "../../data/c-mdvrptw/pr12"
 
-data = read_cordeau_data(
-    str(data_file_path), print_data=False
-)
+# data = read_cordeau_data(
+#     str(data_file_path), depot_ids=[1,1,1], print_data=False
+# )
 # bks = read_solution_format("./data/c-mdvrptw-sol/pr02.res", print_data=True)
-test_data = read_cordeau_data(str(data_file_path), print_data=False)
-d_data = generate_dynamic_df(data_file_path, print_data=False, seed=0)
+# test_data = read_cordeau_data(str(data_file_path), print_data=False)
+# d_data = generate_dynamic_df(data_file_path, print_data=False, seed=0)

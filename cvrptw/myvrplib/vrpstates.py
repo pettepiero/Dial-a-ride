@@ -1,5 +1,5 @@
 from cvrptw.myvrplib.data_module import (
-    data,
+    # data,
     generate_dynamic_df,
     dynamic_df_from_dict,
     cost_matrix_from_coords,
@@ -22,6 +22,8 @@ import networkx as nx
 
 logger = logging.getLogger(__name__)
 logger.setLevel(LOGGING_LEVEL)
+
+DEPOT_ID = 3404
 
 
 class CvrptwState:
@@ -74,23 +76,24 @@ class CvrptwState:
         n_vehicles: int,
         vehicle_capacity: int,
         map_file: str,
+        dataset: Union[dict, pd.DataFrame, str],
+        list_of_depot_stops: list = [DEPOT_ID],
         routes: list[Route] = None,
         routes_cost: list = None,
-        dataset: Union[dict, pd.DataFrame, str] = data,
         given_unassigned: list = None,
         distances: np.ndarray = None,
         current_time: int = 0,
         seed: int = 0,
     ):
         # Set up map information
-        graph, stops_df, segments_df = setup(map_file)
+        graph, stops_df, segments_df = setup(list_of_depots_stops=list_of_depot_stops, stops_data=map_file)
         self.predecessors, shortest_paths = nx.floyd_warshall_predecessor_and_distance(
             graph, weight="weight"
         )
 
         print(f"DEBUG: stops_df = \n{stops_df}")
-        stop_id_to_node = get_dict_of_stops(stops_df, segments_df)
-        nodes_to_stop = {v: k for k, v in stop_id_to_node.items()}
+        self.stop_id_to_node = get_dict_of_stops(stops_df, segments_df)
+        self.nodes_to_stop = {v: k for k, v in self.stop_id_to_node.items()}
 
         stop_nodes = [node_id for node_id in stops_df["node_id"]]
 
@@ -129,8 +132,11 @@ class CvrptwState:
         self.dataset = self.cust_df
         # self.twc_format_nodes_df = dynamic_extended_df(self.cust_df)
         self.twc_format_nodes_df = self.cust_df.loc[self.cust_df["demand"] != 0] # simply exclude depots?
-        self.cust_to_stops = create_cust_stops_mapping(self.cust_df)
-        self.cust_to_nodes = create_cust_nodes_mapping(cust_to_stops=self.cust_to_stops, stop_id_to_node=stop_id_to_node)
+        self.cust_to_stops = create_cust_stops_mapping(
+            cust_df=self.cust_df, list_of_depot_stops=list_of_depot_stops)
+        self.cust_to_nodes = create_cust_nodes_mapping(
+            cust_to_stops=self.cust_to_stops, stop_id_to_node=self.stop_id_to_node
+        )
 
         print(f"Cust to stops: {self.cust_to_stops}")
         print(f"Cust to nodes: {self.cust_to_nodes}")
@@ -163,7 +169,7 @@ class CvrptwState:
 
         assert len(self.routes) == len(self.routes_cost), "Routes and routes_cost must have the same length."
         self.n_vehicles = n_vehicles
-        self.depots = create_depots_dict(cust_df=self.cust_df, cust_to_nodes=self.cust_to_nodes,num_vehicles=n_vehicles)
+        self.depots = create_depots_dict(list_of_depot_stops=list_of_depot_stops, cust_df=self.cust_df, cust_to_nodes=self.cust_to_nodes,num_vehicles=n_vehicles)
 
         if given_unassigned is not None:
             self.unassigned = given_unassigned
@@ -180,7 +186,7 @@ class CvrptwState:
             self.cust_df,
             # self.twc_format_nodes_df[["start_time", "end_time"]].values.tolist(),
             self.distances,
-            stop_to_nodes=stop_id_to_node,
+            stop_to_nodes=self.stop_id_to_node,
             cordeau=False, #node indices start from 0 (cust indices start from 1 because of cordeau)
         )
 

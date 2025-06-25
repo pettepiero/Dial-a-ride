@@ -5,12 +5,16 @@ import numpy as np
 import re
 import networkx as nx
 
+DEPOT_ID = 3404
+DEPOT_ID = 1259
 
 def get_stops(
+        list_of_depots_stops: list,
         data: str = "./data/DataSetActvAut(Fermate).csv",
-        valid_stops: str = "./data/fermate_chiamata_actv.txt",
+        valid_stops_file: str = "./data/fermate_chiamata_actv.txt",
         utm_zone: int = 32,
         output_file: str = "./data/actv_stops.csv",
+        all_stops: bool = False
     ) -> pd.DataFrame:
     """
     Get the stops from the CSV file and convert the UTM coordinates to lat/lon. Drops 
@@ -19,13 +23,18 @@ def get_stops(
     specified text file. Default values are provided for all arguments.
 
     Parameters:
+    list_of_depots_stops: list
+        List of depot stops.
     data: str
         Path to the CSV file containing the stops data.
     valid_stops: str
         Path to the text file containing the valid stops.
     utm_zone: int
         UTM zone for the region. (32 for Venezia/Mestre area)
-
+    output_file: str
+        Path to the output CSV file.
+    all_stops: bool
+        If True, returns all stops in the dataset.
     Returns:
     stops_df: pd.DataFrame
         DataFrame containing the stops data.
@@ -37,6 +46,13 @@ def get_stops(
             - centroid_lon: Longitude
             - node_id: Node ID for graph
     """
+    # Check if the depot stops are in the list of valid stops, otherwise add them
+    with open(valid_stops_file, "r", encoding="utf-8") as file:
+        content = file.readlines()
+    valid_stops = [int(match) for line in content for match in re.findall(r'\((\d+)\)', line)]
+    for depot in list_of_depots_stops:
+        if depot not in valid_stops:
+            valid_stops.append(depot)
 
     stops_df = pd.read_csv(data, delimiter=",")
     # convert from utm to lat/lon
@@ -47,15 +63,17 @@ def get_stops(
         lambda x: utm.to_latlon(x["X"], x["Y"], utm_zone, northern=True)[1], axis=1
     )
 
-    # Filtering stops on Favaro dial a ride area
-    with open(valid_stops, 'r', encoding='utf-8') as file:
-        content = file.readlines()
-    valid_stops = [int(match) for line in content for match in re.findall(r'\((\d+)\)', line)]
+    if not all_stops:
+        # Filtering stops on Favaro dial a ride area
+        with open(valid_stops_file, "r", encoding="utf-8") as file:
+            content = file.readlines()
+        valid_stops = [int(match) for line in content for match in re.findall(r'\((\d+)\)', line)]
     # drop cols that I don't need
     cols_to_drop = ["CODPRGFERMATA", "NODO", "ARCO", "DENOMINAZIONE", "UBICAZIONE", "COMUNE", "TIPOLOGIA", "ZONATARIFFARIA", "INDFERMATA", "INDPROXFERMATA", "NETWORKVERSION"]
     stops_df = stops_df.drop(columns=cols_to_drop)
-    # filter valid stops
-    stops_df = stops_df.loc[stops_df["CODFERMATA"].isin(valid_stops)]
+    if not all_stops:
+        # filter valid stops
+        stops_df = stops_df.loc[stops_df["CODFERMATA"].isin(valid_stops)]
     stops_df["node_id"] = stops_df.index +1
     stops_df.reset_index(drop=True, inplace=True)
     stops_df.to_csv(output_file, index=False)
@@ -88,19 +106,102 @@ def manual_arcs(
     if arcs_to_add is not None:
         result = np.append(starting_list, arcs_to_add)
     else:
-        arcs_to_include = [1299, 1314, 1315, 1316, 1254, 1253, 1175, 1174, 1176, 2304, 2183, 2500, 2502, 332, 232, 1061, 1058, 449, 1046, 234, 1255,
-        311, 233, 314, 1062, 1059, 439, 313, 235, 342, 341, 312, 237, 236, 256, 2190, 2187, 
-        2189, 2188, 1256, 889, 212, 210, 1169, 1049, 1669, 1682, 1050, 1169, 1053, 2587, 2580, 2579, 2199, 
-        1681, 1682, 2584, ]
+        # arcs_to_include = [1299, 1314, 1315, 1316, 1254, 1253,
+        # 1175, 1174, 1176, 2304, 2183, 2500, 2502, 332, 232,
+        # 1061, 1058, 449, 1046, 234, 1255, 311, 233, 314, 1062,
+        # 1059, 439, 313, 235, 342, 341, 312, 237, 236, 256, 2190,
+        # 2187, 2189, 2188, 1256, 889, 212, 210, 1169, 1049, 1169,
+        # 1682, 1050, 1169, 1053, 2587, 2580, 2579, 2199, 1681,
+        # 1682, 2584, 2199, 2202, 2201, 2200, 265, 244, 257,
+        # 2190, 256, 1168, 237, 2582, 2583, 2576, 2575, 3015,
+        # 1695, 1696, 3014, 317, 269, 943,
+        # 267, 258, 2586, 2584, 1052, 1047, 1169]
+
+        arcs_to_include = [
+            210,
+            212,
+            232,
+            233,
+            234,
+            235,
+            236,
+            237,
+            237,
+            244,
+            256,
+            256,
+            257,
+            258,
+            265,
+            311,
+            312,
+            313,
+            314,
+            332,
+            341,
+            342,
+            439,
+            449,
+            889,
+            1046,
+            1047,
+            1049,
+            1050,
+            1052,
+            1053,
+            1058,
+            1059,
+            1061,
+            1062,
+            1168,
+            1169,
+            1169,
+            1169,
+            1169,
+            1174,
+            1175,
+            1176,
+            1253,
+            1254,
+            1255,
+            1256,
+            1299,
+            1314,
+            1315,
+            1316,
+            1681,
+            1682,
+            1682,
+            2183,
+            2187,
+            2188,
+            2189,
+            2190,
+            2199,
+            2200,
+            2201,
+            2202,
+            2304,
+            2500,
+            2502,
+            2579,
+            2580,
+            2584,
+            2586,
+            2587,
+        ]
+
         result = np.append(starting_list, arcs_to_include)
-    
+
     if arcs_to_remove is not None:
         result = np.setdiff1d(result, arcs_to_remove)
     else:
-        arcs_to_remove = [1237, 1238, 1243, 1244, 1161, 1172, 1163, 1162, 1000, 1312, 1311, 
-                        1310, 2185, 342, 1295, 1294, 2179, 2184, 730, 2300, 2186, 2585]
+        arcs_to_remove = [1237, 1238, 1243, 1244, 1161, 1172, 1163, 
+                          1162, 1000, 1312, 1311, 1310, 2185, 342, 
+                          1295, 1294, 2179, 2184, 730, 2300, 2186, 
+                          2585, 886, 889, 1528, 2498]
         result = np.setdiff1d(result, arcs_to_remove)
-    
+
     return result
 
 def get_arcs(
@@ -126,15 +227,15 @@ def get_arcs(
     Returns:
     list_of_arcs: list
         List of arc IDs that connect the stops in the list.
-    """
+    """    
     arcs_df = pd.read_csv(arcs_data, delimiter=",")
+    if all_arcs:
+        return arcs_df["CODPRGARCOFERMATA"].unique()
     # filter arcs that only connect the stops in the list
     filtered_arcs_df = arcs_df.loc[arcs_df["FERMDA"].isin(list_of_stops)]
     list_of_arcs = filtered_arcs_df["CODPRGARCOFERMATA"].unique()
     filtered_arcs_df = filtered_arcs_df.loc[filtered_arcs_df["FERMAA"].isin(list_of_stops)]
     list_of_arcs = np.append(list_of_arcs, filtered_arcs_df["CODPRGARCOFERMATA"].unique())
-    if all_arcs:
-        list_of_arcs = arcs_df["CODPRGARCOFERMATA"].unique()
 
     return list_of_arcs
 
@@ -164,19 +265,23 @@ def get_segments(list_of_arcs: list):
     )
     return segments_df
 
-def filter_geographically(segments_df: pd.DataFrame, stops_df: pd.DataFrame):
-    # filter favaro area
-    # long_min = 12.25766
-    # long_max = 12.31817
-    # lat_min = 45.490074
-    # lat_max = 45.52111
-    # epsilon = 0.002
-    epsilon = 0.01
-
-    long_min = stops_df["centroid_lon"].min() - epsilon
-    long_max = stops_df["centroid_lon"].max() + epsilon
-    lat_min = stops_df["centroid_lat"].min() - epsilon
-    lat_max = stops_df["centroid_lat"].max() + epsilon
+def filter_geographically(
+        segments_df: pd.DataFrame,
+        stops_df: pd.DataFrame,
+        bigger_map: bool = False):
+    if not bigger_map:
+        epsilon = 0.02
+        #filter favaro area
+        long_min = 12.2350 - epsilon
+        long_max = 12.27066 + epsilon
+        lat_min = 45.400074 - epsilon
+        lat_max = 45.49451 + epsilon
+    else:
+        epsilon = 0.010
+        long_min = stops_df["centroid_lon"].min() - epsilon
+        long_max = stops_df["centroid_lon"].max() + epsilon
+        lat_min = stops_df["centroid_lat"].min() - epsilon
+        lat_max = stops_df["centroid_lat"].max() + epsilon
     df_filtered = segments_df[
         (segments_df["lon_da"] >= long_min)
         & (segments_df["lon_da"] <= long_max)  # Start point longitude
@@ -188,7 +293,14 @@ def filter_geographically(segments_df: pd.DataFrame, stops_df: pd.DataFrame):
         & (segments_df["lat_a"] <= lat_max)  # End point latitude
     ]
 
-    return df_filtered
+    stops_filtered = stops_df[
+        (stops_df["centroid_lon"] >= long_min)
+        & (stops_df["centroid_lon"] <= long_max)  # Longitude
+        & (stops_df["centroid_lat"] >= lat_min)
+        & (stops_df["centroid_lat"] <= lat_max)  # Latitude
+    ]
+    print(f"DEBUG: len(df_filtered) = {len(df_filtered)}")
+    return df_filtered, stops_filtered
 
 
 def plot_map(
@@ -214,7 +326,6 @@ def plot_map(
 
     df_plot = pd.DataFrame(plot_data)
 
-    arcs = df_plot["CODPRGARCOFERMATA"].unique()
     df_plot.to_csv("./data/usable_road_network.csv", index=False)
 
     # Plot with Plotly Express
@@ -309,12 +420,6 @@ def get_dict_of_nodes(segments_df: pd.DataFrame) -> dict:
     list_of_arcs = segments_df["CODPRGARCOFERMATA"].unique()
     nodes = {}
     for arc in list_of_arcs:
-        if arc == -1:
-            print(
-                f"Segments for arc {arc}:\n",
-                segments_df.loc[segments_df["CODPRGARCOFERMATA"] == arc],
-            )
-
         # start coordinatess
         lat_da, lon_da, node_id = segments_df.loc[
             segments_df["CODPRGARCOFERMATA"] == arc, ["lat_da", "lon_da", "CODPUNTODA"]
@@ -341,7 +446,14 @@ def get_dict_of_nodes(segments_df: pd.DataFrame) -> dict:
     return nodes
 
 
-def create_graph(segments_df: pd.DataFrame, stops_df: pd.DataFrame) -> pd.DataFrame:
+def create_graph(
+        segments_df: pd.DataFrame, 
+        stops_df: pd.DataFrame, 
+        full_graph: bool = False
+    ) -> pd.DataFrame:
+    """
+    Computes real arcs from segments and creates a graph with them.
+    """
     # compute real arcs from segments
     # create graph with stops and real arcs
 
@@ -349,8 +461,11 @@ def create_graph(segments_df: pd.DataFrame, stops_df: pd.DataFrame) -> pd.DataFr
     list_of_nodes = list(nodes.keys())
 
     list_of_stops = stops_df["CODFERMATA"].unique()
-    list_of_arcs = get_arcs(list_of_stops)
-    list_of_arcs = manual_arcs(list_of_arcs)
+    if not full_graph:
+        list_of_arcs = get_arcs(list_of_stops)
+        list_of_arcs = manual_arcs(list_of_arcs)
+    elif full_graph:
+        list_of_arcs = get_arcs(list_of_stops, all_arcs=True)
 
     graph = nx.DiGraph()
     for arc in list_of_arcs:
@@ -391,7 +506,7 @@ def create_visualization():
         ]
     )
 
-    segments_df = filter_geographically(segments_df, stops_df)
+    segments_df, stops_df = filter_geographically(segments_df, stops_df)
     fig = plot_map(segments_df=segments_df, stops_df=stops_df, show=False)
     return fig
 
@@ -410,15 +525,10 @@ def get_shortest_path(graph, node_a, node_b, stops_df, segments_df):
 
     stops_to_node = get_dict_of_stops(stops_df, segments_df)
     nodes_to_stop = {v: k for k, v in stops_to_node.items()}
-    print(stops_to_node)
-    print(f"Distance between nodes {node_a} and {node_b}:")
-    print(distance_lookup[(stops_to_node[node_a], stops_to_node[node_b])])
-    print("Path between nodes:")
     path = nx.reconstruct_path(
         stops_to_node[node_a], stops_to_node[node_b], predecessors
     )
     path = [int(nodes_to_stop[el]) for el in path]
-    print(path)
 
 
 def manual_segments(segments_df: pd.DataFrame) -> pd.DataFrame:
@@ -448,63 +558,53 @@ def manual_segments(segments_df: pd.DataFrame) -> pd.DataFrame:
     return segments_df
 
 
-def setup(stops_data: str = "./data/DataSetActvAut(Fermate).csv"):
-    stops_df = get_stops(stops_data)
-    # # Manually add the depot node
-    # stops_df = pd.concat(
-    #     [
-    #         pd.DataFrame(
-    #             {
-    #                 "CODFERMATA": [3404],
-    #                 "X": [756701.38],
-    #                 "Y": [5044192.23],
-    #                 "centroid_lat": [45.503981],
-    #                 "centroid_lon": [12.285963],
-    #                 "node_id": [0],
-    #             }
-    #         ),
-    #         stops_df,
-    #     ],
-    #     ignore_index=True,
-    # )
-    print(f"stops_df in setup: \n{stops_df}")
-
+def setup(
+        list_of_depots_stops: list, 
+        stops_data: str = "./data/DataSetActvAut(Fermate).csv",
+        full_arcs: bool = False,
+        bigger_map: bool = True,
+    ):
+    stops_df = get_stops(list_of_depots_stops=list_of_depots_stops, data=stops_data, all_stops=False)
     list_of_stops = stops_df["CODFERMATA"].unique()
-    list_of_arcs = get_arcs(list_of_stops, all_arcs=False)
+    list_of_arcs = get_arcs(list_of_stops, all_arcs=full_arcs)
     list_of_arcs = manual_arcs(list_of_arcs)
     segments_df = get_segments(list_of_arcs)
     segments_df = manual_segments(segments_df)
-    segments_df = filter_geographically(segments_df, stops_df)
-
-    # plot_map(segments_df, stops_df)
-    graph = create_graph(segments_df, stops_df)
+    segments_df, stops_df = filter_geographically(segments_df, stops_df, bigger_map)
+    print(f"DEBUG: len(stop_df) = {len(stops_df)}")
+    plot_map(segments_df, stops_df)
+    graph = create_graph(segments_df, stops_df, full_graph=full_arcs)
+    # graph = None
     return graph, stops_df, segments_df
 
 
 def main():
 
-    graph, stops_df, segments_df = setup()
+    graph, stops_df, segments_df = setup(
+        list_of_depots_stops=[DEPOT_ID],
+        full_arcs=True,
+        bigger_map = False)
 
-    predecessors, shortest_paths = nx.floyd_warshall_predecessor_and_distance(graph, weight="weight")
+    # predecessors, shortest_paths = nx.floyd_warshall_predecessor_and_distance(graph, weight="weight")
 
-    # Convert to a fast lookup dictionary
-    distance_lookup = {
-        (src, dst): shortest_paths[src][dst] for src in graph.nodes for dst in graph.nodes
-    }
+    # # Convert to a fast lookup dictionary
+    # distance_lookup = {
+    #     (src, dst): shortest_paths[src][dst] for src in graph.nodes for dst in graph.nodes
+    # }
 
-    stops_to_node = get_dict_of_stops(stops_df, segments_df)
-    nodes_to_stop = {v: k for k, v in stops_to_node.items()}
+    # stops_to_node = get_dict_of_stops(stops_df, segments_df)
+    # nodes_to_stop = {v: k for k, v in stops_to_node.items()}
 
-    node_a = 277
-    node_b = 684
-    print(f"Distance between nodes {node_a} and {node_b}:")
-    print(distance_lookup[(stops_to_node[node_a], stops_to_node[node_b])])
-    print("Path between nodes:")
-    path = nx.reconstruct_path(
-        stops_to_node[node_a], stops_to_node[node_b], predecessors
-    )
-    path = [int(nodes_to_stop[el]) for el in path]
-    print(path)
+    # node_a = 277
+    # node_b = 684
+    # print(f"Distance between nodes {node_a} and {node_b}:")
+    # print(distance_lookup[(stops_to_node[node_a], stops_to_node[node_b])])
+    # print("Path between nodes:")
+    # path = nx.reconstruct_path(
+    #     stops_to_node[node_a], stops_to_node[node_b], predecessors
+    # )
+    # path = [int(nodes_to_stop[el]) for el in path]
+    # print(path)
 
 if __name__ == "__main__":
     main()

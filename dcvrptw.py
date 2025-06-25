@@ -8,7 +8,7 @@ from alns.stop import MaxIterations
 from alns.My_plot import plot_solution
 
 from cvrptw.myvrplib.myvrplib import LOGGING_LEVEL
-from cvrptw.myvrplib.data_module import d_data as d_data
+# from cvrptw.myvrplib.data_module import d_data as d_data
 from cvrptw.myvrplib.vrpstates import CvrptwState
 from cvrptw.initial_solutions.initial_solutions import nearest_neighbor
 from cvrptw.operators.destroy import *
@@ -17,7 +17,7 @@ from cvrptw.operators.wang_operators import *
 from cvrptw.output.analyze_solution import verify_time_windows, check_solution
 from cvrptw.myvrplib.input_output import print_results_dict, parse_options
 from cvrptw.output.video import generate_video
-from cvrptw.maps.maps import setup
+from cvrptw.maps.maps import setup, create_visualization
 
 SEED = 1234
 NUM_ITERATIONS = 200
@@ -47,39 +47,41 @@ def main():
     args = parse_options()
     print(f"Arguments: {args}")
 
-    # alns = ALNS(rnd.default_rng(SEED))
-    alns = ALNS(rnd.default_rng())
+    # ============== 1. Loading the data ==============
 
-    alns.add_destroy_operator(random_removal)
-    alns.add_destroy_operator(random_route_removal)
-    alns.add_destroy_operator(cost_reducing_removal)
-    alns.add_destroy_operator(worst_removal)
+    requests_data = pd.read_csv("./data/dynamic_df_new_format.csv")
+    requests_data.index += 1  # align index to ids
 
-    # alns.add_destroy_operator(exchange_reducing_removal)  # to be implemented
-    alns.add_destroy_operator(shaw_removal)   #to be implemented
-
-    alns.add_repair_operator(greedy_repair_tw)
-    alns.add_repair_operator(wang_greedy_repair)
-
-    data = pd.read_csv("./data/dynamic_df_new_format.csv")
-    data.index +=1 # align index to ids
-
+    # ============== 2. Initializing the CVRPTW instance ==============
     init = CvrptwState(
-        dataset=data,
+        dataset=requests_data,
         n_vehicles=args.n_vehicles,
         vehicle_capacity=args.vehicle_capacity,
         map_file="./data/DataSetActvAut(Fermate).csv",
+        list_of_depot_stops=[3404],
     )
 
     print(f"init.depots['vehicle_to_depot'] = {init.depots['vehicle_to_depot']}")
 
+    # ============== 3. Computing the initial solution ==============
     initial_solution = nearest_neighbor(state=init, initial_time_slot=True)
     print(f"DEBUG: initial solution:\n")
     for route in initial_solution.routes:
         print(route.nodes_list)
-
     print(f"DEBUG: state.twc_format_nodes_df = \n{initial_solution.twc_format_nodes_df}")
     check_solution(initial_solution)
+
+    # ============== 4. Setting up the alns solver ==============
+    # alns = ALNS(rnd.default_rng(SEED))
+    alns = ALNS(rnd.default_rng())
+    alns.add_destroy_operator(random_removal)
+    alns.add_destroy_operator(random_route_removal)
+    alns.add_destroy_operator(cost_reducing_removal)
+    alns.add_destroy_operator(worst_removal)
+    # alns.add_destroy_operator(exchange_reducing_removal)  # to be implemented
+    alns.add_destroy_operator(shaw_removal)  # to be implemented
+    alns.add_repair_operator(greedy_repair_tw)
+    alns.add_repair_operator(wang_greedy_repair)
 
     select = RouletteWheel([25, 5, 1, 0], 0.8, 5, 2)
     # select = RandomSelect(num_destroy=4, num_repair=2)
@@ -88,7 +90,9 @@ def main():
     )
     stop = MaxIterations(NUM_ITERATIONS)
 
-    print(f"DEBUG: depots = {initial_solution.depots["depots_indices"]}")
+    print(f"DEBUG: depots = {initial_solution.depots['depots_indices']}")
+
+    # ============== 5. Applying the ALNS method ==============
 
     result, *_ = alns.iterate(
         initial_solution, select, accept, stop, data=data, save_plots=args.video
@@ -96,6 +100,8 @@ def main():
 
     # Testing solution validity after iterations
     check_solution(initial_solution)
+
+    # ============== 6. Comparing initial solution to heuristic solution ==============
 
     solution = result.best_state
     objective = round(solution.objective(), 2)
@@ -151,6 +157,7 @@ def main():
     plot_solution(solution=solution, name="Final-solution", save=True, figsize=(8,8))
     plot_solution(solution=initial_solution, name="Initial-solution", save=True, figsize=(8,8))
 
+    # ============== 7. Generate video ==============
     if args.video:
         generate_video(
             image_base_folder="./outputs/plots",

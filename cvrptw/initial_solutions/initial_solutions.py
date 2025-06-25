@@ -84,7 +84,10 @@ def nearest_neighbor(
 ) -> CvrptwState:
 
     routes: list[Route] = []
+    # filter only the requests that are visible at the initial time slot
+    state.cust_df = state.cust_df[state.cust_df["call_in_time_slot"] == 0]
     df = dynamic_extended_df(state.cust_df)
+    print(f"DEBUG: dynamic df:\n{df}")
     if initial_time_slot:
         visible_customers = get_ids_of_time_slot(state.cust_df, 0)
     else:
@@ -106,10 +109,6 @@ def nearest_neighbor(
     while len(routes) < state.n_vehicles and remaining_pick_up_nodes:
         # Initialize route
         initial_depot_id = state.depots["vehicle_to_depot"][len(routes)] # depot for the current vehicle
-        print("\n\n")
-        print(state.depots)
-        print(f"DEBUG: initial_depot_id = {initial_depot_id}")
-        print(f"DEBUG: state.cust_to_nodes = {state.cust_to_nodes}")
         depot_node = state.cust_to_nodes[initial_depot_id][0] # depot node
         route = [depot_node]
         route_schedule = []
@@ -119,25 +118,39 @@ def nearest_neighbor(
 
         # add nearest from list of pickup nodes (only for first customer)
         candidates = [
-            (node, float(distance))
-            for node, distance in zip(
-                remaining_pick_up_nodes, state.distances[depot_node][remaining_pick_up_nodes]
-            )
+            (node, float(state.distances.get((depot_node, node), float('inf'))))
+            for node in remaining_pick_up_nodes
         ]
-        candidates = sorted(candidates, key=lambda x: x[1])
+        candidates = sorted(candidates, key=lambda x: x[1])  # sort by distance
+        candidates = [(node, distance) for node, distance in candidates if node != depot_node]
+        print(f"DEBUG: candidates = {candidates}")
         nearest_node, nearest_dist = candidates[0]
-        if nearest_node is not None:
-            route.append(nearest_node)
-            start_time, load, type = df.loc[nearest_node, ["start_time", "demand", "type"]].values.tolist()
+        nearest_stop = state.nodes_to_stop[nearest_node]
+
+        if nearest_stop is not None:
+            route.append(nearest_stop)
+            print(f"DEBUG: route = {route}")
+            requests_of_nn = df.loc[
+                nearest_stop
+            ]  # all the requests of the nearest neighbor
+            if isinstance(requests_of_nn, pd.DataFrame): # more than one request for node 'nearest_stop' is present, consider only the first one
+                # only consider the first one
+                start_time, load, node_type = requests_of_nn.iloc[0][["start_time", "demand", "type"]].values.tolist()
+            elif isinstance(requests_of_nn, pd.Series): # only one request for node 'nearest_stop' is present
+                start_time, load, node_type = df.loc[
+                    nearest_stop, ["start_time", "demand", "type"]
+                ].values.tolist()
             # add to schedule 'departure from depot' time and 'arrival at customer' time
             route_schedule.append(start_time - nearest_dist) #departure from depot
             route_schedule.append(start_time) # arrival at customer
             vehicle_load += load
             assert vehicle_load <= state.vehicle_capacity, f"Vehicle load is \
                     bigger than allowed: {vehicle_load}"
-            remaining_pick_up_nodes.remove(nearest_node)
-            if type == "pickup":
-                unvisited_nodes.remove(nearest_node)
+            print(f"DEBUG: remaining_pick_up_nodes = {remaining_pick_up_nodes}")    
+            print(f"DEBUG: nearest_stop = {nearest_stop} -> node = {state.stop_id_to_node[nearest_stop]}")
+            remaining_pick_up_nodes.remove(nearest_stop)
+            if node_type == "pickup":
+                unvisited_nodes.remove(nearest_stop)
         else:
             AssertionError("Could not begin a new route")
 
@@ -167,7 +180,7 @@ def nearest_neighbor(
             nearest_node, nearest_dist = candidates[0]
             if nearest_node is not None:
                 route.append(nearest_node)
-                start_time, demand, type = df.loc[nearest_node, ["start_time", "demand", "type"]].values.tolist()
+                start_time, demand, node_type = df.loc[nearest_node, ["start_time", "demand", "type"]].values.tolist()
                 current_time = route_schedule[-1]
                 current_service_time = df.loc[current, "service_time"].item()
                 # add to schedule sum of current time, service time and travel time
@@ -175,12 +188,12 @@ def nearest_neighbor(
                 route_schedule.append(planned_time)
                 # update vehicle load
                 # TODO: add proper check for vehicle capacity
-                if type == "pickup":
+                if node_type == "pickup":
                     vehicle_load += demand
                     assert vehicle_load <= state.vehicle_capacity, f"Vehicle load is \
                           bigger than allowed: {vehicle_load}"
                     unvisited_nodes.remove(nearest_node)
-                elif type == "delivery":
+                elif node_type == "delivery":
                     vehicle_load -= df.loc[nearest_node, "demand"].item()
                     assert vehicle_load >= 0, f"Vehicle load is negative: {vehicle_load}"
                 remaining_pick_up_nodes.remove(nearest_node)
