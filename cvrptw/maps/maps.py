@@ -27,7 +27,7 @@ def get_stops(
         List of depot stops.
     data: str
         Path to the CSV file containing the stops data.
-    valid_stops: str
+    valid_stops_file: str
         Path to the text file containing the valid stops.
     utm_zone: int
         UTM zone for the region. (32 for Venezia/Mestre area)
@@ -240,18 +240,17 @@ def get_arcs(
     return list_of_arcs
 
 def get_segments(list_of_arcs: list):
-    # Read the CSV
+    """
+    Given a list of arcs, returns a dataframe with all the segments that make up the arcs.
+    """
     segments_df = pd.read_csv(
         "./data/DataSetActvAut(Segmenti).csv", delimiter=","
     )
-    # Filter the segments DataFrame to only include the arcs in the arcs DataFrame
+    # Filter the segments DataFrame to only include the arcs in list_of_arcs
     segments_df = segments_df.loc[
         segments_df["CODPRGARCOFERMATA"].isin(list_of_arcs)
     ]
-
-    # UTM Zone (You need to specify the correct one for your region)
-    zone = 32  # Example for Northern Italy (Veneto)
-
+    zone = 32  # UTM Zone for Veneto
     # Convert UTM to lat/lon
     segments_df["lat_da"], segments_df["lon_da"] = zip(
         *segments_df.apply(
@@ -532,7 +531,9 @@ def get_shortest_path(graph, node_a, node_b, stops_df, segments_df):
 
 
 def manual_segments(segments_df: pd.DataFrame) -> pd.DataFrame:
-    # manually add segment from stop 702 to stop 720
+    """
+    Manually adds segment from stop 702 to stop 720
+    """
     segments_df = pd.concat(
         [
             segments_df,
@@ -563,7 +564,13 @@ def setup(
         stops_data: str = "./data/DataSetActvAut(Fermate).csv",
         full_arcs: bool = False,
         bigger_map: bool = True,
-    ):
+        show_map: bool = False):
+    """
+        Given stops data and list of depots stops, returns:
+        - Directed graph for the stops 
+        - Dataframe with all stops in Favaro Area
+        - Dataframe with the list of segments in the Favaro Area
+    """
     stops_df = get_stops(list_of_depots_stops=list_of_depots_stops, data=stops_data, all_stops=False)
     list_of_stops = stops_df["CODFERMATA"].unique()
     list_of_arcs = get_arcs(list_of_stops, all_arcs=full_arcs)
@@ -572,18 +579,19 @@ def setup(
     segments_df = manual_segments(segments_df)
     segments_df, stops_df = filter_geographically(segments_df, stops_df, bigger_map)
     print(f"DEBUG: len(stop_df) = {len(stops_df)}")
-    plot_map(segments_df, stops_df)
+    plot_map(segments_df, stops_df, show=show_map)
     graph = create_graph(segments_df, stops_df, full_graph=full_arcs)
     # graph = None
     return graph, stops_df, segments_df
 
 
 def main():
-
     graph, stops_df, segments_df = setup(
         list_of_depots_stops=[DEPOT_ID],
         full_arcs=True,
-        bigger_map = False)
+        bigger_map = False,
+        show_map=False,
+    )
 
     # predecessors, shortest_paths = nx.floyd_warshall_predecessor_and_distance(graph, weight="weight")
 

@@ -13,9 +13,67 @@ SEED = 1234
 cust_row = lambda id, pickup: id * 2 - 1 if pickup else id * 2
 
 
-def read_cordeau_data(file: str, depot_ids: list, print_data: bool = False) -> dict:
+#def read_cordeau_data(file: str, depot_ids: list, print_data: bool = False) -> dict:
+def read_cordeau_data(file: str, print_data: bool = False) -> dict:
     """
-    Read the Cordeau et al. (2001) benchmark data.
+    Parses a benchmark instance in the format proposed by Cordeau et al. (2001) for VRP variants.
+    Information on this protocol can be found at: https://www.bernabe.dorronsoro.es/vrp/ under the 
+    dedicated page for describing Cordeau's data format.
+
+    The data format includes a header with problem type, number of vehicles, customers, and depots.
+    It is followed by lines describing depot constraints and then detailed customer and depot data.
+
+    The function extracts:
+
+    - Customer locations, demands, and time windows
+    - Depot capacities and durations
+    - Service times
+
+    It computes:
+
+    - Vehicle and depot assignments (using ``calculate_depots``)
+    - Edge-weight matrix (Euclidean cost)
+
+    The last `t` entries are treated as depots; the rest as customers.
+
+    Parameters
+    ----------
+    file : str
+        Path to the input `.txt` file in Cordeau's benchmark format.
+    print_data : bool, optional
+        If True, prints debug information including file name and parsed quantities.
+
+    Returns
+    -------
+    dict
+        A dictionary containing parsed problem data with the following keys:
+
+        - `name` : str  
+          File name.
+        - `vehicles` : int  
+          Number of vehicles.
+        - `capacity` : int  
+          Maximum vehicle load (assumed identical for all).
+        - `dimension` : int  
+          Number of customers (excluding depots).
+        - `n_depots` : int  
+          Number of depots.
+        - `depots` : list[int]  
+          Indices of depot nodes.
+        - `depot_to_vehicles` : dict[int, list[int]]  
+          Mapping from depot ID to list of vehicles assigned to it.
+        - `vehicle_to_depot` : dict[int, int]  
+          Mapping from vehicle ID to assigned depot.
+        - `node_coord` : ndarray  
+          Node coordinates (customers + depots).
+        - `demand` : ndarray  
+          Demand at each node (0 for depots).
+        - `time_window` : list[list[int]]  
+          Earliest and latest service times.
+        - `service_time` : list[float]  
+          Service duration for each node.
+        - `edge_weight` : ndarray  
+          Cost matrix derived from Euclidean distances.
     """
     filename = str(file).split("/")[-1]
     data_file = open(file, "r")
@@ -40,7 +98,6 @@ def read_cordeau_data(file: str, depot_ids: list, print_data: bool = False) -> d
 
     key = data[0].split()[0]
     problem_type = type_dict.get(key)  # Problem type
-    problem_type = type_dict.get(6)
     m = int(data[0].split()[1])  # number of vehicles
     n = int(data[0].split()[2])  # number of customers
     t = int(data[0].split()[3])  # number of days/depots/vehicle types
@@ -66,6 +123,7 @@ def read_cordeau_data(file: str, depot_ids: list, print_data: bool = False) -> d
         depots.append(line.split())
 
     depots = np.array(depots, dtype=np.float64)
+    print(f"\n\nDEBUG:  depots: {depots}\n\n")
 
     # Save in dict structure
     data_dict = {}
@@ -99,9 +157,8 @@ def read_cordeau_data(file: str, depot_ids: list, print_data: bool = False) -> d
     data_dict["service_time"] += [int(row[3]) for row in customers]
     data_dict["service_time"] += [int(row[3]) for row in depots]
     data_dict["edge_weight"] = cost_matrix_from_coords(data_dict["node_coord"])
-    data_dict["depot_to_vehicles"], 
-    data_dict["vehicle_to_depot"] = calculate_depots(
-        n_depots=t, depots=[depot_ids], n_vehicles=data_dict["vehicles"]
+    data_dict["depot_to_vehicles"], data_dict["vehicle_to_depot"] = calculate_depots(
+        depots=data_dict['depots'], n_vehicles=data_dict["vehicles"]
     )
 
     if print_data:
@@ -375,29 +432,73 @@ def time_window_compatibility(tij: float, twi: tuple, twj: tuple) -> float:
 
 
 def calculate_depots(
-    n_depots: int,
-    depots: list, 
+    depots: list,
     n_vehicles: int,
     rng: np.random.Generator = rnd.default_rng(SEED),
 ) -> tuple:
     """
-    Calculate the depot index for the vehicles. If the number of vehicles is equal to the number of depots,
-    then vehicle i is mapped to depot i. If the number of vehicles is greater than the number of depots, then
-    round robin assignment is used. If the number of vehicles is less than the number of depots, then random
-    assignment is used, but load balancing between depots is guaranteed. The mapping is stored in the data
-    dictionaries "depot_to_vehicles" and "vehicle_to_depot".
-    Parameters:
-        n_depots (int): Number of depots.
-        depots (list): List of depot indices.
-        rng (np.random.Generator): Random number generator.
-        n_vehicles (int): Number of vehicles.
-    Returns:
-        tuple: Tuple of dicts (depot_to_vehicles, vehicle_to_depot).
+    Calculates the depot assignment for each vehicle based on the number of depots and vehicles.
+
+    - If the number of vehicles equals the number of depots, vehicles are assigned 1:1 to depots.
+    - If vehicles > depots, a round-robin assignment is used.
+    - If vehicles < depots, a random subset of depots is chosen, and each vehicle is assigned to one.
+
+    The result is returned as two dictionaries:
+    `depot_to_vehicles` and `vehicle_to_depot`.
+
+    Examples
+    --------
+    1) One vehicle per depot (exact match):
+
+        >>> depots = [44, 52]
+        >>> n_vehicles = 2
+        DEPOT   | VEHICLE
+        44      | 0
+        52      | 1
+        depot_to_vehicles = {44: [0], 52: [1]}
+        vehicle_to_depot = {0: 44, 1: 52}
+
+    2) More vehicles than depots (round robin):
+
+        >>> depots = [44, 52]
+        >>> n_vehicles = 5
+        DEPOT   | VEHICLE
+        44      | 0, 2, 4
+        52      | 1, 3
+
+    3) More depots than vehicles (random assignment):
+
+        >>> depots = [44, 52, 38, 7, 78]
+        >>> n_vehicles = 2
+        DEPOT   | VEHICLE
+        44      | 1
+        38      | 0
+
+    Parameters
+    ----------
+    depots : list
+        List of depot indices.
+
+    n_vehicles : int
+        Number of vehicles to assign.
+
+    rng : np.random.Generator, optional
+        Random number generator (default: seeded RNG).
+
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        
+        - depot_to_vehicles : dict[int, list[int]]
+        - vehicle_to_depot : dict[int, int]
     """
+    # check that all depots are unique
+    assert len(set(depots)) == len(depots), "Depot IDs must be unique"
+    n_depots = len(depots)
 
     dict_depot_to_vehicles = {depot: [] for depot in depots}
     dict_vehicle_to_depot = {vehicle: None for vehicle in range(n_vehicles)}
-    print(f"DEBUG: depots = {depots}")
     # vehicle i -> depot i
     if n_vehicles == n_depots:
         for i, depot in enumerate(depots):
@@ -412,9 +513,9 @@ def calculate_depots(
             dict_vehicle_to_depot[vehicle] = depot
     else:
         # Random assignment
-        depots = rng.choice(depots, size=n_vehicles, replace=False)
+        assigned_depots = rng.choice(depots, size=n_vehicles, replace=False)
         for vehicle in range(n_vehicles):
-            depot = depots[vehicle]
+            depot = assigned_depots[vehicle]
             dict_depot_to_vehicles[depot].append(vehicle)
             dict_vehicle_to_depot[vehicle] = int(depot)
 
@@ -559,11 +660,12 @@ def generate_dynamic_df(file: str, static: bool = False, print_data: bool = Fals
         n_steps (int): Number of time steps.
         seed (int): Random seed.
     """
-    print(f"&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n")
-    print(f"&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n")
-    print(f"&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n")
 
-    data = read_cordeau_data(file, print_data=print_data)
+    data = read_cordeau_data(
+            file, 
+            print_data=print_data,
+            # depot_ids = [1259, 259],
+            )
     return dynamic_df_from_dict(
         data, static=static, n_steps=n_steps, seed=seed
     )
@@ -574,13 +676,15 @@ def get_ids_of_time_slot(customer_df: pd.DataFrame, time_slot: int) -> list:
     """
     assert time_slot >= 0, "Time slot must be a non-negative integer."
 
-    indices = customer_df.loc[
-        customer_df["call_in_time_slot"] == time_slot, "cust_id"
-    ].tolist()
+    matching_ids = customer_df.loc[
+            customer_df['call_in_time_slot'] == time_slot
+    ].index.tolist()    #customer ids are the index column of the customer_df dataframe in
+                        #format given by 'generate_dynamic_df'
+
     # depots ids are the elements that have demand = 0 and we need to remove them from the list
-    depots = customer_df.loc[customer_df["demand"] == 0, "cust_id"].tolist()
-    indices = [i for i in indices if i not in depots]
-    return indices
+    depot_ids = customer_df.loc[customer_df["demand"] == 0].index.tolist()
+    requested_ids = [i for i in matching_ids if i not in depot_ids]
+    return requested_ids 
 
 def get_initial_data(cust_df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -815,9 +919,11 @@ def dynamic_extended_df(data: Union[pd.DataFrame, str]) -> pd.DataFrame:
 this_file_path = pathlib.Path(__file__).parent.resolve()
 data_file_path = this_file_path / "../../data/c-mdvrptw/pr12"
 
-# data = read_cordeau_data(
-#     str(data_file_path), depot_ids=[1,1,1], print_data=False
-# )
+data = read_cordeau_data(
+     str(data_file_path), 
+     #depot_ids=[1], 
+     print_data=False
+)
 # bks = read_solution_format("./data/c-mdvrptw-sol/pr02.res", print_data=True)
 # test_data = read_cordeau_data(str(data_file_path), print_data=False)
 # d_data = generate_dynamic_df(data_file_path, print_data=False, seed=0)

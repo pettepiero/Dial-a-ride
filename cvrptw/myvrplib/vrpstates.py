@@ -73,20 +73,25 @@ class CvrptwState:
     """
     def __init__(
         self,
-        n_vehicles: int,
-        vehicle_capacity: int,
-        map_file: str,
+#        n_vehicles: int,
+#        vehicle_capacity: int,
         dataset: Union[dict, pd.DataFrame, str],
         list_of_depot_stops: list = [DEPOT_ID],
         routes: list[Route] = None,
         routes_cost: list = None,
         given_unassigned: list = None,
         distances: np.ndarray = None,
+        map_file: str = "./data/DataSetActvAut(Fermate).csv",
         current_time: int = 0,
         seed: int = 0,
+        show_map: bool = False,
     ):
         # Set up map information
-        graph, stops_df, segments_df = setup(list_of_depots_stops=list_of_depot_stops, stops_data=map_file)
+        graph, stops_df, segments_df = setup(
+                list_of_depots_stops=list_of_depot_stops, 
+                stops_data=map_file,
+                show_map=show_map
+        )
         self.predecessors, shortest_paths = nx.floyd_warshall_predecessor_and_distance(
             graph, weight="weight"
         )
@@ -111,7 +116,10 @@ class CvrptwState:
             self.dataset = dataset
             self.seed = seed
             self.cust_df = dynamic_df_from_dict(dataset, seed=seed)
+            self.n_vehicles = dataset["vehicles"]
+            self.vehicle_capacity = dataset["capacity"] 
         elif isinstance(dataset, pd.DataFrame):
+            raise ValueError(f"ERROR: not implemented yet -> init from dataframe")
             print("From dataframe")
             self.cust_df = dataset
             self.seed = seed
@@ -122,6 +130,8 @@ class CvrptwState:
         self.routes = routes if routes is not None else []
         # Update self.cust_df with the routes
         self.cust_df["route"] = None
+        self.nodes_to_cust = create_nodes_cust_mapping(self.cust_df)
+
         # TODO: check if this is actually doing anything
         for idx, route in enumerate(self.routes):
             for node in route.nodes_list:
@@ -140,7 +150,6 @@ class CvrptwState:
 
         print(f"Cust to stops: {self.cust_to_stops}")
         print(f"Cust to nodes: {self.cust_to_nodes}")
-        # self.nodes_to_cust = create_nodes_cust_mapping(self.cust_df)
 
         # self.requests_df =
 
@@ -168,7 +177,6 @@ class CvrptwState:
         print(f"DEBUG: self.cust_df = \n{self.cust_df}")
 
         assert len(self.routes) == len(self.routes_cost), "Routes and routes_cost must have the same length."
-        self.n_vehicles = n_vehicles
         self.depots = create_depots_dict(list_of_depot_stops=list_of_depot_stops, cust_df=self.cust_df, cust_to_nodes=self.cust_to_nodes,num_vehicles=n_vehicles)
 
         if given_unassigned is not None:
@@ -205,11 +213,11 @@ class CvrptwState:
         #     self.twc / self.dmax
         # )  # Note: maybe use only norm_tw in the future?
 
-        self.n_vehicles = n_vehicles
+        #self.n_vehicles = n_vehicles
         self.n_customers = self.cust_df.loc[
             self.cust_df["demand"] != 0
         ].shape[0]
-        self.vehicle_capacity = vehicle_capacity
+        #self.vehicle_capacity = vehicle_capacity
 
     def __str__(self):
         return  f"Planned routes: {[route.nodes_list for route in self.routes]}, \

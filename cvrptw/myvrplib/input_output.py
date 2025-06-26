@@ -88,7 +88,12 @@ def parse_options():
         default=195,
         help="Vehicle capacity (default: 195).",
     )
-    
+    parser.add_argument(
+        "--map",
+        type=bool,
+        default=False,
+        help="Wether to open the map on the browser or not (default: False)",
+    )
     parser.add_argument('--video', action=argparse.BooleanOptionalAction, help='Generate video from images. Video is saved in outputs/videos, and images in outputs/images. \
                         Use --video to create video, --no-video otherwise.', default=False)
     # parser.add_argument(
