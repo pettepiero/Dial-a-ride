@@ -13,28 +13,12 @@ SEED = 1234
 cust_row = lambda id, pickup: id * 2 - 1 if pickup else id * 2
 
 
-#def read_cordeau_data(file: str, depot_ids: list, print_data: bool = False) -> dict:
 def read_cordeau_data(file: str, print_data: bool = False) -> dict:
     """
     Parses a benchmark instance in the format proposed by Cordeau et al. (2001) for VRP variants.
     Information on this protocol can be found at: https://www.bernabe.dorronsoro.es/vrp/ under the 
-    dedicated page for describing Cordeau's data format.
-
-    The data format includes a header with problem type, number of vehicles, customers, and depots.
-    It is followed by lines describing depot constraints and then detailed customer and depot data.
-
-    The function extracts:
-
-    - Customer locations, demands, and time windows
-    - Depot capacities and durations
-    - Service times
-
-    It computes:
-
-    - Vehicle and depot assignments (using ``calculate_depots``)
-    - Edge-weight matrix (Euclidean cost)
-
-    The last `t` entries are treated as depots; the rest as customers.
+    dedicated page for describing Cordeau's data format. More information can be found at the 
+    documentation of this project (``docs`` folder).
 
     Parameters
     ----------
@@ -123,7 +107,6 @@ def read_cordeau_data(file: str, print_data: bool = False) -> dict:
         depots.append(line.split())
 
     depots = np.array(depots, dtype=np.float64)
-    print(f"\n\nDEBUG:  depots: {depots}\n\n")
 
     # Save in dict structure
     data_dict = {}
@@ -168,6 +151,215 @@ def read_cordeau_data(file: str, print_data: bool = False) -> dict:
         print("Number of days/depots/vehicle types: ", t)
 
     return data_dict
+
+def get_all_section_tags(file: str) -> list:
+    """
+    Reads a structured VRP-like file and returns a list of strings,
+    each corresponding to the first word on each line (section tags, keys, etc.).
+    It tests wether a list of base tags exist in the solution and otherwise raises
+    an assertion error.
+
+    Parameters
+    ----------
+    file : str
+        Path to the input file.
+
+    Returns
+    -------
+    list of str
+        A list of words that appear as the first token on each line.
+    """
+    tags = []
+
+    with open(file, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue  # skip empty lines
+            first_word = line.split()[0]
+            if first_word.isupper():
+                tags.append(first_word)
+
+    # Check that the following tags are found
+    required_tags = ["NAME", "COMMENT", "TYPE", "DIMENSION", "EDGE_WEIGHT_TYPE", "NUM_VEHICLES", "CAPACITY", "NODES_SECTION", "DEMAND_SECTION", "DEPOT_SECTION"] 
+
+    missing = [tag for tag in required_tags if tag not in tags]
+    if missing:
+        raise ValueError(f"Missing required tags: {', '.join(missing)}")
+
+    return tags
+
+
+def verify_vrplib_format(file: str) -> bool:
+    """
+    Verifies if the file located at the given string is in VRPLIB format (see documentation)
+    and is valid. It checks:
+        - Existence of all problem specific information
+        - Coherency in number of customers
+        - Valid time windows (pick up < delivery)
+    """
+    with open(file, "r") as f:
+        lines = f.readlines()
+
+    # check that the file has at least the following sections 
+    tags_to_check = ["NAME", "COMMENT", "TYPE", "DIMENSION", "EDGE_WEIGHT_TYPE", "NUM_VEHICLES", "CAPACITY", "NODES_SECTION", "DEMAND_SECTION", "DEPOT_SECTION"] 
+
+
+def mins_since_midnight(hour: int, mins: int) -> int:
+    assert 0 <= hour < 24
+    assert 0 <= mins < 60 
+    return hour*60 + mins
+
+def read_vrplib_data(file: str, print_data: bool = False) -> dict:
+    """
+    Parses a benchmark instance in the format proposed by Gerhard Reinelt for VRP variants.
+    Information on this protocol can be found at:  http://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/ 
+    under the `Documentation` link. More information can be found at the documentation of this project 
+    (``docs`` folder) under the `Data format` chapter.
+
+    Parameters
+    ----------
+    file : str
+        Path to the input `.txt` file in Cordeau's benchmark format.
+    print_data : bool, optional
+        If True, prints debug information including file name and parsed quantities.
+
+    Returns
+    -------
+    dict
+        A dictionary containing parsed problem data with the following keys:
+
+        - `name` : str  
+          File name.
+        - `vehicles` : int  
+          Number of vehicles.
+        - `capacity` : int  
+          Maximum vehicle load (assumed identical for all).
+        - `dimension` : int  
+          Number of customers (excluding depots).
+        - `n_depots` : int  
+          Number of depots.
+        - `depots` : list[int]  
+          Indices of depot nodes.
+        - `depot_to_vehicles` : dict[int, list[int]]  
+          Mapping from depot ID to list of vehicles assigned to it.
+        - `vehicle_to_depot` : dict[int, int]  
+          Mapping from vehicle ID to assigned depot.
+        - `node_coord` : ndarray  
+          Node coordinates (customers + depots).
+        - `demand` : ndarray  
+          Demand at each node (0 for depots).
+        - `pickup_time_window` : list[list[int]]  
+          Earliest and latest pickup times.
+        - `delivery_time_window` : list[list[int]]  
+          Earliest and latest delivery times.
+        - `service_time` : list[float]  
+          Service duration for each node.
+        - `edge_weight` : ndarray  
+          Cost matrix derived from Euclidean distances.
+    """
+    tags = get_all_section_tags(file)
+
+    data = {}
+    section = None
+
+    with open(file, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+
+            tokens = line.split()
+
+            # Section change
+            if tokens[0].isupper():
+                section = tokens[0]
+                data[section] = []
+                if len(tokens) > 1:
+                    data[section].append(tokens[1:])
+            else:
+                if section:
+                    data[section].append(tokens)
+
+    name = data['NAME'][0][-1]
+    vehicles = int(data['NUM_VEHICLES'][0][-1])
+    capacity = int(data['CAPACITY'][0][-1])
+    dimension = int(data['DIMENSION'][0][-1])
+
+    node_coord = np.zeros((dimension, 2))
+    for row in data['NODES_SECTION']:
+        idx = int(row[0]) - 1
+        x, y = map(float, row[1:3])
+        node_coord[idx] = [x, y]
+
+    demand = np.zeros(dimension, dtype=int)
+    for row in data['DEMAND_SECTION']:
+        idx = int(row[0]) - 1
+        d = int(row[1])
+        demand[idx] = d
+
+    pickup_time_window = [[None, None] for i in range(dimension)]
+    for idx, row in enumerate(data['PICKUP_TIME_WINDOW_SECTION']):
+        start_hours = int(row[1].split(":")[0])
+        start_mins = int(row[1].split(":")[1])
+        end_hours = int(row[2].split(":")[0])
+        end_mins = int(row[2].split(":")[1])
+        pickup_time_window[idx] = [mins_since_midnight(start_hours, start_mins), mins_since_midnight(end_hours, end_mins)]
+        
+    delivery_time_window = [[None, None] for i in range(dimension)]
+    for idx, row in enumerate(data['DELIVERY_TIME_WINDOW_SECTION']):
+        start_hours = int(row[1].split(":")[0])
+        start_mins = int(row[1].split(":")[1])
+        end_hours = int(row[2].split(":")[0])
+        end_mins = int(row[2].split(":")[1])
+        delivery_time_window[idx] = [mins_since_midnight(start_hours, start_mins), mins_since_midnight(end_hours, end_mins)]
+
+    depots = []
+    for row in data['DEPOT_SECTION']:
+        if row[0] == '-1':
+            break
+        depots.append(int(row[0]))
+
+    n_depots = len(depots)
+
+    depot_to_vehicles, vehicle_to_depot = calculate_depots(depots=depots, n_vehicles=vehicles)
+
+    service_time = [None] * dimension
+    if "SERVICE_TIME_SECTION" in tags:
+        for row in data['SERVICE_TIME_SECTION']:
+            idx = int(row[0])-1
+            s = int(row[1])
+            service_time[idx] = s
+    else:
+        print(f"\n SERVICE TIME NOT FOUND \n")
+        service_time = [None] * dimension
+
+    edge_weight = cost_matrix_from_coords(node_coord)
+
+    result = {
+        'name': name,
+        'vehicles': vehicles,
+        'capacity': capacity,
+        'dimension': dimension,
+        'n_depots': n_depots,
+        'depots': depots,
+        'depot_to_vehicles': depot_to_vehicles,
+        'vehicle_to_depot': vehicle_to_depot,
+        'node_coord': node_coord,
+        'demand': demand,
+        'pickup_time_window': pickup_time_window,
+        'delivery_time_window': delivery_time_window,
+        'service_time': service_time,
+        'edge_weight': edge_weight
+    }
+
+    if print_data:
+        print(f"\nDEBUG: in read_vrplib_data():\n")
+        print(f"DEBUG: passed file string: {file}")
+        print(f"DEBUG: parsed data: {result}")
+
+    return result
+
 
 
 def read_solution_format(file: str, print_data: bool = False) -> dict:
@@ -259,8 +451,6 @@ def create_cust_stops_mapping(cust_df: pd.DataFrame, list_of_depot_stops: list) 
     # for depot in depots_list:
     #     cust_to_nodes[depot].append(cust_to_nodes[depot][0])
 
-    print(f"DEBUG: cust_df: \n{cust_df}")
-
     return cust_to_nodes
 
 
@@ -302,11 +492,6 @@ def create_nodes_cust_mapping(cust_df: pd.DataFrame) -> dict:
 
     used_nodes = [int(node) for node in cust_df["from_node"].unique()]
     used_nodes = used_nodes.extend([int(node) for node in cust_df["to_node"].unique()])
-    nodes_to_cust = {node }
-    # nodes_to_cust = {int(node): None for node in cust_df["node_id"].unique()}
-    # for index, row in twc_format_nodes_df.iterrows():
-    #     # print(f"DEBUG: index: {index}, row: {row}")
-    #     nodes_to_cust[row["node_id"]] = row["cust_id"]
 
     return nodes_to_cust
 
@@ -727,7 +912,6 @@ def create_depots_dict(
     if isinstance(cust_df, pd.DataFrame):
         # depots_cust_idx = cust_df.loc[cust_df["demand"] == 0, "cust_id"].tolist()
         depots_cust_idx = list_of_depot_stops
-        print(f"DEBUG_ depots_cust_idx = {depots_cust_idx}")
         depots_dict = {
             "num_depots": len(list_of_depot_stops),
             "depot_to_vehicles": {},
@@ -744,7 +928,6 @@ def create_depots_dict(
             )
         )
 
-        print(f"DEBUG: depots_dict = {depots_dict}")
         return depots_dict
     else:
         raise ValueError("Data must be a DataFrame.")

@@ -96,7 +96,6 @@ class CvrptwState:
             graph, weight="weight"
         )
 
-        print(f"DEBUG: stops_df = \n{stops_df}")
         self.stop_id_to_node = get_dict_of_stops(stops_df, segments_df)
         self.nodes_to_stop = {v: k for k, v in self.stop_id_to_node.items()}
 
@@ -147,11 +146,6 @@ class CvrptwState:
         self.cust_to_nodes = create_cust_nodes_mapping(
             cust_to_stops=self.cust_to_stops, stop_id_to_node=self.stop_id_to_node
         )
-
-        print(f"Cust to stops: {self.cust_to_stops}")
-        print(f"Cust to nodes: {self.cust_to_nodes}")
-
-        # self.requests_df =
 
         # if distances is not None:
         #     self.distances = distances

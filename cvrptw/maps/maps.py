@@ -298,7 +298,6 @@ def filter_geographically(
         & (stops_df["centroid_lat"] >= lat_min)
         & (stops_df["centroid_lat"] <= lat_max)  # Latitude
     ]
-    print(f"DEBUG: len(df_filtered) = {len(df_filtered)}")
     return df_filtered, stops_filtered
 
 
@@ -578,7 +577,6 @@ def setup(
     segments_df = get_segments(list_of_arcs)
     segments_df = manual_segments(segments_df)
     segments_df, stops_df = filter_geographically(segments_df, stops_df, bigger_map)
-    print(f"DEBUG: len(stop_df) = {len(stops_df)}")
     plot_map(segments_df, stops_df, show=show_map)
     graph = create_graph(segments_df, stops_df, full_graph=full_arcs)
     # graph = None

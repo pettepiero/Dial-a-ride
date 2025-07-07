@@ -8,6 +8,7 @@ from alns.stop import MaxIterations
 
 from cvrptw.myvrplib.myvrplib import LOGGING_LEVEL
 #from cvrptw.myvrplib.data_module import d_data as d_data
+from cvrptw.myvrplib.data_module import data
 from cvrptw.myvrplib.vrpstates import CvrptwState
 from cvrptw.initial_solutions.initial_solutions import nearest_neighbor_tw
 from cvrptw.operators.destroy import *
@@ -17,20 +18,22 @@ from cvrptw.output.analyze_solution import verify_time_windows
 from cvrptw.myvrplib.input_output import print_results_dict, parse_options
 from cvrptw.output.video import generate_video
 
-SEED = 1234
-NUM_ITERATIONS = 200
-
 # logging setup
 import logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=LOGGING_LEVEL)
+
+SEED = 1234
+NUM_ITERATIONS = 200
+NUM_VEHICLES = 2
+VEHICLE_CAPACITY = 80
 
 degree_of_destruction = 0.05
 
 def main():
 
     args = parse_options()
-    print(f"Arguments: {args}")
+    print(f"Arguments: \n{args}")
 
     # alns = ALNS(rnd.default_rng(SEED))
     alns = ALNS(rnd.default_rng())
@@ -46,7 +49,12 @@ def main():
     alns.add_repair_operator(greedy_repair_tw)
     alns.add_repair_operator(wang_greedy_repair)
 
-    init = CvrptwState(dataset=data)
+    init = CvrptwState(
+            dataset=data,
+            n_vehicles=NUM_VEHICLES,
+            vehicle_capacity=VEHICLE_CAPACITY,
+            show_map=args.map,
+    )
     initial_solution = nearest_neighbor_tw(state=init, initial_time_slot=False)
     select = RouletteWheel([25, 5, 1, 0], 0.8, 5, 2)
     # select = RandomSelect(num_destroy=4, num_repair=2)
