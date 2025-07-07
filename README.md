@@ -55,6 +55,11 @@ make html
 And the documentation will be available at ``_build/html``.
 
 ## How to execute the code
+
+********************************************************************************************
+NOTE: the project is being developed therefore a working script may not always be available.
+********************************************************************************************
+
 An instance of the static problem can be obtained by executing cvrptw.py, with the desired command line options. 
 ```
 python cvrptw.py
@@ -80,6 +85,21 @@ To generate a video of the solution, copy the video output folder that is printe
 python cvrptw/output/generate_video.py --image_folder=<copied-path> 
 ```
 and optionally specify a video output name with argument `--video_name`. The video will be saved in `outputs/videos` folder.
+
+
+## Running tests
+To run the test scripts in folder `tests`, you can use the following command (from parent folder of `tests`):
+```
+python -m unittest discover -s tests
+```
+
+To run a specific test (e.g. `test_data`) inside `tests` folder, run the following command (from parent folder of `tests`):
+
+```
+python -m unittest tests.test_data
+```
+
+
 
 ## Data notation
 The dataset convention that is used in this project is that of [**Cordeau**](https://www.bernabe.dorronsoro.es/vrp/index.html?/Problem_Instances/CVRPTWInstances.html).

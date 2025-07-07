@@ -68,24 +68,20 @@ class TestDFConversion(unittest.TestCase):
         self.assertEqual(initial_data.loc[89, 'demand'], 4)
 
     def test_generate_dynamic_df(self):
-
         dynamic_data = generate_dynamic_df(
             "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr12",
             seed=0, # do not remove this
         )
         # some hand picked customers checks for seed = 0
-        #self.assertEqual(dynamic_data.loc[dynamic_data["id"] == 1, 'call_in_time_slot'].item(), 3)
         self.assertEqual(dynamic_data.loc[1, 'call_in_time_slot'], 3)
         self.assertEqual(dynamic_data.loc[2, 'call_in_time_slot'], 1)
         self.assertEqual(dynamic_data.loc[93, 'call_in_time_slot'], 5)
-
         # Test the static case (all call in times are 0)
         dynamic_data = generate_dynamic_df(
             "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr12",
             static=True,
             seed=0
         )
-
         num_custs = len(dynamic_data)
         zeros = np.zeros(num_custs).astype(int).tolist()
         self.assertEqual(
@@ -175,11 +171,8 @@ class TestCoordsMatrix(unittest.TestCase):
         data = read_cordeau_data(
             "/home/pettepiero/tirocinio/dial-a-ride/tests/test_data",
         )
-        print(f"DEBUG: data after 'read_cordeau_data':\n{data}")
 
         data_df = dynamic_df_from_dict(data)
-        print("In test_coord_matrix:\n")
-        print(f"\nDEBUG: data_df: {data_df}")
         known_cost_matrix = np.array(
                             [[np.nan,     np.nan,   np.nan, np.nan, np.nan, np.nan, np.nan],
                             [np.nan,      0,        65.19,  80.62,  31.62,  136.01, 14.14],
@@ -191,6 +184,47 @@ class TestCoordsMatrix(unittest.TestCase):
                             )
         
         np.testing.assert_allclose(known_cost_matrix, data['edge_weight'])
+
+class TestTime(unittest.TestCase):
+    def test_mins_since_midnight(self):
+
+        known_mins_since_midnight = [23, 89, 467, 77]
+        hours = [0, 1, 7, 1]
+        mins = [23, 29, 47, 17]
+        results = list(map(mins_since_midnight, hours, mins))
+        self.assertListEqual(known_mins_since_midnight, results)
+
+class TestVRPLIBData(unittest.TestCase):
+    def test_get_all_sections_tag(self):
+        known_solution = ["NAME", "COMMENT", "TYPE", "DIMENSION", "EDGE_WEIGHT_TYPE", "NUM_VEHICLES", "CAPACITY", "NODES_SECTION", "DEMAND_SECTION", "DEPOT_SECTION"] 
+
+        tags = get_all_section_tags("/home/pettepiero/tirocinio/dial-a-ride/tests/vrplib_test_data.knd")
+        for tag in known_solution:
+            self.assertTrue(tag in tags)
+    def test_read_vrplib_data(self):
+        data = read_vrplib_data("/home/pettepiero/tirocinio/dial-a-ride/tests/vrplib_test_data.knd", False)
+        print(f"\nDEBUG: In read_vrplib_data:\n")
+        print(f"data: \n{data}")
+
+        known_solution = {
+            'name': "vrplib_test_data.knd",
+            'vehicles': 2,
+            'capacity': 101,
+            'dimension': 10,
+            'n_depots': 4,
+            'depots': [0, 49, 50, 51],
+            'depot_to_vehicles': {0: [], 49: [], 50: [0], 51: [1]},
+            'vehicle_to_depot': {0: 50, 1: 51},
+            'node_coord': [[42, 7], [89, 22], [7, 13], [60, 41], [24, 45], [12, 23], [19, 68], [98, 33], [32, 85], [22, 6]],
+            'demand': [1, 1, 2, 5, 1, 3, 1, 4, 1, 2],
+            'pickup_time_window': [[525, 570], [450, 555], [465, 750], [705, 885], [705, 840], [615, 765], [615, 720], [435, 645], [435, 675], [555, 765]],
+            'delivery_time_window': [[645, 690], [510, 615], [585, 930], [825, 1005], [825, 960], [735, 885], [675, 780], [555, 765], [555, 795], [615, 825]],
+            'service_time': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            }
+
+##        self.assertDictEqual(data, known_solution)
+        for key in known_solution:
+            self.assertTrue(np.array_equal(known_solution[key], data[key]), f"\nFailed on key: {key}")
 
 
 class TestCRR(unittest.TestCase):

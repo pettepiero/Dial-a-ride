@@ -24,6 +24,23 @@ read_cordeau_data
 -----------------
 .. autofunction:: cvrptw.myvrplib.data_module.read_cordeau_data
 
+
+    The data format includes a header with problem type, number of vehicles, customers, and depots.
+    It is followed by lines describing depot constraints and then detailed customer and depot data.
+
+    The function extracts:
+
+    - Customer locations, demands, and time windows
+    - Depot capacities and durations
+    - Service times
+
+    It computes:
+
+    - Vehicle and depot assignments (using ``calculate_depots``)
+    - Edge-weight matrix (Euclidean cost)
+
+    The last `t` entries are treated as depots; the rest as customers.
+
     Notes
     -----
     The input file must conform to the format specified in Cordeau et al. (2001). Specifically:
