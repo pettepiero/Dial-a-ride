@@ -43,16 +43,24 @@ To install requirements, run
 pip install -r requirements.txt
 ```
 
+## VRP variants
+The following different variants of VRP are implemented and solved:
+
+- CVRPTW
+- CVRPPDTW
+
+The code to run them is in the `cvrptw` and `cvrppdtw` repositories.
+
 ## How to execute the code
-An instance of the static problem can be obtained by executing cvrptw.py, with the desired command line options. A description of these options is available running: 
+An instance of the static problem can be obtained by executing cvrptw.py for CVRPTW problem, or analogously for the other instances. The command can be followed by the desired command line options. A description of these options is available running: 
 
 ```
 python cvrptw.py --help
 ```
-
-Currently, the newest implementation of the article [(Wang et al., 2024)](https://www.sciencedirect.com/science/article/abs/pii/S0360835224002432) is in `cvrptw/wang-2024.ipynb`. This should be ready to run with the mentioned requirements. As opposed to `cvrptw.py`, it also produces useful plots of the statistics on the operators. 
+Currently, the newest implementation of the article [(Wang et al., 2024)](https://www.sciencedirect.com/science/article/abs/pii/S0360835224002432) is in `cvrptw.py`. This should be ready to run with the mentioned requirements. A more experimental notebook is `wang-2024.ipynb`, which produces useful plots on the statistics of the operators.
 
 The notebook can also be run on colab, without installing anything through [this link](https://colab.research.google.com/github/pettepiero/Dial-a-ride/blob/main/wang-2024.ipynb). To execute it, uncomment the first cell and set the recommended data_file path in cell before *Solution state*. **Note:** This notebook might produce some errors on `plot_solution function`.
+
 ## Plots and videos
 Running `cvrptw/wang-2024.ipynb` will save plots inside `outputs/plots/[foldername]` where `foldername` is given by the year, month, day, hour, minute and seconds of execution. Therefore, **it is recommended to remove these folders to save space after some executions**.
 
@@ -64,4 +72,4 @@ python cvrptw/generate_video.py --image_folder=<copied-path>
 and optionally specify a video output name with argument `--video_name`. The video will be saved in `outputs/videos` folder.
 
 ## Data notation
-The dataset convention that is used in this project is that of [**Cordeau**](https://www.bernabe.dorronsoro.es/vrp/index.html?/Problem_Instances/CVRPTWInstances.html).
+The dataset convention that is used in this project is that of [**Cordeau**](https://www.bernabe.dorronsoro.es/vrp/index.html?/Problem_Instances/CVRPTWInstances.html) for CVRPTW variant and [**Reinelt**](https://pubsonline.informs.org/doi/10.1287/ijoc.3.4.376) for the CVRPPDTW variant.

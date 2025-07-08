@@ -45,6 +45,8 @@ def wang_greedy_repair(state: CvrptwState, rng: np.random) -> CvrptwState:
 
         elif len(new_state.routes) < state.n_vehicles:
             depot = state.depots["vehicle_to_depot"][len(new_state.routes)]
+            pw = deepcopy(state.routes[-1].planned_windows)
+            pw.append([0, END_OF_DAY])
             new_state.routes.append(
                 Route(
                     [
@@ -53,9 +55,7 @@ def wang_greedy_repair(state: CvrptwState, rng: np.random) -> CvrptwState:
                         depot,
                     ],
                     vehicle=len(new_state.routes),
-                    planned_windows=deepcopy(
-                        state.routes[-1].planned_windows.append([0, END_OF_DAY])
-                    ),
+                    planned_windows=pw
                 )
             )
             new_state.nodes_df.loc[customer, "route"] = len(new_state.routes) - 1
@@ -67,6 +67,8 @@ def wang_greedy_repair(state: CvrptwState, rng: np.random) -> CvrptwState:
         else:
             logger.debug(f"Could not satisfy customer: {customer}")
             new_state.unassigned.insert(0, customer)
+
+    new_state.update_attributes()
     return new_state
 
 

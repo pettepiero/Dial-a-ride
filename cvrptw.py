@@ -15,8 +15,8 @@ from cvrptw.operators.wang_operators import *
 from cvrptw.output.analyze_solution import verify_time_windows
 from cvrptw.myvrplib.input_output import print_results_dict, parse_options
 from cvrptw.output.video import generate_video
-SEED = 1234
-NUM_ITERATIONS = 100
+#NUM_ITERATIONS = 100
+NUM_ITERATIONS = 50 
 
 # logging setup
 import logging
@@ -26,12 +26,15 @@ logging.basicConfig(level=LOGGING_LEVEL)
 degree_of_destruction = 0.05
 
 def main():
-
     args = parse_options()
     print(f"Arguments: {args}")
-
-    # alns = ALNS(rnd.default_rng(SEED))
-    alns = ALNS(rnd.default_rng())
+    
+    if args.seed:
+        print(f"Initializing with explicit seed: {args.seed}")
+        alns = ALNS(rnd.default_rng(args.seed))
+    else:
+        print(f"Initializing ALNS without explicit seed")
+        alns = ALNS(rnd.default_rng())
 
     alns.add_destroy_operator(random_removal)
     alns.add_destroy_operator(random_route_removal)
@@ -46,7 +49,12 @@ def main():
 
     init = CvrptwState(dataset=data)
     initial_solution = nearest_neighbor_tw(state=init, initial_time_slot=False)
-    select = RouletteWheel([25, 5, 1, 0], 0.8, 5, 2)
+    select = RouletteWheel(
+            scores=[25, 5, 1, 0], 
+            decay=0.8, 
+            num_destroy=5,
+            num_repair=2
+            )
     # select = RandomSelect(num_destroy=4, num_repair=2)
     accept = RecordToRecordTravel.autofit(
         initial_solution.objective(), 0.02, 0, NUM_ITERATIONS

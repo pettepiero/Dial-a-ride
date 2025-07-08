@@ -13,6 +13,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 logger.setLevel(LOGGING_LEVEL)
+logger.setLevel(logging.DEBUG)
 
 
 class CvrptwState:
@@ -126,6 +127,7 @@ class CvrptwState:
         )  # Note: maybe use only norm_tw in the future?
         self.n_vehicles = dataset["vehicles"]
         self.n_customers = len(self.nodes_df) -1     # first line is not a customer
+        self.n_planned_customers = self.n_served_customers() 
         self.vehicle_capacity = dataset["capacity"]
 
     def __str__(self):
@@ -151,6 +153,7 @@ class CvrptwState:
         cost = 0
         for idx, customer in enumerate(route[:-1]):
             next_customer = route[idx + 1]
+            logger.debug(f"Route: {route}")
             cost += self.distances[customer][next_customer]
 
         return round(cost, 2)
@@ -388,6 +391,10 @@ class CvrptwState:
         for customer in self.routes[route_idx].customers_list:
             demand += self.nodes_df.loc[customer, "demand"].item()
         self.routes[route_idx].demand = demand
+
+    def update_attributes(self):
+        self.update_unassigned_list()
+        self.n_planned_customers = self.n_served_customers() 
 
 
 def time_window_compatibility(tij: float, twi: tuple, twj: tuple) -> float:

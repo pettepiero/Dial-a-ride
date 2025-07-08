@@ -26,6 +26,12 @@ def parse_options():
         help="Use a random seed instead of a fixed one.",
     )
     parser.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="Set random seed.",
+    )
+    parser.add_argument(
         "--logging",
         type=str,
         default="ERROR",

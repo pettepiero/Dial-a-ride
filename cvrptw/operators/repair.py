@@ -60,7 +60,8 @@ logger.setLevel(LOGGING_LEVEL)
 #         logger.debug(f"Route {idx}: {route.planned_windows}")
 #         for idx, route in enumerate(new_state.routes)
 #     ]
-#     new_state.update_unassigned_list()
+#     #new_state.update_unassigned_list()
+#      new_state.update_attributes()
 
 #     return new_state
 
@@ -105,7 +106,9 @@ def greedy_repair_tw(state: CvrptwState, rng: np.random) -> CvrptwState:
             # Check if the number of routes is less than the number of vehicles
         elif len(new_state.routes) < state.n_vehicles:
             # Initialize a new route and corresponding timings
-            depot = state.depots["vehicle_to_depot"]
+            depot = state.depots["vehicle_to_depot"][len(new_state.routes)]
+            pw = deepcopy(state.routes[-1].planned_windows)
+            pw.append([0, END_OF_DAY])
             new_state.routes.append(
                 Route(
                     [depot, customer, depot],
@@ -114,7 +117,7 @@ def greedy_repair_tw(state: CvrptwState, rng: np.random) -> CvrptwState:
                         # depot(new_state.routes[-1], customer),
                     # ],
                     vehicle=len(new_state.routes),
-                    planned_windows=deepcopy(state.routes[-1].planned_windows.append([0, END_OF_DAY]))
+                    planned_windows=pw
                     )
             )
             new_state.nodes_df.loc[customer, "route"] = len(new_state.routes) - 1
@@ -128,7 +131,8 @@ def greedy_repair_tw(state: CvrptwState, rng: np.random) -> CvrptwState:
         else:
             new_state.unassigned.insert(0, customer)
 
-    new_state.update_unassigned_list()
+    #new_state.update_unassigned_list()
+    new_state.update_attributes()
     return new_state
 
 

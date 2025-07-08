@@ -23,11 +23,13 @@ def random_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
                 The solution after applying the destroy operator.
     """
     destroyed: CvrptwState = state.copy()
-    customers_to_remove = int(destroyed.n_customers * degree_of_destruction)
 
     # list of customers in solution
     solution_customers = state.served_customers()
+    customers_to_remove = min(int(destroyed.n_customers * degree_of_destruction), len(solution_customers))
+
     assert len(solution_customers) > 0, "No customers in solution."
+    assert len(solution_customers) >= customers_to_remove, "Trying to remove too many customers"
     for customer in rng.choice(solution_customers, customers_to_remove, replace=False):
         assert (
             customer not in destroyed.depots["depots_indices"]
@@ -47,7 +49,8 @@ def random_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
             logger.debug(
                 f"Error: customer {customer.item()} not found in any route but picked from served customers."
             )
-    destroyed.update_unassigned_list()
+    #destroyed.update_unassigned_list()
+    destroyed.update_attributes()
     return remove_empty_routes(destroyed)
 
 
@@ -118,7 +121,8 @@ def random_route_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
                     route_idx
                 )
 
-    destroyed.update_unassigned_list()
+    #destroyed.update_unassigned_list()
+    destroyed.update_attributes()
     return remove_empty_routes(destroyed)
 
 
@@ -232,7 +236,8 @@ def shaw_removal(state: CvrptwState, rng) -> CvrptwState:
             route_i_idx
         )
 
-    destroyed.update_unassigned_list()
+    #destroyed.update_unassigned_list()
+    destroyed.update_attributes()
     return remove_empty_routes(destroyed)
 
 
@@ -320,8 +325,8 @@ def cost_reducing_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
                         # else:
                         # print(f"Time window check failed.")
 
-    destroyed.update_unassigned_list()
-    print(f"Finished")
+    #destroyed.update_unassigned_list()
+    destroyed.update_attributes()
     return remove_empty_routes(destroyed)
 
 
@@ -363,7 +368,8 @@ def worst_removal(state: CvrptwState, rng: np.random.Generator) -> CvrptwState:
         )
     destroyed.unassigned.append(worst_customer)
 
-    destroyed.update_unassigned_list()
+    #destroyed.update_unassigned_list()
+    destroyed.update_attributes()
     return destroyed
 
 
@@ -447,7 +453,8 @@ def exchange_reducing_removal(
                                 destroyed.update_times_attributes_routes(
                                     second_route_index
                                 )
-                                destroyed.update_unassigned_list()
+                                #destroyed.update_unassigned_list()
+                                destroyed.update_attributes()
 
                                 return remove_empty_routes(destroyed)
 

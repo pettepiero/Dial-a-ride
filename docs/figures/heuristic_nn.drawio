@@ -1,0 +1,119 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:135.0) Gecko/20100101 Firefox/135.0" version="26.0.11">
+  <diagram id="C5RBs43oDa-KdzZeNtuy" name="Page-1">
+    <mxGraphModel dx="989" dy="528" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="WIyWlLk6GJQsqaUBKTNV-0" />
+        <mxCell id="WIyWlLk6GJQsqaUBKTNV-1" parent="WIyWlLk6GJQsqaUBKTNV-0" />
+        <mxCell id="PELLuqCs5naIXxOrmulJ-6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="WIyWlLk6GJQsqaUBKTNV-3" target="w9apprOF4AOWEV_3NA-S-0">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="WIyWlLk6GJQsqaUBKTNV-3" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;Initialize new route&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
+          <mxGeometry x="331.5" y="70" width="113.5" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="PELLuqCs5naIXxOrmulJ-7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="w9apprOF4AOWEV_3NA-S-0" target="w9apprOF4AOWEV_3NA-S-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="w9apprOF4AOWEV_3NA-S-0" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;Create list &lt;/font&gt;&lt;font face=&quot;Helvetica&quot; style=&quot;font-size: 10px;&quot;&gt;&quot;&lt;b&gt;candidates&lt;/b&gt;&quot; containing&lt;/font&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt; &lt;i&gt;n&lt;/i&gt; nearest &lt;br&gt;&lt;/font&gt;&lt;div&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;unvisited pickup nodes that are visible at time 0&lt;/font&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
+          <mxGeometry x="263.5" y="130" width="249.5" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="w9apprOF4AOWEV_3NA-S-18" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;" parent="WIyWlLk6GJQsqaUBKTNV-1" source="w9apprOF4AOWEV_3NA-S-2" target="w9apprOF4AOWEV_3NA-S-17" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="w9apprOF4AOWEV_3NA-S-2" value="&lt;div&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;Remove nearest node to depot from &quot;&lt;b&gt;candidates&lt;/b&gt;&quot; and add it to route&lt;/font&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
+          <mxGeometry x="263.25" y="194" width="250" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="PELLuqCs5naIXxOrmulJ-9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="w9apprOF4AOWEV_3NA-S-5" target="w9apprOF4AOWEV_3NA-S-9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="w9apprOF4AOWEV_3NA-S-5" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;For each planned pickup node, add the corresponding delivery node to &quot;&lt;b&gt;candidates&lt;/b&gt;&quot;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
+          <mxGeometry x="263.25" y="323" width="250" height="41" as="geometry" />
+        </mxCell>
+        <mxCell id="w9apprOF4AOWEV_3NA-S-13" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=classic;endFill=1;" parent="WIyWlLk6GJQsqaUBKTNV-1" source="w9apprOF4AOWEV_3NA-S-9" target="w9apprOF4AOWEV_3NA-S-12" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="w9apprOF4AOWEV_3NA-S-9" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;Add nearest node of &quot;&lt;b&gt;candidates&lt;/b&gt;&quot; to route&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
+          <mxGeometry x="283.25" y="392" width="210" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="w9apprOF4AOWEV_3NA-S-12" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;Decrease &lt;i&gt;n&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
+          <mxGeometry x="327.75" y="450" width="120" height="27" as="geometry" />
+        </mxCell>
+        <mxCell id="w9apprOF4AOWEV_3NA-S-16" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;endArrow=classic;endFill=1;" parent="WIyWlLk6GJQsqaUBKTNV-1" source="w9apprOF4AOWEV_3NA-S-14" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="390" y="250" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="550" y="534" />
+              <mxPoint x="550" y="250" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="w9apprOF4AOWEV_3NA-S-14" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;&lt;i&gt;n&lt;/i&gt; == 0&lt;/font&gt;" style="rhombus;whiteSpace=wrap;html=1;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
+          <mxGeometry x="352.75" y="500" width="70" height="67" as="geometry" />
+        </mxCell>
+        <mxCell id="PELLuqCs5naIXxOrmulJ-8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="w9apprOF4AOWEV_3NA-S-17" target="w9apprOF4AOWEV_3NA-S-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="w9apprOF4AOWEV_3NA-S-17" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;Update list of &quot;&lt;b&gt;candidates&lt;/b&gt;&quot; with the visible pickup nodes&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
+          <mxGeometry x="288.25" y="260" width="200" height="37" as="geometry" />
+        </mxCell>
+        <mxCell id="w9apprOF4AOWEV_3NA-S-20" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;No&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
+          <mxGeometry x="422.75" y="510" width="40" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="w9apprOF4AOWEV_3NA-S-21" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;Yes&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
+          <mxGeometry x="331.5" y="551" width="40" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="PELLuqCs5naIXxOrmulJ-18" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="w9apprOF4AOWEV_3NA-S-22" target="w9apprOF4AOWEV_3NA-S-24">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="w9apprOF4AOWEV_3NA-S-22" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;Update &quot;&lt;b&gt;candidates&lt;/b&gt;&quot; so that it contains all remaining delivery nodes&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
+          <mxGeometry x="283.75" y="583" width="209" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="w9apprOF4AOWEV_3NA-S-24" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;Serve all remaining nodes in order of decreasing distance&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
+          <mxGeometry x="317.75" y="646" width="141" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="w9apprOF4AOWEV_3NA-S-29" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;endArrow=classic;endFill=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="WIyWlLk6GJQsqaUBKTNV-1" source="w9apprOF4AOWEV_3NA-S-26" target="WIyWlLk6GJQsqaUBKTNV-3" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="559.9999999999998" y="89.3103448275862" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="433" y="750" />
+              <mxPoint x="620" y="750" />
+              <mxPoint x="620" y="85" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="w9apprOF4AOWEV_3NA-S-34" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;endArrow=classic;endFill=1;" parent="WIyWlLk6GJQsqaUBKTNV-1" source="w9apprOF4AOWEV_3NA-S-26" target="w9apprOF4AOWEV_3NA-S-31" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="w9apprOF4AOWEV_3NA-S-26" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;n routes &lt;br&gt;&amp;lt;&lt;br&gt;n vehicles&lt;/font&gt;" style="rhombus;whiteSpace=wrap;html=1;shadow=0;fontFamily=Helvetica;fontSize=12;align=center;strokeWidth=1;spacing=6;spacingTop=-4;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
+          <mxGeometry x="344" y="709" width="88.5" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="w9apprOF4AOWEV_3NA-S-30" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;Yes&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
+          <mxGeometry x="432.5" y="747" width="40" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="w9apprOF4AOWEV_3NA-S-31" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;End NN solution&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
+          <mxGeometry x="327.75" y="810" width="121" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="w9apprOF4AOWEV_3NA-S-35" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;No&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
+          <mxGeometry x="331.5" y="769" width="40" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="PELLuqCs5naIXxOrmulJ-12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.49;entryY=-0.041;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="w9apprOF4AOWEV_3NA-S-12" target="w9apprOF4AOWEV_3NA-S-14">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="PELLuqCs5naIXxOrmulJ-17" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="388" y="567" as="sourcePoint" />
+            <mxPoint x="388" y="579" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="388" y="579" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="PELLuqCs5naIXxOrmulJ-20" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="388.01" y="686" as="sourcePoint" />
+            <mxPoint x="388.01" y="704" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
