@@ -1,7 +1,7 @@
 import unittest
-from cvrptw.myvrplib.data_module import *
-from cvrptw.myvrplib.vrpstates import CvrptwState
-from cvrptw.myvrplib.route import Route
+from lib.myvrplib.data_module import *
+from lib.myvrplib.vrpstates import CvrptwState
+from lib.myvrplib.route import Route
 
 
 class TestCVRPTWState(unittest.TestCase):

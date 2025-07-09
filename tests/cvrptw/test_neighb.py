@@ -1,11 +1,11 @@
 import unittest
 import cvrptw
-from cvrptw.initial_solutions.initial_solutions import neighbours, time_neighbours, nearest_neighbor_tw
-from cvrptw.myvrplib.data_module import (
+from lib.initial_solutions.initial_solutions import neighbours, time_neighbours, nearest_neighbor_tw
+from lib.myvrplib.data_module import (
     data,
     read_cordeau_data,
 )
-from cvrptw.myvrplib.vrpstates import CvrptwState
+from lib.myvrplib.vrpstates import CvrptwState
 
 class NeighbourhoodTests(unittest.TestCase):
     """

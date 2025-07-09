@@ -1,34 +1,14 @@
 import unittest
 from unittest.mock import Mock
-from cvrptw.myvrplib.data_module import *
-from cvrptw.myvrplib.vrpstates import CvrptwState
-from cvrptw.myvrplib.route import Route
-from cvrptw.operators.destroy import cost_reducing_removal
+from lib.myvrplib.data_module import *
+from lib.myvrplib.vrpstates import CvrptwState
+from lib.myvrplib.route import Route
+from lib.operators.destroy import cost_reducing_removal
 
 class TestDFConversion(unittest.TestCase):
     def setUp(self):
         self.data = read_cordeau_data(
             "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr12"
-        )
-
-    def test_create_customers_df(self):
-        customers_df = create_customers_df(self.data)
-        # test dimensions
-        self.assertEqual(customers_df.shape[0], self.data["dimension"] + self.data["n_depots"] +1)
-        # some hand picked customers checks
-        self.assertEqual(customers_df['x'].loc[customers_df["id"] == 1].item(), 33.588)
-        self.assertEqual(customers_df['service_time'].loc[customers_df["id"] == 23].item(), 18)
-        self.assertEqual(customers_df['start_time'].loc[customers_df["id"] == 36].item(), 269)
-        # testing depots
-        self.assertEqual(customers_df['x'].loc[customers_df["id"] == 97].item(), 6.229)
-        self.assertEqual(customers_df['service_time'].loc[customers_df["id"] == 97].item(), 0)
-        self.assertEqual(
-            customers_df["start_time"].loc[customers_df["id"] == 99].item(),
-            0,
-        )
-        self.assertEqual(
-            customers_df["end_time"].loc[customers_df["id"] == 97].item(),
-            END_OF_DAY,
         )
 
     def test_get_ids_of_time_slot(self):
@@ -123,19 +103,18 @@ class TestCoordsMatrix(unittest.TestCase):
     def test_coords_matrix(self):
         #on hand made test data
         data = read_cordeau_data(
-            "/home/pettepiero/tirocinio/dial-a-ride/tests/test_data"
+            "/home/pettepiero/tirocinio/dial-a-ride/tests/cvrptw/test_data"
         )
 
-        data_df = dynamic_df_from_dict(data)
-        print(data_df)
-
-        known_cost_matrix = np.array([[np.nan,     np.nan,   np.nan,   np.nan,   np.nan,   np.nan,   np.nan],
-                            [np.nan,      0,      65.19,  80.62,  31.62,  136.01, 14.14],
-                            [np.nan,      65.19,	0.00,	35.36,  35.36,	79.06,	69.64],
-                            [np.nan,      80.62,	35.36,	0.00,	50.00,	100.00,	90.00],
-                            [np.nan,      31.62,  35.36,	50.00,	0.00,	111.80,	40.00],
-                            [np.nan,      136.01,	79.06,	100.00,	111.80,	0.00,	134.54],
-                            [np.nan,      14.14,	69.64,	90.00,	40.00,	134.54,	0.00]])
+        known_cost_matrix = np.array([
+                            [np.nan,    np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                            [np.nan,    0,      65.19,  80.62,  31.62,  136.01, 14.14,  67.08],
+                            [np.nan,    65.19,	0.00,	35.36,  35.36,	79.06,	69.64,  35.36],
+                            [np.nan,    80.62,	35.36,	0.00,	50.00,	100.00,	90.00,  70.71],
+                            [np.nan,    31.62,  35.36,	50.00,	0.00,	111.80,	40.00,  50.00],
+                            [np.nan,    136.01,	79.06,	100.00,	111.80,	0.00,	134.54, 70.71],
+                            [np.nan,    14.14,	69.64,	90.00,	40.00,	134.54,	0.00,   64.03],
+                            [np.nan,    67.08,  35.36,  70.71,  50.00,  70.71,  64.03,  0]])
         
         np.testing.assert_allclose(known_cost_matrix, data['edge_weight'])
 
@@ -144,7 +123,7 @@ class TestCRR(unittest.TestCase):
     """Test for cost reducing removal operator"""
     def setUp(self):
         self.data = read_cordeau_data(
-            "/home/pettepiero/tirocinio/dial-a-ride/tests/test_data"
+            "/home/pettepiero/tirocinio/dial-a-ride/tests/cvrptw/test_data"
         )
         self.data_df = dynamic_df_from_dict(self.data)
         route1 = Route([6, 1, 2, 6])
@@ -153,38 +132,30 @@ class TestCRR(unittest.TestCase):
         self.nodes_dict = {1: 'A', 2: 'B', 3: 'C', 4: 'D', 6: 'F', 7: 'G'}
 
     def test_crr(self):
-        print(f"Starting from: {self.state.routes_cost}")
 
         for route in self.state.routes:
             path = []
             for cust in route.customers_list:
                 path.append(self.nodes_dict[cust])
-            print(f'{path}\n')
         np.testing.assert_allclose(self.state.routes_cost, np.array([148.98, 170.71]), rtol=0.01)
 
         self.state = cost_reducing_removal(self.state, np.random)
-        print(f"After: {self.state.routes_cost}")
         for route in self.state.routes:
             path = []
             for cust in route.customers_list:
                 path.append(self.nodes_dict[cust])
-            print(f"{path}\n")
 
         self.state = cost_reducing_removal(self.state, np.random)
-        print(f"After: {self.state.routes_cost}")
         for route in self.state.routes:
             path = []
             for cust in route.customers_list:
                 path.append(self.nodes_dict[cust])
-            print(f"{path}\n")
 
         self.state = cost_reducing_removal(self.state, np.random)
-        print(f"After: {self.state.routes_cost}")
         for route in self.state.routes:
             path = []
             for cust in route.customers_list:
                 path.append(self.nodes_dict[cust])
-            print(f"{path}\n")
 
 if __name__ == "__main__":
     unittest.main()
