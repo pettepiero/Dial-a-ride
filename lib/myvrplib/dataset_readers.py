@@ -4,9 +4,18 @@ from lib.myvrplib.data_module import *
 
 END_OF_DAY = 1000
 
-def read_cordeau_data(file: str, print_data: bool = False) -> dict:
+def read_cordeau_data(file: str, print_data: bool = False, seed: int = None) -> dict:
     """
     Read the Cordeau et al. (2001) benchmark data.
+
+    Parameters
+    ----------
+    file : str
+        Path to the input `.txt` file in Cordeau's benchmark format.
+    print_data : bool, optional
+        If True, prints debug information including file name and parsed quantities.
+    seed : int, optional
+        Seed for random number generator. If None (default), no seed is used.
     """
     filename = file.split("/")[-1]
     data_file = open(file, "r")
@@ -91,7 +100,11 @@ def read_cordeau_data(file: str, print_data: bool = False) -> dict:
     data_dict["service_time"] += [int(row[3]) for row in customers]
     data_dict["service_time"] += [int(row[3]) for row in depots]
     data_dict["edge_weight"] = cost_matrix_from_coords(data_dict["node_coord"])
-    depot_to_vehicles, vehicle_to_depot = calculate_depots(depots=data_dict['depots'], n_vehicles=data_dict['vehicles'])
+    depot_to_vehicles, vehicle_to_depot = calculate_depots(
+        depots=data_dict['depots'], 
+        n_vehicles=data_dict['vehicles'],
+        seed = seed
+    )
 
     data_dict['depot_to_vehicles'] = depot_to_vehicles
     data_dict['vehicle_to_depot'] = vehicle_to_depot
