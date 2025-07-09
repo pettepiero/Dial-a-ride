@@ -1,5 +1,5 @@
-from cvrptw.myvrplib.vrpstates import CvrptwState
-from cvrptw.myvrplib.data_module import data, END_OF_DAY, generate_dynamic_cust_df, get_initial_data
+from lib.myvrplib.vrpstates import CvrptwState
+from lib.myvrplib.data_module import data, END_OF_DAY, generate_dynamic_cust_df, get_initial_data
 import pandas as pd
 import numpy as np
 import copy

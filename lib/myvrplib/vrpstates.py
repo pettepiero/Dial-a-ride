@@ -1,5 +1,4 @@
 from lib.myvrplib.data_module import (
-    data, 
     generate_dynamic_df, 
     dynamic_df_from_dict, 
     cost_matrix_from_coords,
@@ -55,9 +54,9 @@ class CvrptwState:
 
     def __init__(
         self,
+        dataset: dict,
         routes: list[Route] = None,
         routes_cost: list = None,
-        dataset: dict = data,
         given_unassigned: list = None,
         distances: np.ndarray = None,
         nodes_df: pd.DataFrame = None,
@@ -134,14 +133,14 @@ class CvrptwState:
 
     def copy(self):
         return CvrptwState(
-            [route.copy() for route in self.routes],  # Deep copy each Route
-            self.routes_cost.copy(),
-            self.dataset.copy(),
-            self.unassigned.copy(),
-            self.distances.copy(),
-            self.nodes_df.copy(deep=True),
-            self.current_time,
-            seed=self.seed
+            dataset             = self.dataset.copy(),
+            routes              = [route.copy() for route in self.routes],  # Deep copy each Route
+            routes_cost         = self.routes_cost.copy(),
+            given_unassigned    = self.unassigned.copy(),
+            distances           = self.distances.copy(),
+            nodes_df            = self.nodes_df.copy(deep=True),
+            current_time        = self.current_time,
+            seed                = self.seed
         )
 
     def route_cost_calculator(self, route_id: int):

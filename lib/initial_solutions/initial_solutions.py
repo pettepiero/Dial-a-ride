@@ -2,8 +2,6 @@ from typing import List
 import numpy as np
 import pandas as pd
 from lib.myvrplib.data_module import (
-    data,
-    d_data,
     calculate_depots,
     get_initial_data,
     get_ids_of_time_slot,
@@ -139,7 +137,12 @@ def nearest_neighbor_tw(state: CvrptwState, cordeau:bool = True, initial_time_sl
             state.nodes_df.loc[customer, "route"] = route_num
     
     # Create the solution object of type CvrptwState
-    solution = CvrptwState(routes, nodes_df=state.nodes_df, given_unassigned=list(unvisited))
+    solution = CvrptwState(
+            dataset             = state.dataset,
+            routes              = routes, 
+            nodes_df            = state.nodes_df, 
+            given_unassigned    = list(unvisited)
+            )
     # Update the time and cost attributes of the solution
     for route_idx in range(len(solution.routes)):
         solution.update_times_attributes_routes(route_idx)

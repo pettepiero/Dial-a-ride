@@ -1,4 +1,3 @@
-from lib.myvrplib.data_module import data
 from lib.myvrplib.vrpstates import CvrptwState
 from alns import Result
 import numpy as np
