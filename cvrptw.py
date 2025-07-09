@@ -6,7 +6,7 @@ from alns.select import *
 from alns.stop import MaxIterations
 
 from lib.myvrplib.myvrplib import LOGGING_LEVEL
-from lib.myvrplib.data_module import d_data as d_data
+from lib.myvrplib.data_module import cvrptw_data as data
 from lib.myvrplib.vrpstates import CvrptwState
 from lib.initial_solutions.initial_solutions import nearest_neighbor_tw
 from lib.operators.destroy import *

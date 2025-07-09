@@ -1,7 +1,7 @@
 import unittest
 import cvrptw
 from lib.myvrplib.route import Route
-from lib.myvrplib.data_module import data
+#from lib.myvrplib.data_module import data *which data??
 from lib.initial_solutions.initial_solutions import neighbours, time_neighbours, nearest_neighbor_tw
 
 class RouteTests(unittest.TestCase):

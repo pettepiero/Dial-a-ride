@@ -1,4 +1,3 @@
-from lib.myvrplib.data_module import data
 import numpy as np
 from lib.myvrplib.myvrplib import END_OF_DAY, LOGGING_LEVEL
 from lib.myvrplib.vrpstates import CvrptwState

@@ -1,6 +1,5 @@
 import logging
 import numpy as np
-from lib.myvrplib.data_module import data
 from lib.myvrplib.myvrplib import END_OF_DAY, LOGGING_LEVEL
 from lib.myvrplib.vrpstates import CvrptwState
 from lib.myvrplib.route import Route
