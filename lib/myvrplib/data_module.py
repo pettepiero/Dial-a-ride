@@ -28,52 +28,100 @@ def cost_matrix_from_coords(coords: list, cordeau: bool=True) -> list:
                 cost_matrix[i, j] = round(np.linalg.norm(coords[i] - coords[j]), 2)
         return cost_matrix
 
-
 def calculate_depots(
-    data, rng: np.random.Generator = rnd.default_rng(SEED)
-):
+    depots: list,
+    n_vehicles: int,
+    seed: int = SEED,
+) -> tuple:
     """
-    Calculate the depot index for the vehicles. If the number of vehicles is equal to the number of depots,
-    then vehicle i is mapped to depot i. If the number of vehicles is greater than the number of depots, then
-    round robin assignment is used. If the number of vehicles is less than the number of depots, then random
-    assignment is used, but load balancing between depots is guaranteed. The mapping is stored in the data
-    dictionaries "depot_to_vehicles" and "vehicle_to_depot".
+    Calculates the depot assignment for each vehicle based on the number of depots and vehicles.
+
+    - If the number of vehicles equals the number of depots, vehicles are assigned 1:1 to depots.
+    - If vehicles > depots, a round-robin assignment is used.
+    - If vehicles < depots, a random subset of depots is chosen, and each vehicle is assigned to one.
+
+    The result is returned as two dictionaries:
+    `depot_to_vehicles` and `vehicle_to_depot`.
+
+    Examples
+    --------
+    1) One vehicle per depot (exact match):
+
+        >>> depots = [44, 52]
+        >>> n_vehicles = 2
+        DEPOT   | VEHICLE
+        44      | 0
+        52      | 1
+        depot_to_vehicles = {44: [0], 52: [1]}
+        vehicle_to_depot = {0: 44, 1: 52}
+
+    2) More vehicles than depots (round robin):
+
+        >>> depots = [44, 52]
+        >>> n_vehicles = 5
+        DEPOT   | VEHICLE
+        44      | 0, 2, 4
+        52      | 1, 3
+
+    3) More depots than vehicles (random assignment):
+
+        >>> depots = [44, 52, 38, 7, 78]
+        >>> n_vehicles = 2
+        DEPOT   | VEHICLE
+        44      | 1
+        38      | 0
+
+    Parameters
+    ----------
+    depots : list
+        List of depot indices.
+
+    n_vehicles : int
+        Number of vehicles to assign.
+
+    seed : int, optional
+        Seed for random number generator. If None, no fixed seed is used
+
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        
+        - depot_to_vehicles : dict[int, list[int]]
+        - vehicle_to_depot : dict[int, int]
     """
-    n_customers = data["dimension"]
-    n_vehicles = data["vehicles"]
-    n_depots = data["n_depots"]
-    depots = data["depots"]
-    # print(f"Number of customers: {n_customers}")
-    # print(f"Before, depot to vehicles: {data['depot_to_vehicles']}")
-    # Initialization of the dictionaries
-    for depot in depots:
-        data["depot_to_vehicles"][depot] = []
-    for vehicle in range(n_vehicles):
-        data["vehicle_to_depot"][vehicle] = None
+    if seed is None:
+        rng = rnd.default_rng()
+    else:
+        rng = rnd.default_rng(seed)
+
+    # check that all depots are unique
+    assert len(set(depots)) == len(depots), "Depot IDs must be unique"
+    n_depots = len(depots)
+
+    dict_depot_to_vehicles = {depot: [] for depot in depots}
+    dict_vehicle_to_depot = {vehicle: None for vehicle in range(n_vehicles)}
     # vehicle i -> depot i
     if n_vehicles == n_depots:
-        for depot in depots:
-            data["depot_to_vehicles"][depot].append(depot)
-            data["vehicle_to_depot"][depot] = depot
+        for i, depot in enumerate(depots):
+            dict_depot_to_vehicles[depot].append(i)
+            dict_vehicle_to_depot[i] = depot
 
     elif n_vehicles > n_depots:
         # Round robin assignment
         for vehicle in range(n_vehicles):
-            depot = vehicle % n_depots
-            # print(f"Vehicle {vehicle} assigned to depot {depot}.")
-            # print(f"Depot to vehicles: {data['depot_to_vehicles']}")
-            # print(f"After, depot to vehicles: {data['depot_to_vehicles']}")
-            # print(f"n_customer + depot: {n_customers + depot}")
-            data["depot_to_vehicles"][n_customers + depot].append(vehicle)
-            data["vehicle_to_depot"][vehicle] = n_customers + depot
+            depot = depots[vehicle % n_depots]
+            dict_depot_to_vehicles[depot].append(vehicle)
+            dict_vehicle_to_depot[vehicle] = depot
     else:
         # Random assignment
-        depots = rng.choice(depots, size=n_vehicles, replace=False)
+        assigned_depots = rng.choice(depots, size=n_vehicles, replace=False)
         for vehicle in range(n_vehicles):
-            depot = depots[vehicle]
-            data["depot_to_vehicles"][depot].append(vehicle)
-            data["vehicle_to_depot"][vehicle] = int(depot)
+            depot = assigned_depots[vehicle]
+            dict_depot_to_vehicles[depot].append(vehicle)
+            dict_vehicle_to_depot[vehicle] = int(depot)
 
+    return dict_depot_to_vehicles, dict_vehicle_to_depot
 
 def read_solution_format(file: str, print_data: bool = False) -> dict:
     """
@@ -265,4 +313,46 @@ def create_depots_dict(data: dict) -> dict:
     }
 
     return depots_dict
+
+def mins_since_midnight(hour: int, mins: int) -> int:
+    assert 0 <= hour < 24
+    assert 0 <= mins < 60 
+    return hour*60 + mins
+
+def get_all_section_tags(file: str) -> list:
+    """  
+    Reads a structured VRP-like file and returns a list of strings,
+    each corresponding to the first word on each line (section tags, keys, etc.).
+    It tests wether a list of base tags exist in the solution and otherwise raises
+    an assertion error.
+
+    Parameters
+    ----------
+    file : str
+        Path to the input file.
+
+    Returns
+    -------
+    list of str
+        A list of words that appear as the first token on each line.
+    """
+    tags = [] 
+
+    with open(file, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue  # skip empty lines
+            first_word = line.split()[0]
+            if first_word.isupper():
+                tags.append(first_word)
+
+    # Check that the following tags are found
+    required_tags = ["NAME", "COMMENT", "TYPE", "DIMENSION", "EDGE_WEIGHT_TYPE", "NUM_VEHICLES", "CAPACITY", "NODES_SECTION", "DEMAND_SECTION", "DEPOT_SECTION"] 
+
+    missing = [tag for tag in required_tags if tag not in tags]
+    if missing:
+        raise ValueError(f"Missing required tags: {', '.join(missing)}")
+
+    return tags 
 
