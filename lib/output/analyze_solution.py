@@ -1,5 +1,5 @@
-from cvrptw.myvrplib.data_module import data
-from cvrptw.myvrplib.vrpstates import CvrptwState
+from lib.myvrplib.data_module import data
+from lib.myvrplib.vrpstates import CvrptwState
 from alns import Result
 import numpy as np
 import matplotlib.pyplot as plt

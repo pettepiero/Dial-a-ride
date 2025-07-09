@@ -1,16 +1,16 @@
 from typing import List
 import numpy as np
 import pandas as pd
-from cvrptw.myvrplib.data_module import (
+from lib.myvrplib.data_module import (
     data,
     d_data,
     calculate_depots,
     get_initial_data,
     get_ids_of_time_slot,
 )
-from cvrptw.myvrplib.vrpstates import CvrptwState
-from cvrptw.myvrplib.route import Route
-from cvrptw.myvrplib.myvrplib import time_window_check
+from lib.myvrplib.vrpstates import CvrptwState
+from lib.myvrplib.route import Route
+from lib.myvrplib.myvrplib import time_window_check
 
 def neighbours(state: CvrptwState, customer: int) -> list:
     """

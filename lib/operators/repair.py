@@ -1,14 +1,14 @@
-from cvrptw.myvrplib.data_module import data
+from lib.myvrplib.data_module import data
 import numpy as np
-from cvrptw.myvrplib.myvrplib import (
+from lib.myvrplib.myvrplib import (
     END_OF_DAY,
     time_window_check,
     route_time_window_check,
     LOGGING_LEVEL,
 )
-from cvrptw.myvrplib.vrpstates import CvrptwState
+from lib.myvrplib.vrpstates import CvrptwState
 import logging
-from cvrptw.myvrplib.route import Route
+from lib.myvrplib.route import Route
 from copy import deepcopy
 
 

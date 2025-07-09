@@ -1,19 +1,18 @@
-from cvrptw.myvrplib.data_module import (
+from lib.myvrplib.data_module import (
     data, 
     generate_dynamic_df, 
     dynamic_df_from_dict, 
     cost_matrix_from_coords,
     create_depots_dict
 )
-from cvrptw.myvrplib.myvrplib import END_OF_DAY, UNASSIGNED_PENALTY, LOGGING_LEVEL
-from cvrptw.myvrplib.route import Route
+from lib.myvrplib.myvrplib import END_OF_DAY, UNASSIGNED_PENALTY, LOGGING_LEVEL
+from lib.myvrplib.route import Route
 import numpy as np
 import pandas as pd
 import logging
 
 logger = logging.getLogger(__name__)
 logger.setLevel(LOGGING_LEVEL)
-logger.setLevel(logging.DEBUG)
 
 
 class CvrptwState:

@@ -1,8 +1,8 @@
 import copy
 import logging
 
-from cvrptw.myvrplib.data_module import data, d_data
-from cvrptw.myvrplib.myvrplib import END_OF_DAY, LOGGING_LEVEL
+from lib.myvrplib.data_module import data, d_data
+from lib.myvrplib.myvrplib import END_OF_DAY, LOGGING_LEVEL
 
 logger = logging.getLogger(__name__)
 logger.setLevel(LOGGING_LEVEL)
