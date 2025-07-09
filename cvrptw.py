@@ -5,16 +5,16 @@ from alns.accept import RecordToRecordTravel
 from alns.select import *
 from alns.stop import MaxIterations
 
-from cvrptw.myvrplib.myvrplib import LOGGING_LEVEL
-from cvrptw.myvrplib.data_module import d_data as d_data
-from cvrptw.myvrplib.vrpstates import CvrptwState
-from cvrptw.initial_solutions.initial_solutions import nearest_neighbor_tw
-from cvrptw.operators.destroy import *
-from cvrptw.operators.repair import *
-from cvrptw.operators.wang_operators import *
-from cvrptw.output.analyze_solution import verify_time_windows
-from cvrptw.myvrplib.input_output import print_results_dict, parse_options
-from cvrptw.output.video import generate_video
+from lib.myvrplib.myvrplib import LOGGING_LEVEL
+from lib.myvrplib.data_module import d_data as d_data
+from lib.myvrplib.vrpstates import CvrptwState
+from lib.initial_solutions.initial_solutions import nearest_neighbor_tw
+from lib.operators.destroy import *
+from lib.operators.repair import *
+from lib.operators.wang_operators import *
+from lib.output.analyze_solution import verify_time_windows
+from lib.myvrplib.input_output import print_results_dict, parse_options
+from lib.output.video import generate_video
 #NUM_ITERATIONS = 100
 NUM_ITERATIONS = 50 
 
