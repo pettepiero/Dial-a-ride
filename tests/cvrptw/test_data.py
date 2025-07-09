@@ -12,9 +12,7 @@ class TestDFConversion(unittest.TestCase):
         )
 
     def test_get_ids_of_time_slot(self):
-        dynamic_data = generate_dynamic_df(
-            "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr12", seed=0
-        )
+        dynamic_data = generate_dynamic_df(self.data, seed=0)
 
         ids = get_ids_of_time_slot(dynamic_data, 0)
         # known indices for seed = 0 and time_slot = 0
@@ -55,9 +53,7 @@ class TestDFConversion(unittest.TestCase):
         self.assertEqual(ids, known_ids)
 
     def test_get_initial_data(self):
-        dynamic_data = generate_dynamic_df(
-            "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr12", seed=0
-        )
+        dynamic_data = generate_dynamic_df(self.data, seed=0)
         initial_data = get_initial_data(dynamic_data)
         # some hand picked customers checks for seed = 0
         self.assertEqual(initial_data.loc[initial_data["id"] == 11, 'x'].item(), 37.085)
@@ -69,11 +65,7 @@ class TestDFConversion(unittest.TestCase):
         )
 
     def test_generate_dynamic_df(self):
-
-        dynamic_data = generate_dynamic_df(
-            "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr12",
-            seed=0
-        )
+        dynamic_data = generate_dynamic_df(self.data, seed=0)
         # some hand picked customers checks for seed = 0
 
         self.assertEqual(dynamic_data.loc[dynamic_data["id"] == 1, 'call_in_time_slot'].item(), 3)
@@ -86,11 +78,7 @@ class TestDFConversion(unittest.TestCase):
         self.assertEqual(dynamic_data.loc[dynamic_data["id"] == 93, 'call_in_time_slot'].item(), 5)
 
         # Test the static case (all call in times are 0)
-        dynamic_data = generate_dynamic_df(
-            "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr12",
-            static=True,
-            seed=0
-        )
+        dynamic_data = generate_dynamic_df(self.data, static=True, seed=0)
 
         num_custs = len(dynamic_data)
         zeros = np.zeros(num_custs).astype(int).tolist()

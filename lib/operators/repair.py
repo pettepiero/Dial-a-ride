@@ -1,10 +1,10 @@
 import numpy as np
 from lib.myvrplib.myvrplib import (
-    END_OF_DAY,
     time_window_check,
     route_time_window_check,
     LOGGING_LEVEL,
 )
+from lib.myvrplib.dataset_readers import END_OF_DAY
 from lib.myvrplib.vrpstates import CvrptwState
 import logging
 from lib.myvrplib.route import Route

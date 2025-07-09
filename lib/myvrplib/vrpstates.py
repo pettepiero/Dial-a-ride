@@ -1,10 +1,10 @@
 from lib.myvrplib.data_module import (
-    generate_dynamic_df, 
     dynamic_df_from_dict, 
     cost_matrix_from_coords,
     create_depots_dict
 )
-from lib.myvrplib.myvrplib import END_OF_DAY, UNASSIGNED_PENALTY, LOGGING_LEVEL
+from lib.myvrplib.myvrplib import UNASSIGNED_PENALTY, LOGGING_LEVEL
+from lib.myvrplib.dataset_readers import END_OF_DAY
 from lib.myvrplib.route import Route
 import numpy as np
 import pandas as pd

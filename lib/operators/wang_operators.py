@@ -1,6 +1,7 @@
 import logging
 import numpy as np
-from lib.myvrplib.myvrplib import END_OF_DAY, LOGGING_LEVEL
+from lib.myvrplib.myvrplib import LOGGING_LEVEL
+from lib.myvrplib.dataset_readers import END_OF_DAY
 from lib.myvrplib.vrpstates import CvrptwState
 from lib.myvrplib.route import Route
 from lib.operators.repair import insert_cost

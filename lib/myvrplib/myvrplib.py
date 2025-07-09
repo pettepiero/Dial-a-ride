@@ -1,6 +1,5 @@
 import logging
 import pandas as pd
-from .data_module import END_OF_DAY
 
 UNASSIGNED_PENALTY = 50
 LOGGING_LEVEL = logging.ERROR
