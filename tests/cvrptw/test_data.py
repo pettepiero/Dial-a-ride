@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import Mock
 from lib.myvrplib.data_module import *
+from lib.myvrplib.dataset_readers import read_cordeau_data 
 from lib.myvrplib.vrpstates import CvrptwState
 from lib.myvrplib.route import Route
 from lib.operators.destroy import cost_reducing_removal

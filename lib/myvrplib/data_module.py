@@ -356,3 +356,19 @@ def get_all_section_tags(file: str) -> list:
 
     return tags 
 
+
+def insert_coords_from_ids(data_with_ids: dict, map_data: pd.DataFrame) -> None:
+    assert isinstance(data_with_ids, dict), f"Wrong datatype: expected dict, obtained {type(data_with_ids)}"
+    check_keys = ['name', 'vehicles', 'capacity', 'dimension', 'n_depots', 'depot_to_vehicles', 'vehicle_to_depot', 'demand', 'pickup_time_window', 'delivery_time_window', 'service_time']
+    obtained_keys = list(data_with_ids.keys())
+
+    for key in check_keys:
+        assert key in obtained_keys, f"Key {key} not found in passed data dict"
+
+    customer_ids = data_with_ids['customer_ids']
+    coords = map_data.set_index('id').loc[customer_ids, ['lat', 'lon']].values.tolist()
+    data_with_ids['node_coord'] = coords 
+
+    data_with_ids['edge_weight'] = cost_matrix_from_coords(np.array(map_data[['lat', 'lon']].values.tolist()))
+
+

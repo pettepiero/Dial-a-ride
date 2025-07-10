@@ -53,12 +53,13 @@ def read_cordeau_data(file: str, print_data: bool = False, seed: int = None) -> 
 
     # Save customers in array
     customers = []
+    customer_ids = []
     for i in range(n):
         line = data[t + 1 + i]
         customers.append(line.split())
+        customer_ids.append(line.split()[0])
 
     customers = np.array(customers, dtype=np.float64)
-    
 
     # Save depots in array
     depots = []
@@ -74,6 +75,7 @@ def read_cordeau_data(file: str, print_data: bool = False, seed: int = None) -> 
     data_dict["vehicles"] = m   # maximum number of vehicles
     data_dict["capacity"] = int(depots_info[0][1])
     data_dict["dimension"] = n  # Number of customers only, not depots
+    data_dict["customer_ids"] = customer_ids
     data_dict["n_depots"] = t
     data_dict["depot_to_vehicles"] = {}  # {depot: [vehicles]}
     data_dict["vehicle_to_depot"] = {}  # {vehicle: depot}
@@ -215,8 +217,6 @@ def read_vrplib_data(file: str, print_data: bool = False, seed: int = None) -> d
           Mapping from depot ID to list of vehicles assigned to it.
         - `vehicle_to_depot` : dict[int, int]  
           Mapping from vehicle ID to assigned depot.
-        - `node_coord` : ndarray  
-          Node coordinates (customers + depots).
         - `demand` : ndarray  
           Demand at each node (0 for depots).
         - `pickup_time_window` : list[list[int]]  
@@ -225,8 +225,8 @@ def read_vrplib_data(file: str, print_data: bool = False, seed: int = None) -> d
           Earliest and latest delivery times.
         - `service_time` : list[float]  
           Service duration for each node.
-        - `edge_weight` : ndarray  
-          Cost matrix derived from Euclidean distances.
+        - 'requested_stops': dict
+          Pickup and delivery depot for each customer
     """
     verify_vrplib_format(file)
     tags = get_all_section_tags(file)
@@ -257,11 +257,14 @@ def read_vrplib_data(file: str, print_data: bool = False, seed: int = None) -> d
     capacity = int(data['CAPACITY'][0][-1])
     dimension = int(data['DIMENSION'][0][-1])
 
-    node_coord = np.zeros((dimension, 2))
+    requested_stops = {}
+    customer_ids = []
     for row in data['NODES_SECTION']:
         idx = int(row[0]) - 1
-        x, y = map(float, row[1:3])
-        node_coord[idx] = [x, y]
+        customer = int(row[0]) 
+        customer_ids.append(customer)
+        pickup, delivery= map(int, row[1:3])
+        requested_stops[customer] = [pickup, delivery]
 
     demand = np.zeros(dimension, dtype=int)
     for row in data['DEMAND_SECTION']:
@@ -305,23 +308,21 @@ def read_vrplib_data(file: str, print_data: bool = False, seed: int = None) -> d
         print(f"\n SERVICE TIME NOT FOUND \n")
         service_time = [None] * dimension
 
-    edge_weight = cost_matrix_from_coords(node_coord)
-
     result = {
-        'name': name,
-        'vehicles': vehicles,
-        'capacity': capacity,
-        'dimension': dimension,
-        'n_depots': n_depots,
-        'depots': depots,
-        'depot_to_vehicles': depot_to_vehicles,
-        'vehicle_to_depot': vehicle_to_depot,
-        'node_coord': node_coord,
-        'demand': demand,
-        'pickup_time_window': pickup_time_window,
+        'name':                 name,
+        'vehicles':             vehicles,
+        'capacity':             capacity,
+        'dimension':            dimension,
+        'customer_ids':         customer_ids,
+        'n_depots':             n_depots,
+        'depots':               depots,
+        'depot_to_vehicles':    depot_to_vehicles,
+        'vehicle_to_depot':     vehicle_to_depot,
+        'demand':               demand,
+        'pickup_time_window':   pickup_time_window,
         'delivery_time_window': delivery_time_window,
-        'service_time': service_time,
-        'edge_weight': edge_weight
+        'service_time':         service_time,
+        'requested_stops':      requested_stops,
     }
 
     if print_data:

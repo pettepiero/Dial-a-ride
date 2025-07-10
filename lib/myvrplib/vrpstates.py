@@ -1,7 +1,8 @@
 from lib.myvrplib.data_module import (
     dynamic_df_from_dict, 
     cost_matrix_from_coords,
-    create_depots_dict
+    create_depots_dict,
+    insert_coords_from_ids,
 )
 from lib.myvrplib.myvrplib import UNASSIGNED_PENALTY, LOGGING_LEVEL
 from lib.myvrplib.dataset_readers import END_OF_DAY
@@ -13,6 +14,88 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(LOGGING_LEVEL)
 
+
+class VRPState:
+    """
+    Parent class for states of VRP problem variants
+    """
+    def __init__(
+        self,
+        requests_dataset: dict,
+        map_dataset: pd.DataFrame,
+        routes: list[Route] = None,
+        routes_cost: list = None,
+        given_unassigned: list = None,
+        distances: np.ndarray = None,
+        nodes_df: pd.DataFrame = None,
+        current_time: int = 0,
+        seed: int = 0,
+    ):
+        # merge map and request data
+        self.dataset = requests_dataset
+        insert_coords_from_ids(requests_dataset, map_dataset)
+        self.seed = seed
+        self.routes = routes if routes is not None else []
+        if nodes_df is not None:
+            self.nodes_df = nodes_df
+        else:
+            self.nodes_df = dynamic_df_from_dict(dataset, seed=seed)
+        # Initialize distances matrix
+
+        full_coordinates = self.nodes_df[["x", "y"]].values
+
+        if distances is not None:
+            self.distances = distances
+        else:
+            self.distances = cost_matrix_from_coords(coords=full_coordinates)
+
+        if routes_cost is not None:
+            self.routes_cost = routes_cost
+            logger.debug(f"Passed len(routes_cost): {len(self.routes_cost)}")
+            logger.debug(f"passed routes_cost: {self.routes_cost}")
+        else:
+            self.routes_cost = np.array([self.route_cost_calculator(idx) for idx in range(len(self.routes))])
+            logger.debug(f"Calculated len(routes_cost): {len(self.routes_cost)}")
+
+        # self.routes_cost = routes_cost if routes_cost is not None else [self.route_cost_calculator(idx) for idx in range(len(self.routes))]
+        # logger.debug(f"len(routes_cost): {len(self.routes_cost)}")
+        # logger.debug(f"len(self.routes) = {len(self.routes)}")
+
+        assert len(self.routes) == len(self.routes_cost), "Routes and routes_cost must have the same length."
+
+        self.depots = create_depots_dict(dataset)
+        if given_unassigned is not None:
+            self.unassigned = given_unassigned
+        else:
+            unassigned = self.nodes_df[["id", "route"]]
+            unassigned = unassigned.loc[pd.isna(unassigned["route"]), "id"].tolist()
+            # filter out depots
+            unassigned = [customer for customer in unassigned if customer not in self.depots["depots_indices"]]      
+
+            self.unassigned = unassigned
+
+        # Initialize time window compatibility matrix
+        full_times = self.nodes_df[["start_time", "end_time"]].values
+
+    
+        for depot in dataset["depots"]:
+            full_times = np.append(full_times, [[0, END_OF_DAY]], axis=0)
+        full_times = full_times.tolist()
+        self.twc = self.generate_twc_matrix(
+            full_times,
+            self.distances,
+        )
+        self.current_time = current_time
+
+        self.qmax = self.get_qmax()
+        self.dmax = self.get_dmax()
+        self.norm_tw = (
+            self.twc / self.dmax
+        )  # Note: maybe use only norm_tw in the future?
+        self.n_vehicles = dataset["vehicles"]
+        self.n_customers = len(self.nodes_df) -1     # first line is not a customer
+        self.n_planned_customers = self.n_served_customers() 
+        self.vehicle_capacity = dataset["capacity"]
 
 class CvrptwState:
     """
@@ -63,7 +146,6 @@ class CvrptwState:
         current_time: int = 0,
         seed: int = 0,
     ):
-
         self.dataset = dataset
         self.seed = seed
         self.routes = routes if routes is not None else []
