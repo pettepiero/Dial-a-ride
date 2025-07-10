@@ -6,14 +6,14 @@ from alns.select import *
 from alns.stop import MaxIterations
 
 from lib.myvrplib.myvrplib import LOGGING_LEVEL
-from lib.myvrplib.data_module import cvrptw_data as data, read_cordeau_data
+from lib.myvrplib.data_module import read_cordeau_data
 from lib.myvrplib.vrpstates import CvrptwState
 from lib.initial_solutions.initial_solutions import nearest_neighbor_tw
 from lib.operators.destroy import *
 from lib.operators.repair import *
 from lib.operators.wang_operators import *
 from lib.output.analyze_solution import verify_time_windows
-from lib.myvrplib.input_output import print_results_dict, parse_options
+from lib.myvrplib.input_output import print_results_dict, parse_options, print_cvrptw_dataset
 from lib.output.video import generate_video
 #NUM_ITERATIONS = 100
 NUM_ITERATIONS = 50 
@@ -42,9 +42,12 @@ def main():
     dataset_full_path = "./data/c-mdvrptw/" + dataset_name
     print(f"Chosen dataset: {dataset_full_path}")
 
-    cvrptw_data = read_cordeau_data(
+    data = read_cordeau_data(
         dataset_full_path, print_data=False
     )
+    print_cvrptw_dataset(data)
+
+
     # Set up ALNS operators
     alns.add_destroy_operator(random_removal)
     alns.add_destroy_operator(random_route_removal)

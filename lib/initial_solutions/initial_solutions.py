@@ -1,4 +1,5 @@
 from typing import List
+import logging
 import numpy as np
 import pandas as pd
 from lib.myvrplib.data_module import (
@@ -8,7 +9,11 @@ from lib.myvrplib.data_module import (
 )
 from lib.myvrplib.vrpstates import CvrptwState
 from lib.myvrplib.route import Route
-from lib.myvrplib.myvrplib import time_window_check
+from lib.myvrplib.myvrplib import time_window_check, LOGGING_LEVEL
+
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=LOGGING_LEVEL)
 
 def neighbours(state: CvrptwState, customer: int) -> list:
     """
@@ -93,6 +98,7 @@ def nearest_neighbor_tw(state: CvrptwState, cordeau:bool = True, initial_time_sl
         while unvisited:
             # Add the nearest compatible unvisited customer to the route till max capacity
             current = route[-1]
+            logger.debug(f"DEBUG: calling time_neighbours with customer: {current}")
             reachable = time_neighbours(
                 state,
                 current

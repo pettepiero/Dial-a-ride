@@ -10,6 +10,17 @@ def print_results_dict(results_dict: dict) -> None:
     print(tabulate.tabulate(results_dict, headers="keys", tablefmt="fancy_grid"))
 
 
+def print_cvrptw_dataset(dataset: dict) -> None:
+    """
+    Prints information about the cvrptw dataset
+    """
+    print("\n")
+    print(f"Dataset name: {dataset['name']}")
+    print(f"Number of customers: {dataset['dimension']}")
+    print(f"Number of vehicles: {dataset['vehicles']}")
+    print(f"Number of depots: {dataset['n_depots']}")
+    print("\n")
+
 def parse_options():
     """
     Parse the command line options, allowing parameters from a config file and command-line overrides.

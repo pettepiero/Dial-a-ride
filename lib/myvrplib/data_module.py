@@ -31,8 +31,9 @@ def read_cordeau_data(file: str, print_data: bool = False) -> dict:
         7: "SDVRPTW",
     }
 
-    key = data[0].split()[0]
-    problem_type = type_dict.get(key)  # Problem type
+    key = int(data[0].split()[0])
+    problem_type = type_dict[key]  # Problem type
+    assert problem_type == "MDVRPTW", f"Available data is for {problem_type} and not for MDVRPTW"
     problem_type = type_dict.get(6)
     m = int(data[0].split()[1])  # number of vehicles
     n = int(data[0].split()[2])  # number of customers
@@ -215,20 +216,20 @@ def calculate_depots(
         data["vehicle_to_depot"][vehicle] = None
     # vehicle i -> depot i
     if n_vehicles == n_depots:
-        for depot in depots:
-            data["depot_to_vehicles"][depot].append(depot)
-            data["vehicle_to_depot"][depot] = depot
+        for i, depot in enumerate(depots):
+            #data["depot_to_vehicles"][depot].append(depot)
+            #data["vehicle_to_depot"][depot] = depot
+            data["depot_to_vehicles"][depot].append(i)
+            data["vehicle_to_depot"][i] = depot
 
     elif n_vehicles > n_depots:
         # Round robin assignment
         for vehicle in range(n_vehicles):
-            depot = vehicle % n_depots
-            # print(f"Vehicle {vehicle} assigned to depot {depot}.")
-            # print(f"Depot to vehicles: {data['depot_to_vehicles']}")
-            # print(f"After, depot to vehicles: {data['depot_to_vehicles']}")
-            # print(f"n_customer + depot: {n_customers + depot}")
-            data["depot_to_vehicles"][n_customers + depot].append(vehicle)
-            data["vehicle_to_depot"][vehicle] = n_customers + depot
+            depot = depots[vehicle % n_depots]
+            #data["depot_to_vehicles"][n_customers + depot].append(vehicle)
+            #data["vehicle_to_depot"][vehicle] = n_customers + depot
+            data["depot_to_vehicles"][depot].append(vehicle)
+            data["vehicle_to_depot"][vehicle] = depot
     else:
         # Random assignment
         depots = rng.choice(depots, size=n_vehicles, replace=False)
@@ -430,15 +431,15 @@ def create_depots_dict(data: dict) -> dict:
 
     return depots_dict
 
-cvrptw_data = read_cordeau_data(
-    "./data/c-mdvrptw/pr12", print_data=False
-)
-# bks = read_solution_format("./data/c-mdvrptw-sol/pr02.res", print_data=True)
-test_data = read_cordeau_data(
-    "./data/c-mdvrptw/pr12",
-    print_data=False,
-)
-
-d_data = generate_dynamic_df(
-    "./data/c-mdvrptw/pr12", print_data=False, seed=0
-)
+#cvrptw_data = read_cordeau_data(
+#    "./data/c-mdvrptw/pr12", print_data=False
+#)
+## bks = read_solution_format("./data/c-mdvrptw-sol/pr02.res", print_data=True)
+#test_data = read_cordeau_data(
+#    "./data/c-mdvrptw/pr12",
+#    print_data=False,
+#)
+#
+#d_data = generate_dynamic_df(
+#    "./data/c-mdvrptw/pr12", print_data=False, seed=0
+#)
