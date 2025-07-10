@@ -6,7 +6,7 @@ from alns.select import *
 from alns.stop import MaxIterations
 
 from lib.myvrplib.myvrplib import LOGGING_LEVEL
-from lib.myvrplib.data_module import cvrptw_data as data
+from lib.myvrplib.data_module import cvrptw_data as data, read_cordeau_data
 from lib.myvrplib.vrpstates import CvrptwState
 from lib.initial_solutions.initial_solutions import nearest_neighbor_tw
 from lib.operators.destroy import *
@@ -36,14 +36,22 @@ def main():
         print(f"Initializing ALNS without explicit seed")
         alns = ALNS(rnd.default_rng())
 
+    dataset_name = args.dataset
+    valid_datasets = ["pr02",  "pr04",  "pr06",  "pr08",  "pr10",  "pr12",  "pr14",  "pr16",  "pr18",  "pr20", "pr01", "pr03", "pr05", "pr07",  "pr09",  "pr11",  "pr13",  "pr15",  "pr17",  "pr19"]
+    assert dataset_name in valid_datasets, f"Dataset {dataset_name} not found in ./data/c-mdvrptw"
+    dataset_full_path = "./data/c-mdvrptw/" + dataset_name
+    print(f"Chosen dataset: {dataset_full_path}")
+
+    cvrptw_data = read_cordeau_data(
+        dataset_full_path, print_data=False
+    )
+    # Set up ALNS operators
     alns.add_destroy_operator(random_removal)
     alns.add_destroy_operator(random_route_removal)
     alns.add_destroy_operator(cost_reducing_removal)
     alns.add_destroy_operator(worst_removal)
-
-    alns.add_destroy_operator(exchange_reducing_removal)  #to be implemented
+    alns.add_destroy_operator(exchange_reducing_removal) 
     # alns.add_destroy_operator(shaw_removal)   #to be implemented
-
     alns.add_repair_operator(greedy_repair_tw)
     alns.add_repair_operator(wang_greedy_repair)
 
