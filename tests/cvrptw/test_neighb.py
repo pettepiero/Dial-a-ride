@@ -1,8 +1,7 @@
 import unittest
 import cvrptw
 from lib.initial_solutions.initial_solutions import neighbours, time_neighbours, nearest_neighbor_tw
-from lib.myvrplib.data_module import (
-    data,
+from lib.myvrplib.dataset_readers import (
     read_cordeau_data,
 )
 from lib.myvrplib.vrpstates import CvrptwState
