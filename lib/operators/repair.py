@@ -70,14 +70,18 @@ def greedy_repair_tw(state: CvrptwState, rng: np.random) -> CvrptwState:
     Inserts the unassigned customers in the best route. If there are no
     feasible insertions, then a new route is created.
     Checks capacity and time window constraints.
-        Parameters:
-            state: CvrptwState
-                The current solution state.
-            rng: np.random
-                The random number generator.
-        Returns:
-            CvrptwState
-                The repaired solution state.
+
+    Parameters
+    ----------
+    state: CvrptwState
+        The current solution state.
+    rng: np.random
+        The random number generator.
+
+    Returns
+    -------
+    CvrptwState
+        The repaired solution state.
     """
     new_state = state.copy()
 
@@ -168,14 +172,18 @@ def best_insert_tw(customer: int, state: CvrptwState) -> tuple:
     Return (None, None) if no feasible route insertions are found.
     Checks both capacity and time window constraints.
     Only checks capacity constraints.
-        Parameters:
-            customer: int
-                The customer to be inserted.
-            state: CvrptwState
-                The current solution state.
-        Returns:
-            tuple
-                The best route and insertion indices for the customer.
+
+    Parameters
+    ----------
+    customer: int
+        The customer to be inserted.
+    state: CvrptwState
+        The current solution state.
+
+    Returns
+    -------
+    tuple
+        The best route and insertion indices for the customer.
     """
     best_cost, best_route_idx, best_idx = None, None, None
 
@@ -198,18 +206,22 @@ def can_insert_tw(
     """
     Checks if inserting customer in route 'route_number' at position 'idx'
     does not exceed vehicle capacity and time window constraints.
-        Parameters:
-            customer: int
-                The customer to be inserted.
-            route_number: int
-                The route number.
-            idx: int
-                The insertion index.
-            state: CvrptwState
-                The current solution state.
-        Returns:
-            bool
-                True if the insertion is feasible, False otherwise.
+
+    Parameters
+    ----------
+    customer: int
+        The customer to be inserted.
+    route_number: int
+        The route number.
+    idx: int
+        The insertion index.
+    state: CvrptwState
+        The current solution state.
+
+    Returns
+    -------
+    bool
+        True if the insertion is feasible, False otherwise.
     """
     df = state.nodes_df
     route = state.routes[route_number]
@@ -237,18 +249,22 @@ def can_insert_tw(
 def insert_cost(customer: int, route: list, idx: int, state: CvrptwState) -> float:
     """
     Computes the insertion cost for inserting customer in route at idx.
-        Parameters:
-            customer: int
-                The customer to be inserted.
-            route: list
-                The route where the customer is to be inserted.
-            idx: int
-                The insertion index.
-            state: CvrptwState
-                The current solution state.
-        Returns:
-            float
-                The insertion cost.
+
+    Parameters
+    ----------
+    customer: int
+        The customer to be inserted.
+    route: list
+        The route where the customer is to be inserted.
+    idx: int
+        The insertion index.
+    state: CvrptwState
+        The current solution state.
+
+    Returns
+    -------
+    float
+        The insertion cost.
     """
     dist = state.distances
     pred = 0 if idx == 0 else route[idx - 1]
