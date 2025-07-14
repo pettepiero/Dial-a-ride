@@ -361,7 +361,7 @@ def verify_vrplib_format(file: str) -> bool:
 
 # Datasets
 cvrptw_data = read_cordeau_data(
-    "./data/c-mdvrptw/pr12", print_data=False
+    "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr12", print_data=False
 )
 
 cvrppdtw_data = read_vrplib_data(
@@ -370,6 +370,6 @@ cvrppdtw_data = read_vrplib_data(
 
 # bks = read_solution_format("./data/c-mdvrptw-sol/pr02.res", print_data=True)
 test_data = read_cordeau_data(
-    "./data/c-mdvrptw/pr12",
+    "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr12",
     print_data=False,
 )

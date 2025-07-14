@@ -14,15 +14,19 @@ def neighbours(state: CvrptwState, customer: int) -> list:
     """
     Return the customers IDs in order of increasing distance from the given
     customer, excluding the depots.
-        Parameters:
-            state: Cvrptw
-                The current state of the CVRPTW problem.s
-            customer: int
-                The customer whose neighbors are to be found.
-        Returns:
-            list
-                The list of customers in order of increasing distance from the
-                given customer, excluding the depots.
+
+    Parameters
+    ----------
+    state: Cvrptw
+        The current state of the CVRPTW problem.s
+    customer: int
+        The customer whose neighbors are to be found.
+
+    Returns
+    -------
+    list
+        The list of customers in order of increasing distance from the
+        given customer, excluding the depots.
     """
     locations = np.argsort(state.distances[customer]).tolist()
 
@@ -34,16 +38,19 @@ def time_neighbours(state: CvrptwState, customer: int) -> list:
     customer. Considers the customers that can be reached in time from the
     given customer. Therefore, this can exclude customers that request a 
     service later in the day but that are not reachable in time.
-        Parameters:
-            state: Cvrptw
-                The current state of the CVRPTW problem.
-            customer: int
-                The customer whose neighbors are to be found.
 
-        Returns:
-            list
-                The list of customers in order of increasing time from the
-                given customer, excluding the depots.
+    Parameters
+    ----------
+    state: Cvrptw
+        The current state of the CVRPTW problem.
+    customer: int
+        The customer whose neighbors are to be found.
+
+    Returns
+    -------
+    list
+        The list of customers in order of increasing time from the
+        given customer, excluding the depots.
     """
     current_start_time = state.nodes_df.loc[customer, "start_time"]
     current_start_time = current_start_time.item()
@@ -60,18 +67,22 @@ def nearest_neighbor_tw(state: CvrptwState, cordeau:bool = True, initial_time_sl
     Build a solution by iteratively constructing routes, where the nearest
     time-window compatible customer is added until the route has met the
     vehicle capacity limit.
-        Parameters:
-            state: CvrptwState
-                The current state of the CVRPTW problem.
-            cordeau: bool
-                If True, the Cordeau dataset notation is used, else the
-                Solomon dataset notation is used.
-            intial_time_slot: bool
-                If True, only data related to customers that are called
-                in at the initial time step are considered.
-        Returns:
-            CvrptwState
-                The initial solution to the CVRPTW problem.
+
+    Parameters
+    ----------
+    state: CvrptwState
+        The current state of the CVRPTW problem.
+    cordeau: bool
+        If True, the Cordeau dataset notation is used, else the
+        Solomon dataset notation is used.
+    intial_time_slot: bool
+        If True, only data related to customers that are called
+        in at the initial time step are considered.
+
+    Returns
+    -------
+    CvrptwState
+        The initial solution to the CVRPTW problem.
     """
 
     routes: list[Route] = []

@@ -100,39 +100,41 @@ class VRPState:
 class CvrptwState:
     """
     Class representing the state of the CVRPTW problem.
-    Attributes:
-        routes: list
-            List of routes in the state.
-        routes_cost: list
-            List of costs of each route.
-        dataset: dict
-            Dictionary containing the dataset.
-        unassigned: list
-            List of unassigned customers.
-        nodes_df: pd.DataFrame
-            DataFrame containing the customers data.
-        seed: int
-            Seed for the random number generator.
-        distances: np.ndarray
-            Matrix of distances between each pair of customers.
-        twc: np.ndarray
-            Time window compatibility matrix.
-        qmax: float
-            Maximum demand of any customer.
-        dmax: float
-            Maximum distance between any two customers.
-        norm_tw: np.ndarray
-            Normalized time window compatibility matrix.
-        n_vehicles: int
-            Number of vehicles in the dataset.
-        depots: dict
-            Dictionary containing the depots information
-        n_customers: int
-            Number of customers in the dataset.
-        vehicle_capacity: int
-            Capacity of the vehicles in the dataset.
-        current_time: int
-            Current time of the simulation.
+    
+    Parameters
+    ----------
+    routes: list
+        List of routes in the state.
+    routes_cost: list
+        List of costs of each route.
+    dataset: dict
+        Dictionary containing the dataset.
+    unassigned: list
+        List of unassigned customers.
+    nodes_df: pd.DataFrame
+        DataFrame containing the customers data.
+    seed: int
+        Seed for the random number generator.
+    distances: np.ndarray
+        Matrix of distances between each pair of customers.
+    twc: np.ndarray
+        Time window compatibility matrix.
+    qmax: float
+        Maximum demand of any customer.
+    dmax: float
+        Maximum distance between any two customers.
+    norm_tw: np.ndarray
+        Normalized time window compatibility matrix.
+    n_vehicles: int
+        Number of vehicles in the dataset.
+    depots: dict
+        Dictionary containing the depots information
+    n_customers: int
+        Number of customers in the dataset.
+    vehicle_capacity: int
+        Capacity of the vehicles in the dataset.
+    current_time: int
+        Current time of the simulation.
     """
 
     def __init__(
@@ -300,16 +302,20 @@ class CvrptwState:
         Generate the time window compatability matrix matrix. If cordeau is True,
         the first row and column are set to -inf, as customer 0 is not considered
         in the matrix.
-            Parameters:
-                time_windows: list
-                    List of time windows for each customer.
-                distances: list
-                    List of distances between each pair of customers.
-                cordeau: bool
-                    If True, the first row and column are set to -inf.
-            Returns:
-                list
-                    Time window compatibility matrix.
+
+        Parameters
+        ----------
+        time_windows: list
+            List of time windows for each customer.
+        distances: list
+            List of distances between each pair of customers.
+        cordeau: bool
+            If True, the first row and column are set to -inf.
+
+        Returns
+        -------
+        list
+            Time window compatibility matrix.
         """
 
         start_idx = 1 if cordeau else 0
@@ -359,11 +365,15 @@ class CvrptwState:
         """
         Calculates vectors of the earliest (EST) and latest (LST) start times for each customer in the route.
         Based on equations (3b) and (13) of Wang et al. (2024).
-        Parameters:
-            route_index: int
-                Index of the route.
-        Returns:
-            None
+
+        Parameters
+        ----------
+        route_index: int
+            Index of the route.
+
+        Returns
+        -------
+        None
         """
         est = []
         route = self.routes[route_index].customers_list
@@ -461,11 +471,15 @@ class CvrptwState:
     def compute_route_demand(self, route_idx: int) -> None:
         """
         Compute the demand of a route and store in the route object.
-        Parameters:
-            route_idx: int
-                Index of the route.
-        Returns:
-            None
+
+        Parameters
+        ----------
+        route_idx: int
+            Index of the route.
+
+        Returns
+        -------
+        None
         """
         demand = 0
         for customer in self.routes[route_idx].customers_list:

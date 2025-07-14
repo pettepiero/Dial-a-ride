@@ -13,14 +13,18 @@ def random_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
     """
     Removes customers_to_remove randomly selected customers from the passed-in solution.
     Ignores first and last customers in the routes following cordeau dataset notation.
-        Parameters:
-            state: CvrptwState
-                The solution from which to remove customers.
-            rng: np.random
-                Random number generator.
-        Returns:
-            CvrptwState
-                The solution after applying the destroy operator.
+
+    Parameters
+    ----------
+    state: CvrptwState
+        The solution from which to remove customers.
+    rng: np.random
+        Random number generator.
+
+    Returns
+    -------
+    CvrptwState
+        The solution after applying the destroy operator.
     """
     destroyed: CvrptwState = state.copy()
 
@@ -58,12 +62,16 @@ def remove_empty_routes(state: CvrptwState) -> CvrptwState:
     """
     Remove empty routes and corresponding cost after applying the destroy operator.
     Cordeau dataset notation is followed, so empty routes ar those with two elements.
-        Parameters:
-            state: CvrptwState
-                The solution from which to remove empty routes.
-        Returns:
-            CvrptwState
-                The solution after removing empty routes.
+
+    Parameters
+    ----------
+    state: CvrptwState
+        The solution from which to remove empty routes.
+
+    Returns
+    -------
+    CvrptwState
+        The solution after removing empty routes.
     """
     for idx, route in enumerate(state.routes):
         if len(route) == 2:
@@ -90,14 +98,18 @@ def random_route_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
     """
     Based on (Wang et. al, 2024). This operator randomly selects customers_to_remove
     routes from a given solution and then removes a random customer from each route.
-        Parameters:
-            state: CvrptwState
-                The solution from which to remove customers.
-            rng: np.random
-                Random number generator.
-        Returns:
-            CvrptwState
-                The solution after applying the destroy operator.
+
+    Parameters
+    ----------
+    state: CvrptwState
+        The solution from which to remove customers.
+    rng: np.random
+        Random number generator.
+
+    Returns
+    -------
+    CvrptwState
+        The solution after applying the destroy operator.
     """
     destroyed: CvrptwState = state.copy()
     customers_to_remove = int(destroyed.n_customers * degree_of_destruction)
@@ -131,16 +143,20 @@ def relatedness_function(state: CvrptwState, i: int, j: int) -> float:
     Calculates how related two requests are. The lower the value, the more related.
     Based on (Wang et. al, 2024), formula (4), which is itself based on the work of
     Shaw (1997) and Ropke and Pisinger (2006).
-        Parameters:
-            state: CvrptwState
-                The solution from which to remove customers.
-            i: int
-                The first customer.
-            j: int
-                The second customer.
-        Returns:
-            float
-                The relatedness value between the two customers.
+
+    Parameters
+    ----------
+    state: CvrptwState
+        The solution from which to remove customers.
+    i: int
+        The first customer.
+    j: int
+        The second customer.
+
+    Returns
+    -------
+    float
+        The relatedness value between the two customers.
     """
     a1 = 0.4
     a2 = 0.8
@@ -168,14 +184,18 @@ def shaw_removal(state: CvrptwState, rng) -> CvrptwState:
     Based on (Wang et. al, 2024), formula (4), which is itself based on the work of
     Shaw (1997) and Ropke and Pisinger (2006). This operator removes a customer_to_remove
     customers from the solution by selecting the most related ones, according to the formula.
-        Parameters:
-            state: CvrptwState
-                The solution from which to remove customers.
-            rng: np.random
-                Random number generator.
-        Returns:
-            CvrptwState
-                The solution after applying the destroy operator.
+
+    Parameters
+    ----------
+    state: CvrptwState
+        The solution from which to remove customers.
+    rng: np.random
+        Random number generator.
+
+    Returns
+    -------
+    CvrptwState
+        The solution after applying the destroy operator.
     """
 
     destroyed: CvrptwState = state.copy()
@@ -247,14 +267,18 @@ def cost_reducing_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
     customers that can be inserted into a solution route at a lower cost.
     A limit on iterations is proposed to terminate the search for potential
     customers using this operator.
-        Parameters:
-            state: CvrptwState
-                The solution from which to remove customers.
-            rng: np.random
-                Random number generator.
-        Returns:
-            CvrptwState
-                The solution after applying the destroy operator.
+
+    Parameters
+    ----------
+    state: CvrptwState
+        The solution from which to remove customers.
+    rng: np.random
+        Random number generator.
+
+    Returns
+    -------
+    CvrptwState
+        The solution after applying the destroy operator.
     """
 
     # TODO: Implement the limit on the iterations for this operator
@@ -333,14 +357,18 @@ def cost_reducing_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
 def worst_removal(state: CvrptwState, rng: np.random.Generator) -> CvrptwState:
     """
     Removes customers in decreasing order of service cost.
-        Parameters:
-            state: CvrptwState
-                The solution from which to remove customers.
-            rng: np.random.Generator
-                Random number generator.
-        Returns:
-            CvrptwState
-                The solution after applying the destroy operator.
+
+    Parameters
+    ----------
+    state: CvrptwState
+        The solution from which to remove customers.
+    rng: np.random.Generator
+        Random number generator.
+
+    Returns
+    -------
+    CvrptwState
+        The solution after applying the destroy operator.
     """
     destroyed = state.copy()
     max_service_cost = 0
@@ -379,14 +407,18 @@ def exchange_reducing_removal(
     """
     Variation of the cost-reducing removal based on Wang et. al (2024). Selects
     customers in pairs, allowing one customer to be replaced by another simultaneously.
-        Parameters:
-            state: CvrptwState
-                The solution from which to remove customers.
-            rng: np.random.Generator
-                Random number generator.
-        Returns:
-            CvrptwState
-                The solution after applying the destroy operator.
+
+    Parameters
+    ----------
+    state: CvrptwState
+        The solution from which to remove customers.
+    rng: np.random.Generator
+        Random number generator.
+
+    Returns
+    -------
+    CvrptwState
+        The solution after applying the destroy operator.
     """
 
     destroyed = state.copy()
