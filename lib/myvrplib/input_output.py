@@ -84,8 +84,8 @@ def parse_options():
     parser.add_argument(
         "--num_iterations",
         type=int,
-        default=100,
-        help="Number of iterations for stopping (default: 100).",
+        default=None,
+        help="Number of iterations for stopping (default: NUM_ITERATIONS variable).",
     )
     parser.add_argument(
         "--operator_selection_schemes",

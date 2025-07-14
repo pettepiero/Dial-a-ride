@@ -34,6 +34,9 @@ class Route():
         # NOTE: maybe only planned arrival time is sufficient
         self.demand = None
 
+    def __str__(self) -> str:
+        return(str(self.customers_list))
+
     def __len__(self) -> int:
         """
         Returns the number of customers in the route, including the depot

@@ -47,6 +47,12 @@ def main():
     )
     print_cvrptw_dataset(data)
 
+    if args.num_iterations is not None:
+        num_iterations = int(args.num_iterations)
+    else:
+        num_iterations = NUM_ITERATIONS
+
+    print(f"num_iterations: {num_iterations}\n")
 
     # Set up ALNS operators
     alns.add_destroy_operator(random_removal)
@@ -68,9 +74,9 @@ def main():
             )
     # select = RandomSelect(num_destroy=4, num_repair=2)
     accept = RecordToRecordTravel.autofit(
-        initial_solution.objective(), 0.02, 0, NUM_ITERATIONS
+        initial_solution.objective(), 0.02, 0, num_iterations 
     )
-    stop = MaxIterations(NUM_ITERATIONS)
+    stop = MaxIterations(num_iterations)
 
     result, *_ = (
         alns.iterate(initial_solution, select, accept, stop, data=data, save_plots=args.video)
