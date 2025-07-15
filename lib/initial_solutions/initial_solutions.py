@@ -6,19 +6,19 @@ from lib.myvrplib.data_module import (
     get_initial_data,
     get_ids_of_time_slot,
 )
-from lib.myvrplib.vrpstates import CvrptwState
+from lib.myvrplib.vrpstates import CVRPTWState
 from lib.myvrplib.route import Route
 from lib.myvrplib.myvrplib import time_window_check
 
-def neighbours(state: CvrptwState, customer: int) -> list:
+def neighbours(state: CVRPTWState, customer: int) -> list:
     """
     Return the customers IDs in order of increasing distance from the given
     customer, excluding the depots.
 
     Parameters
     ----------
-    state: Cvrptw
-        The current state of the CVRPTW problem.s
+    state: CVRPTWState
+        The current state of the CVRPTW problem
     customer: int
         The customer whose neighbors are to be found.
 
@@ -32,7 +32,7 @@ def neighbours(state: CvrptwState, customer: int) -> list:
 
     return [loc for loc in locations if loc not in state.depots["depots_indices"] and loc != customer]
 
-def time_neighbours(state: CvrptwState, customer: int) -> list:
+def time_neighbours(state: CVRPTWState, customer: int, count: int = None) -> list:
     """
     Return the customers in order of increasing start time after the given
     customer. Considers the customers that can be reached in time from the
@@ -41,10 +41,12 @@ def time_neighbours(state: CvrptwState, customer: int) -> list:
 
     Parameters
     ----------
-    state: Cvrptw
+    state: CVRPTWState
         The current state of the CVRPTW problem.
     customer: int
         The customer whose neighbors are to be found.
+    count: int
+        How many neighbours to return. Default (None) means all the nodes
 
     Returns
     -------
@@ -62,7 +64,7 @@ def time_neighbours(state: CvrptwState, customer: int) -> list:
 
     return [loc[0] for loc in locations]
 
-def nearest_neighbor_tw(state: CvrptwState, cordeau:bool = True, initial_time_slot: bool = True) -> CvrptwState:
+def nearest_neighbor_tw(state: CVRPTWState, cordeau:bool = True, initial_time_slot: bool = True) -> CVRPTWState:
     """
     Build a solution by iteratively constructing routes, where the nearest
     time-window compatible customer is added until the route has met the
@@ -70,7 +72,7 @@ def nearest_neighbor_tw(state: CvrptwState, cordeau:bool = True, initial_time_sl
 
     Parameters
     ----------
-    state: CvrptwState
+    state: CVRPTWState
         The current state of the CVRPTW problem.
     cordeau: bool
         If True, the Cordeau dataset notation is used, else the
@@ -81,7 +83,7 @@ def nearest_neighbor_tw(state: CvrptwState, cordeau:bool = True, initial_time_sl
 
     Returns
     -------
-    CvrptwState
+    CVRPTWState
         The initial solution to the CVRPTW problem.
     """
 
@@ -90,6 +92,7 @@ def nearest_neighbor_tw(state: CvrptwState, cordeau:bool = True, initial_time_sl
     start_idx = 1 if cordeau else 0
     if initial_time_slot:
         valid_customers = get_ids_of_time_slot(state.nodes_df, 0)
+        # consider all customers who have a request at time step 0
         unvisited = valid_customers
     else:
         unvisited = set(range(start_idx, len(state.nodes_df["demand"])))
@@ -147,8 +150,117 @@ def nearest_neighbor_tw(state: CvrptwState, cordeau:bool = True, initial_time_sl
         for customer in route.customers_list:
             state.nodes_df.loc[customer, "route"] = route_num
     
-    # Create the solution object of type CvrptwState
-    solution = CvrptwState(
+    # Create the solution object of type CVRPTWState
+    solution = CVRPTWState(
+            dataset             = state.dataset,
+            routes              = routes, 
+            nodes_df            = state.nodes_df, 
+            given_unassigned    = list(unvisited)
+            )
+    # Update the time and cost attributes of the solution
+    for route_idx in range(len(solution.routes)):
+        solution.update_times_attributes_routes(route_idx)
+        for customer in solution.routes[route_idx].customers_list:
+            solution.nodes_df.loc[customer, "route"] = route_idx
+    return solution
+
+def nearest_neighbor_pdtw(state: CVRPPDTWState, n: int, cordeau:bool = True, initial_time_slot: bool = True) -> CVRPTWState:
+    """
+    Build a solution by iteratively constructing routes, where the nearest
+    time-window compatible customer is added until the route has met the
+    vehicle capacity limit. Designed for CVRPPDTW problems.
+
+    Parameters
+    ----------
+    state: CVRPPDTWState
+        The current state of the CVRPPDTW problem.
+    n: int
+        Hyperparameter 'n': number of new possible customers that are 
+        considered at each step.
+    cordeau: bool
+        If True, the Cordeau dataset notation is used, else the
+        Solomon dataset notation is used.
+    intial_time_slot: bool
+        If True, only data related to customers that are called
+        in at the initial time step are considered.
+
+    Returns
+    -------
+    CVRPTWState
+        The initial solution to the CVRPPDTW problem.
+    """
+
+    routes: list[Route] = []
+
+    start_idx = 1 if cordeau else 0
+    if initial_time_slot:
+        valid_customers = get_ids_of_time_slot(state.nodes_df, 0)
+        # consider all customers who have a request at time step 0
+        unvisited = valid_customers
+    else:
+        unvisited = set(range(start_idx, len(state.nodes_df["demand"])))
+
+
+    # Get n nearest unvisited pickup nodes that are visible at time 0
+
+    candidate_nodes = []
+
+
+    vehicle = 0
+
+    while vehicle < state.n_vehicles:
+        initial_depot = state.depots["vehicle_to_depot"][vehicle]
+        route = [initial_depot]
+        route_schedule = [0]
+        route_demands = 0
+        while unvisited:
+            # Add the nearest compatible unvisited customer to the route till max capacity
+            current = route[-1]
+            reachable = time_neighbours(
+                state,
+                current
+            )  # Customers reachable in time
+            if len(reachable) == 0:
+                break
+            nearest = [
+                nb for nb in reachable if nb in unvisited
+            ]  # Keep only unvisited customers
+            if len(nearest) == 0:
+                break
+            nearest = int(nearest[0])  # Nearest unvisited reachable customer
+            # Check vehicle capacity and time window constraints
+            nearest_demand, nearest_end_time = state.nodes_df.loc[
+                nearest, ["demand", "end_time"]
+            ].values
+            edge_time = state.distances[current][nearest].item()
+
+            if route_demands + nearest_demand > state.vehicle_capacity:
+                break
+            current_service_time = state.nodes_df.loc[current, "service_time"].item()
+            if not time_window_check(route_schedule[-1], current_service_time, edge_time, nearest_end_time):
+                break
+
+            route.append(nearest)
+            route_schedule.append(
+                state.distances[current][nearest].item()
+                + state.nodes_df.loc[current, "service_time"].item()
+            )
+
+            unvisited.remove(nearest)
+            route_demands += state.nodes_df.loc[nearest, "demand"].item()
+
+        route.append(route[0])  # Return to the depot
+        route = Route(route, vehicle)
+        routes.append(route)
+        vehicle += 1
+
+    # Assign routes to customers in nodes_df
+    for route_num, route in enumerate(routes):
+        for customer in route.customers_list:
+            state.nodes_df.loc[customer, "route"] = route_num
+    
+    # Create the solution object of type CVRPTWState
+    solution = CVRPTWState(
             dataset             = state.dataset,
             routes              = routes, 
             nodes_df            = state.nodes_df, 

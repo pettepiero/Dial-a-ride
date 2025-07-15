@@ -9,7 +9,7 @@ def solution_times_statistics(state) -> dict:
     Counts the number of customers that are served late or early in the solution.
     The considered time step is current_time attribute of state.
         Parameters:
-            state: CvrptwState
+            state: CVRPTWState
                 The solution to be verified.
         Returns:
             dict

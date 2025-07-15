@@ -4,7 +4,7 @@ from lib.initial_solutions.initial_solutions import neighbours, time_neighbours,
 from lib.myvrplib.dataset_readers import (
     read_cordeau_data,
 )
-from lib.myvrplib.vrpstates import CvrptwState
+from lib.myvrplib.vrpstates import CVRPTWState
 
 class NeighbourhoodTests(unittest.TestCase):
     """
@@ -13,7 +13,7 @@ class NeighbourhoodTests(unittest.TestCase):
     data = read_cordeau_data(
         "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr12"
     )
-    state = CvrptwState(dataset=data)
+    state = CVRPTWState(dataset=data)
 
     def test_neighbours_function(self):
         # Some hand picked checks for this dataset

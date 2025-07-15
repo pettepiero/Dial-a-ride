@@ -2,7 +2,7 @@ import unittest
 from numpy import nan
 from lib.myvrplib.data_module import *
 from lib.myvrplib.dataset_readers import *
-from lib.myvrplib.vrpstates import CvrptwState
+from lib.myvrplib.vrpstates import CVRPTWState
 from lib.myvrplib.route import Route
 from lib.operators.destroy import cost_reducing_removal
 

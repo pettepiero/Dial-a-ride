@@ -1,17 +1,17 @@
-from lib.myvrplib.vrpstates import CvrptwState
+from lib.myvrplib.vrpstates import CVRPTWState
 from alns import Result
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
-def verify_time_windows(data: pd.DataFrame, sol: CvrptwState, percentage: bool = False) -> dict:
+def verify_time_windows(data: pd.DataFrame, sol: CVRPTWState, percentage: bool = False) -> dict:
     """
     Verifies the time windows of the solution and returns the early/late/ontime counts.
     If percentage is True, then the counts are returned as percentages of served customers.
         Parameters:
             data: pd.DataFrame
                 The data dataframe.
-            sol: CvrptwState
+            sol: CVRPTWState
                 The solution to be verified.
             percentage: bool
                 If True, the counts are returned as percentages.

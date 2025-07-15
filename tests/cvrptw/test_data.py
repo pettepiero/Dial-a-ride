@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import Mock
 from lib.myvrplib.data_module import *
 from lib.myvrplib.dataset_readers import read_cordeau_data 
-from lib.myvrplib.vrpstates import CvrptwState
+from lib.myvrplib.vrpstates import CVRPTWState
 from lib.myvrplib.route import Route
 from lib.operators.destroy import cost_reducing_removal
 
@@ -117,7 +117,7 @@ class TestCRR(unittest.TestCase):
         self.data_df = dynamic_df_from_dict(self.data)
         route1 = Route([6, 1, 2, 6])
         route2 = Route([7, 4, 3, 7])
-        self.state = CvrptwState(routes=[route1, route2], dataset=self.data)
+        self.state = CVRPTWState(routes=[route1, route2], dataset=self.data)
         self.nodes_dict = {1: 'A', 2: 'B', 3: 'C', 4: 'D', 6: 'F', 7: 'G'}
 
     def test_crr(self):

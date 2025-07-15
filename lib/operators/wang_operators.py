@@ -2,7 +2,7 @@ import logging
 import numpy as np
 from lib.myvrplib.myvrplib import LOGGING_LEVEL
 from lib.myvrplib.dataset_readers import END_OF_DAY
-from lib.myvrplib.vrpstates import CvrptwState
+from lib.myvrplib.vrpstates import CVRPTWState
 from lib.myvrplib.route import Route
 from lib.operators.repair import insert_cost
 from copy import deepcopy
@@ -11,18 +11,18 @@ from copy import deepcopy
 logger = logging.getLogger(__name__)
 logger.setLevel(LOGGING_LEVEL)
 
-def wang_greedy_repair(state: CvrptwState, rng: np.random) -> CvrptwState:
+def wang_greedy_repair(state: CVRPTWState, rng: np.random) -> CVRPTWState:
     """
     Inserts the unassigned customers in the best route. If there are no
     feasible insertions, then a new route is created. Uses the Wang et al (2024)
     insertion heuristics with time window compatibility checks.
         Parameters:
-            state: CvrptwState
+            state: CVRPTWState
                 The current solution state.
             rng: np.random
                 The random number generator.
         Returns:
-            CvrptwState
+            CVRPTWState
                 The repaired solution state.
     """
     new_state = state.copy()
@@ -72,7 +72,7 @@ def wang_greedy_repair(state: CvrptwState, rng: np.random) -> CvrptwState:
     return new_state
 
 
-def wang_best_insert(customer: int, state: CvrptwState) -> tuple:
+def wang_best_insert(customer: int, state: CVRPTWState) -> tuple:
     """
     Finds the best feasible route and insertion idx for the customer.
     Return (None, None) if no feasible route insertions are found.
@@ -81,7 +81,7 @@ def wang_best_insert(customer: int, state: CvrptwState) -> tuple:
         Parameters:
             customer: int
                 The customer to be inserted.
-            state: CvrptwState
+            state: CVRPTWState
                 The current solution state.
         Returns:
             tuple

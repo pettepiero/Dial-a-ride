@@ -7,6 +7,7 @@ from lib.myvrplib.data_module import (
 from lib.myvrplib.myvrplib import UNASSIGNED_PENALTY, LOGGING_LEVEL
 from lib.myvrplib.dataset_readers import END_OF_DAY
 from lib.myvrplib.route import Route
+from lib.myvrplib.vrpproblems import VRPProblem
 import numpy as np
 import pandas as pd
 import logging
@@ -21,33 +22,26 @@ class VRPState:
     """
     def __init__(
         self,
-        requests_dataset: dict,
-        map_dataset: pd.DataFrame,
+        problem: VRPProblem,
+        #requests_dataset: dict,
+        #map_dataset: pd.DataFrame,
         routes: list[Route] = None,
         routes_cost: list = None,
         given_unassigned: list = None,
-        distances: np.ndarray = None,
-        nodes_df: pd.DataFrame = None,
+        #nodes_df: pd.DataFrame = None,
         current_time: int = 0,
         seed: int = 0,
     ):
-        # merge map and request data
         self.dataset = requests_dataset
-        insert_coords_from_ids(requests_dataset, map_dataset)
+        insert_coords_from_ids(requests_dataset, map_dataset) # merge map and request data
+
         self.seed = seed
         self.routes = routes if routes is not None else []
-        if nodes_df is not None:
-            self.nodes_df = nodes_df
-        else:
-            self.nodes_df = dynamic_df_from_dict(dataset, seed=seed)
-        # Initialize distances matrix
-
-        full_coordinates = self.nodes_df[["x", "y"]].values
-
-        if distances is not None:
-            self.distances = distances
-        else:
-            self.distances = cost_matrix_from_coords(coords=full_coordinates)
+        #if nodes_df is not None:
+        #    self.nodes_df = nodes_df
+        #else:
+        #    self.nodes_df = dynamic_df_from_dict(dataset, seed=seed)
+        #full_coordinates = self.nodes_df[["x", "y"]].values
 
         if routes_cost is not None:
             self.routes_cost = routes_cost
@@ -56,10 +50,6 @@ class VRPState:
         else:
             self.routes_cost = np.array([self.route_cost_calculator(idx) for idx in range(len(self.routes))])
             logger.debug(f"Calculated len(routes_cost): {len(self.routes_cost)}")
-
-        # self.routes_cost = routes_cost if routes_cost is not None else [self.route_cost_calculator(idx) for idx in range(len(self.routes))]
-        # logger.debug(f"len(routes_cost): {len(self.routes_cost)}")
-        # logger.debug(f"len(self.routes) = {len(self.routes)}")
 
         assert len(self.routes) == len(self.routes_cost), "Routes and routes_cost must have the same length."
 
@@ -97,7 +87,140 @@ class VRPState:
         self.n_planned_customers = self.n_served_customers() 
         self.vehicle_capacity = dataset["capacity"]
 
-class CvrptwState:
+    def __str__(self):
+        return f"Routes: {[route.customers_list for route in self.routes]}, \nUnassigned: {self.unassigned}"
+
+    def route_cost_calculator(self, route_id: int):
+        """
+        Compute the cost of a route.
+        """
+        route = self.routes[route_id].customers_list
+        cost = 0
+        for idx, customer in enumerate(route[:-1]):
+            next_customer = route[idx + 1]
+            logger.debug(f"Route: {route}")
+            cost += self.distances[customer][next_customer]
+
+        return round(cost, 2)
+
+    def objective(self):
+        """
+        Computes the total route costs.
+        """
+        assert len(self.routes) == len(self.routes_cost), "Routes and routes_cost must have the same length."
+        unassigned_penalty = UNASSIGNED_PENALTY * len(self.unassigned)
+        return sum([self.routes_cost[idx] for idx in range(len(self.routes))]) + unassigned_penalty
+
+    @property
+    def cost(self):
+        """
+        Alias for objective method. Used for plotting.
+        """
+        return self.objective()
+
+    def find_route(self, customer: int) -> tuple:
+        """
+        Return the route that contains the passed-in customer.
+            Parameters:
+                customer: int
+                    The customer ID to find.
+            Returns:
+                tuple
+                    The route that contains the customer and its index.
+        """
+        assert customer >= 0, f"Customer ID must be non-negative, got {customer}."
+        assert (
+            customer < self.nodes_df.shape[0]
+        ), f"Customer ID must be less than {self.nodes_df.shape[0]}, got {customer}."
+
+        found = False
+        for idx, route in enumerate(self.routes):
+            if customer in route.customers_list:
+                found = True
+                return route, idx
+        if not found:
+            # raise ValueError(f"Customer {customer} not found in any route.")
+            print(f"Customer {customer} not found in any route.")
+
+    def find_index_in_route(self, customer, route: Route):
+        """
+        Return the index of the customer in the route.
+        """
+        assert route is not None, "Route must be provided."
+        if customer in route.customers_list:
+            return route.customers_list.index(customer)
+
+        raise ValueError(f"Given route does not contain customer {customer}.")
+
+    def update_times_attributes_routes(self, route_index: int):
+        """
+        Update the start, end and planned times for each customer in the routes.
+        """        
+        self.update_est_lst(route_index)
+        # TODO udpate planned windows
+        self.calculate_planned_times(route_index)
+
+    def get_dmax(self):
+        """
+        Get the maximum distance between any two customers.
+        """
+        # return np.max(self.dataset["edge_weight"])
+        return np.max(self.distances)
+
+    def get_qmax(self):
+        """
+        Get the maximum demand of any customer.
+        """
+        return self.nodes_df["demand"].max()
+
+    def n_served_customers(self):
+        """
+        Return the number of served customers.
+        """
+        return sum(len(route.customers_list[1:-1]) for route in self.routes)
+
+    def served_customers(self):
+        """
+        Return the list of served customers.
+        """
+        return [customer for route in self.routes for customer in route.customers_list[1:-1]]
+
+        # TODO: Test this method
+
+    def update_unassigned_list(self):
+        """
+        Update the list of unassigned customers.
+        """
+        self.unassigned = self.nodes_df.loc[pd.isna(self.nodes_df["route"]), "id"].tolist()
+        # filter out depots
+        self.unassigned = [customer for customer in self.unassigned if customer not in self.depots["depots_indices"]]
+
+    def compute_route_demand(self, route_idx: int) -> None:
+        """
+        Compute the demand of a route and store in the route object.
+
+        Parameters
+        ----------
+        route_idx: int
+            Index of the route.
+
+        Returns
+        -------
+        None
+        """
+        demand = 0
+        for customer in self.routes[route_idx].customers_list:
+            demand += self.nodes_df.loc[customer, "demand"].item()
+        self.routes[route_idx].demand = demand
+
+    def update_attributes(self):
+        self.update_unassigned_list()
+        self.n_planned_customers = self.n_served_customers() 
+
+
+
+
+class CVRPTWState(VRPState):
     """
     Class representing the state of the CVRPTW problem.
     
@@ -212,11 +335,8 @@ class CvrptwState:
         self.n_planned_customers = self.n_served_customers() 
         self.vehicle_capacity = dataset["capacity"]
 
-    def __str__(self):
-        return f"Routes: {[route.customers_list for route in self.routes]}, \nUnassigned: {self.unassigned}"
-
     def copy(self):
-        return CvrptwState(
+        return CVRPTWState(
             dataset             = self.dataset.copy(),
             routes              = [route.copy() for route in self.routes],  # Deep copy each Route
             routes_cost         = self.routes_cost.copy(),
@@ -226,76 +346,6 @@ class CvrptwState:
             current_time        = self.current_time,
             seed                = self.seed
         )
-
-    def route_cost_calculator(self, route_id: int):
-        """
-        Compute the cost of a route.
-        """
-        route = self.routes[route_id].customers_list
-        cost = 0
-        for idx, customer in enumerate(route[:-1]):
-            next_customer = route[idx + 1]
-            logger.debug(f"Route: {route}")
-            cost += self.distances[customer][next_customer]
-
-        return round(cost, 2)
-
-    def objective(self):
-        """
-        Computes the total route costs.
-        """
-        assert len(self.routes) == len(self.routes_cost), "Routes and routes_cost must have the same length."
-        unassigned_penalty = UNASSIGNED_PENALTY * len(self.unassigned)
-        return sum([self.routes_cost[idx] for idx in range(len(self.routes))]) + unassigned_penalty
-
-    @property
-    def cost(self):
-        """
-        Alias for objective method. Used for plotting.
-        """
-        return self.objective()
-
-    def find_route(self, customer: int) -> tuple:
-        """
-        Return the route that contains the passed-in customer.
-            Parameters:
-                customer: int
-                    The customer ID to find.
-            Returns:
-                tuple
-                    The route that contains the customer and its index.
-        """
-        assert customer >= 0, f"Customer ID must be non-negative, got {customer}."
-        assert (
-            customer < self.nodes_df.shape[0]
-        ), f"Customer ID must be less than {self.nodes_df.shape[0]}, got {customer}."
-
-        found = False
-        for idx, route in enumerate(self.routes):
-            if customer in route.customers_list:
-                found = True
-                return route, idx
-        if not found:
-            # raise ValueError(f"Customer {customer} not found in any route.")
-            print(f"Customer {customer} not found in any route.")
-
-    def find_index_in_route(self, customer, route: Route):
-        """
-        Return the index of the customer in the route.
-        """
-        assert route is not None, "Route must be provided."
-        if customer in route.customers_list:
-            return route.customers_list.index(customer)
-
-        raise ValueError(f"Given route does not contain customer {customer}.")
-
-    def update_times_attributes_routes(self, route_index: int):
-        """
-        Update the start, end and planned times for each customer in the routes.
-        """        
-        self.update_est_lst(route_index)
-        # TODO udpate planned windows
-        self.calculate_planned_times(route_index)
 
     def generate_twc_matrix(self, time_windows: list, distances: np.ndarray, cordeau: bool = True) -> list:
         """
@@ -333,33 +383,6 @@ class CvrptwState:
                 twc[i][0] = -np.inf
                 twc[0][i] = -np.inf
         return twc
-
-    def get_dmax(self):
-        """
-        Get the maximum distance between any two customers.
-        """
-        # return np.max(self.dataset["edge_weight"])
-        return np.max(self.distances)
-
-    def get_qmax(self):
-        """
-        Get the maximum demand of any customer.
-        """
-        return self.nodes_df["demand"].max()
-
-    def n_served_customers(self):
-        """
-        Return the number of served customers.
-        """
-        return sum(len(route.customers_list[1:-1]) for route in self.routes)
-
-    def served_customers(self):
-        """
-        Return the list of served customers.
-        """
-        return [customer for route in self.routes for customer in route.customers_list[1:-1]]
-
-        # TODO: Test this method
 
     def update_est_lst(self, route_index: int):
         """
@@ -514,3 +537,14 @@ def time_window_compatibility(tij: float, twi: tuple, twj: tuple) -> float:
         return round(min([bi + tij, bj]) - max([ai + tij, aj]), 2)
     else:
         return -np.inf  # Incompatible time windows
+
+
+class CVRPPDTWState(VRPState):
+    def __init__(self,
+            problem: VRPProblem,
+            routes: list[Route] = None,
+            state_cost: list = None,
+            given_unassigned: list = None,
+            seed: int = 0
+        ):
+        super().__init__(problem, routes, state_cost, given_unassigned, seed)

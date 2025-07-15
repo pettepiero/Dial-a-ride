@@ -7,7 +7,7 @@ from alns.stop import MaxIterations
 
 from lib.myvrplib.myvrplib import LOGGING_LEVEL
 from lib.myvrplib.dataset_readers import cvrptw_data as data
-from lib.myvrplib.vrpstates import CvrptwState
+from lib.myvrplib.vrpstates import CVRPTWState
 from lib.initial_solutions.initial_solutions import nearest_neighbor_tw
 from lib.operators.destroy import *
 from lib.operators.repair import *
@@ -47,7 +47,7 @@ def main():
     alns.add_repair_operator(greedy_repair_tw)
     alns.add_repair_operator(wang_greedy_repair)
 
-    init = CvrptwState(dataset=data)
+    init = CVRPTWState(dataset=data)
     initial_solution = nearest_neighbor_tw(state=init, initial_time_slot=False)
     select = RouletteWheel(
             scores=[25, 5, 1, 0], 
