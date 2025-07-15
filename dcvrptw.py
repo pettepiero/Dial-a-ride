@@ -1,4 +1,4 @@
-from lib.myvrplib.vrpstates import CvrptwState
+from lib.myvrplib.vrpstates import CVRPTWState
 from lib.myvrplib.data_module import data, END_OF_DAY, generate_dynamic_cust_df, get_initial_data
 import pandas as pd
 import numpy as np
@@ -20,7 +20,7 @@ class DynamicVRP():
     Class for the dynamic CVRPTW problem.
     """
     def __init__(self, num_steps: int = 20, data: dict = data):
-        self.state = CvrptwState(data)
+        self.state = CVRPTWState(data)
         self.num_steps = num_steps
         self.data = generate_dynamic_cust_df(
             "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr11",

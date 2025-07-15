@@ -1,9 +1,19 @@
 Initial Solution
 ================
 
------------
-Description
------------
+-----------------------
+CVRPTW initial solution
+-----------------------
+
+This is an implementation of the nearest neighbour solution for standard Capacitated Vehicle Routing Problem.
+
+
+.. autofunction:: lib.initial_solutions.initial_solutions.nearest_neighbor_tw
+
+-------------------------
+CVRPPDTW initial solution
+-------------------------
+
 The provided initial solution is an extension of the nearest neighbour solution
 for the standard Capacitated Vehicle Routing Problem. 
 This heuristic has been modified to work with Pick up and Delivery problem instances, 
@@ -16,12 +26,17 @@ Note that, even if it is not shown in the diagram, adding a node to the route me
 - Calculating the planned arrival time (#TODO: or times?) and adding it to the ``route_schedule`` vector
 - Calculating the new load of the vehicle and updating the ``vehicle_load`` variable
 
-The algorithm is implemented in ``nearest_neighbor`` method of ``lib/initial_solutions/initial_solution.py``.
+The algorithm is implemented in the following function:
+
+.. autofunction:: lib.initial_solutions.initial_solutions.nearest_neighbor_pdtw
+
+
+The following diagram explains the workflow of ``nearest_neighbor_pdtw``
 
 .. image:: ../figures/heuristic_nn.drawio.svg
    :width: 400px
    :align: center
-   :alt: Nearest Neighbour Heuristic
+   :alt: Nearest Neighbour Heuristic for CVRPPDTW
 
 Notes:
 
