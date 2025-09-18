@@ -68,6 +68,11 @@ class CvrptwState:
 
         self.dataset = dataset
         self.seed = seed
+        if seed is not None:
+            rng = np.random.default_rng(seed)
+        else:
+            rng = np.random.default_rng()
+
         self.routes = routes if routes is not None else []
         if nodes_df is not None:
             self.nodes_df = nodes_df

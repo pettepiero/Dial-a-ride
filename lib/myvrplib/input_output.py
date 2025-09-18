@@ -29,70 +29,69 @@ def parse_options():
         description="Run the ALNS algorithm for the CVRPTW problem."
     )
 
-    # Define command line arguments with sensible defaults
     parser.add_argument("--config", type=str, help="Configuration file in JSON format.")
-    parser.add_argument(
-        "--random",
-        action="store_true",
-        help="Use a random seed instead of a fixed one.",
-    )
+   # parser.add_argument(
+   #     "--random",
+   #     action="store_true",
+   #     help="Use a random seed instead of a fixed one.",
+   # )
     parser.add_argument(
         "--seed",
         type=int,
         default=None,
         help="Set random seed.",
     )
-    parser.add_argument(
-        "--logging",
-        type=str,
-        default="ERROR",
-        help="Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL).",
-    )
+   # parser.add_argument(
+   #     "--logging",
+   #     type=str,
+   #     default="ERROR",
+   #     help="Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL).",
+   # )
     parser.add_argument(
         "--dataset", type=str, default="pr12", help="Dataset name (e.g., pr01 to pr20)."
     )
-    parser.add_argument(
-        "--degree_of_destruction",
-        type=float,
-        default=0.05,
-        help="Degree of destruction (default: 0.05).",
-    )
-    parser.add_argument(
-        "--removal_operators",
-        type=int,
-        default=1,
-        help="Number of removal operators (1 means all implemented).",
-    )
-    parser.add_argument(
-        "--insertion_operators",
-        type=int,
-        default=1,
-        help="Number of insertion operators (1 means all implemented).",
-    )
-    parser.add_argument(
-        "--acceptance_criterion",
-        type=int,
-        default=1,
-        help="Acceptance criterion (1 means RecordToRecordTravel).",
-    )
-    parser.add_argument(
-        "--stop_criterion",
-        type=int,
-        default=1,
-        help="Stop criterion (1 means MaxIterations).",
-    )
+   # parser.add_argument(
+   #     "--degree_of_destruction",
+   #     type=float,
+   #     default=0.05,
+   #     help="Degree of destruction (default: 0.05).",
+   # )
+   # parser.add_argument(
+   #     "--removal_operators",
+   #     type=int,
+   #     default=1,
+   #     help="Number of removal operators (1 means all implemented).",
+   # )
+   # parser.add_argument(
+   #     "--insertion_operators",
+   #     type=int,
+   #     default=1,
+   #     help="Number of insertion operators (1 means all implemented).",
+   # )
+   # parser.add_argument(
+   #     "--acceptance_criterion",
+   #     type=int,
+   #     default=1,
+   #     help="Acceptance criterion (1 means RecordToRecordTravel).",
+   # )
+   # parser.add_argument(
+   #     "--stop_criterion",
+   #     type=int,
+   #     default=1,
+   #     help="Stop criterion (1 means MaxIterations).",
+   # )
     parser.add_argument(
         "--num_iterations",
         type=int,
         default=None,
         help="Number of iterations for stopping (default: NUM_ITERATIONS variable).",
     )
-    parser.add_argument(
-        "--operator_selection_schemes",
-        type=int,
-        default=1,
-        help="Operator selection schemes (1 means RouletteWheel).",
-    )
+   # parser.add_argument(
+   #     "--operator_selection_schemes",
+   #     type=int,
+   #     default=1,
+   #     help="Operator selection schemes (1 means RouletteWheel).",
+   # )
     
     parser.add_argument('--video', action=argparse.BooleanOptionalAction, help='Generate video from images. Video is saved in outputs/videos, and images in outputs/images. \
                         Use --video to create video, --no-video otherwise.', default=False)
