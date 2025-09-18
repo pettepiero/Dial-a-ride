@@ -29,7 +29,7 @@ def main():
     args = parse_options()
     print(f"Arguments: {args}")
     
-    if args.seed:
+    if args.seed is not None:
         print(f"Initializing with explicit seed: {args.seed}")
         alns = ALNS(rnd.default_rng(args.seed))
     else:

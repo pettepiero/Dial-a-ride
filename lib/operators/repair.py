@@ -69,7 +69,7 @@ def greedy_repair_no_tw(state: CvrptwState, rng: np.random) -> CvrptwState:
         for idx, route in enumerate(new_state.routes)
     ]
     #new_state.update_unassigned_list()
-     new_state.update_attributes()
+    new_state.update_attributes()
 
     return new_state
 
