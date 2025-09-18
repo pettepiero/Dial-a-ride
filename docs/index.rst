@@ -20,6 +20,7 @@ Dial a ride project documentation.
    source/vrp
    source/usage
    source/notation
+   source/model
    source/nn_sol
    source/removal_ops
    source/repair_ops

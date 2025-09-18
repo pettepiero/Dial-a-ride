@@ -1,10 +1,22 @@
 Data format
 ===========
+
+----------------
+Node coordinates
+----------------
+The data files containing geographical coordinates for each node are separate from the ones containing requests
+information. The coordinates are contained in files whose name ends with 'geo.csv'. Here is a simple example:
+
+.. image:: ./figures/geo_data_example_table.png
+    :width: 200 px
+    :align: center
+    :alt: Geographical data table example
+
 ------------------
 VRPLIB data format
 ------------------
 
-Data format is based on Gerhard Reinelt's work ([Rein91]_). This is clearly explained in the documentation available `here <http://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/>`_.
+Requests data format is based on Gerhard Reinelt's work ([Rein91]_). This is clearly explained in the documentation available `here <http://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/>`_.
 
 For clarity and completeness, the description is reproduced here. 
 
@@ -41,13 +53,13 @@ The data part is divided in sections:
 - **Time window section** giving the pick up and delivery time windows for each customer
 - **Depot section** indicating the possible depot nodes and terminating at -1
 
-Small example
-*************
+Small examples
+**************
 
 >>> *Example data*
 NAME : example_data.knd 
 COMMENT : 
-TYPE : CVRPPTW
+TYPE : CVRPPDTW
 DIMENSION : 10
 EDGE_WEIGHT_TYPE : EUC_2D
 NUM_VEHICLES : 2
@@ -105,4 +117,46 @@ DEPOT_SECTION
 EOF
 
 
-In this simple example, the problem type is CVRPPTW, the number of customers is 10 (numbered from 1 to 10) and the used notion of distance is euclidian distance. There are 2 vehicles, each with a capacity of 101. The depots are nodes ``0, 49, 50, 51``.
+In example above, the problem type is CVRPPDTW, the number of customers is 10 (numbered from 1 to 10) and the used notion of distance is euclidian distance. There are 2 vehicles, each with a capacity of 101. The depots are nodes ``0, 49, 50, 51``.
+
+
+>>> *Example data*
+NAME : example_data.knd 
+COMMENT : 
+TYPE : MDCVRP
+DIMENSION : 10
+EDGE_WEIGHT_TYPE : EUC_2D
+NUM_VEHICLES : 2
+CAPACITY : 101
+NODES_SECTION
+1  42 
+2  89 
+3  7  
+4  60 
+5  24 
+6  12 
+7  19 
+8  98 
+9  32 
+10 22 
+DEMAND_SECTION
+1 1
+2 1
+3 2
+4 5
+5 1
+6 3
+7 1
+8 4
+9 1
+10 2
+DEPOT_SECTION
+0
+49
+50
+51
+-1
+EOF
+
+
+In the example above, the problem type is MDCVRP, the number of customers is 10 (numbered from 1 to 10) and the used notion of distance is euclidian distance. There are 2 vehicles, each with a capacity of 101. The depots are nodes ``0, 49, 50, 51``. Notice how this example differs from the CVRPPDTW above. In this case, the NODES_SECTION doesn't need to specify a pickup and a delivery node pair.

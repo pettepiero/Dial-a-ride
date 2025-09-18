@@ -1,6 +1,8 @@
 Initial Solution
 ================
 
+For the NLNS project [HoTi20]_ adapted to Multi depot case, see section :ref:`NLNS MD initial solution`
+
 -----------
 Description
 -----------
@@ -31,6 +33,22 @@ Notes:
   to drastically change, so not too much attention and energy should 
   be focused on it.
 
+
+.. _NLNS MD initial solution:
+------------------------------------
+NLNS to Multi Depot initial solution
+------------------------------------
+The simple greedy procedure proposed by [HoTi20]_ can be adapted to MD as follows:
+
+- A clustering algorithm creates a cluster of customer for each depot, based
+  on the locations.
+- Inside each cluster, the greedy initial solution proposed by [HoTi20]_ is
+  applied.
+- For a cluster, the first route starts from the depot and is created by always
+  adding the closest customer to a tour.
+- A new route is created if the demand of a candidate customers exceeds the 
+  remaining load of the vehicle. In this case the old route returns to the depot.
+- The process is repeated until all customers have been visited.
 
 .. toctree::
    :maxdepth: 2
