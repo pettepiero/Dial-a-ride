@@ -1,31 +1,33 @@
 import numpy as np
 from lib.myvrplib.myvrplib import END_OF_DAY, LOGGING_LEVEL
 from lib.myvrplib.CVRPTWState import CVRPTWState
+from lib.myvrplib.CVRPState import CVRPState
 import logging
+from typing import Union
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=LOGGING_LEVEL)
 degree_of_destruction = 0.05
 
 
-def random_removal(state: CVRPTWState, rng: np.random) -> CVRPTWState:
+def random_removal(state: CVRPState, rng: np.random) -> CVRPState:
     """
     Removes customers_to_remove randomly selected customers from the passed-in solution.
     Ignores first and last customers in the routes following cordeau dataset notation.
 
     Parameters
     ----------
-    state: CVRPTWState
+    state: CVRPState
         The solution from which to remove customers.
     rng: np.random
         Random number generator.
 
     Returns
     -------
-    CVRPTWState
+    CVRPState
         The solution after applying the destroy operator.
     """
-    destroyed: CVRPTWState = state.copy()
+    destroyed: CVRPState = state.copy()
 
     # list of customers in solution
     solution_customers = state.served_customers()
@@ -57,19 +59,19 @@ def random_removal(state: CVRPTWState, rng: np.random) -> CVRPTWState:
     return remove_empty_routes(destroyed)
 
 
-def remove_empty_routes(state: CVRPTWState) -> CVRPTWState:
+def remove_empty_routes(state: CVRPState) -> CVRPState:
     """
     Remove empty routes and corresponding cost after applying the destroy operator.
     Cordeau dataset notation is followed, so empty routes ar those with two elements.
         
     Parameters
     ----------
-    state: CVRPTWState
+    state: CVRPState
         The solution from which to remove empty routes.
     
     Returns
     -------
-    CVRPTWState
+    CVRPState
         The solution after removing empty routes.
     """
     for idx, route in enumerate(state.routes):
@@ -93,24 +95,24 @@ def remove_empty_routes(state: CVRPTWState) -> CVRPTWState:
     return state
 
 
-def random_route_removal(state: CVRPTWState, rng: np.random) -> CVRPTWState:
+def random_route_removal(state: CVRPState, rng: np.random) -> CVRPState:
     """
     Based on (Wang et. al, 2024). This operator randomly selects customers_to_remove
     routes from a given solution and then removes a random customer from each route.
 
     Parameters
     ----------
-    state: CVRPTWState
+    state: CVRPState
         The solution from which to remove customers.
     rng: np.random
         Random number generator.
 
     Returns
     -------
-    CVRPTWState
+    CVRPState
         The solution after applying the destroy operator.
     """
-    destroyed: CVRPTWState = state.copy()
+    destroyed: CVRPState = state.copy()
     customers_to_remove = int(destroyed.n_customers * degree_of_destruction)
     for route_idx in rng.choice(
         range(len(destroyed.routes)),
@@ -389,7 +391,8 @@ def worst_removal(state: CVRPTWState, rng: np.random.Generator) -> CVRPTWState:
     destroyed.nodes_df.loc[worst_customer, "route"] = None
     destroyed.nodes_df.loc[worst_customer, "done"] = False
     if len(destroyed.routes[worst_route]) != 2:
-        destroyed.update_times_attributes_routes(worst_route)
+        if isinstance(destroyed, CVRPTWState):
+            destroyed.update_times_attributes_routes(worst_route)
         destroyed.routes_cost[worst_route] = destroyed.route_cost_calculator(
             worst_route
         )
