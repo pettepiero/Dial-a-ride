@@ -98,6 +98,12 @@ class CvrptwState(CVRPState):
             seed                = self.seed
         )
 
+    def update_attributes(self):
+        self.update_unassigned_list()
+        self.n_planned_customers = self.n_served_customers() 
+        for i, route in enumerate(self.routes):
+            self.update_times_attributes_routes(i)
+
     def update_times_attributes_routes(self, route_index: int):
         """
         Update the start, end and planned times for each customer in the routes.

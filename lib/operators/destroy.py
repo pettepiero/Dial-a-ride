@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=LOGGING_LEVEL)
 degree_of_destruction = 0.05
 
-
 def random_removal(state: CVRPState, rng: np.random) -> CVRPState:
     """
     Removes customers_to_remove randomly selected customers from the passed-in solution.
@@ -46,7 +45,6 @@ def random_removal(state: CVRPState, rng: np.random) -> CVRPState:
             destroyed.nodes_df.loc[customer.item(), "route"] = None
             destroyed.nodes_df.loc[customer.item(), "done"] = False
             destroyed.unassigned.append(customer.item())
-            destroyed.update_times_attributes_routes(idx)
             if len(destroyed.routes[idx]) != 2:
                 destroyed.routes_cost[idx] = destroyed.route_cost_calculator(idx)
             logger.debug(f"Customer {customer.item()} removed from route {idx}.")
@@ -129,7 +127,6 @@ def random_route_removal(state: CVRPState, rng: np.random) -> CVRPState:
             destroyed.nodes_df.loc[customer.item(), "route"] = None
             destroyed.nodes_df.loc[customer.item(), "done"] = False
             if len(destroyed.routes[route_idx]) != 2:
-                destroyed.update_times_attributes_routes(route_idx)
                 destroyed.routes_cost[route_idx] = destroyed.route_cost_calculator(
                     route_idx
                 )
@@ -237,7 +234,7 @@ def shaw_removal(state: CVRPTWState, rng) -> CVRPTWState:
     destroyed.nodes_df.loc[j_star.item(), "route"] = None
     destroyed.nodes_df.loc[j_star.item(), "done"] = False
     if len(destroyed.routes[route_star_idx]) != 2:
-        destroyed.update_times_attributes_routes(route_star_idx)
+        #destroyed.update_times_attributes_routes(route_star_idx)
         destroyed.routes_cost[route_star_idx] = destroyed.route_cost_calculator(
             route_star_idx
         )
@@ -252,7 +249,7 @@ def shaw_removal(state: CVRPTWState, rng) -> CVRPTWState:
     destroyed.nodes_df.loc[first_customer.item(), "route"] = None
     destroyed.nodes_df.loc[first_customer.item(), "done"] = False
     if len(route_i) != 2:
-        destroyed.update_times_attributes_routes(route_i_idx)
+        #destroyed.update_times_attributes_routes(route_i_idx)
         destroyed.routes_cost[route_i_idx] = destroyed.route_cost_calculator(
             route_i_idx
         )
@@ -391,8 +388,6 @@ def worst_removal(state: CVRPTWState, rng: np.random.Generator) -> CVRPTWState:
     destroyed.nodes_df.loc[worst_customer, "route"] = None
     destroyed.nodes_df.loc[worst_customer, "done"] = False
     if len(destroyed.routes[worst_route]) != 2:
-        if isinstance(destroyed, CVRPTWState):
-            destroyed.update_times_attributes_routes(worst_route)
         destroyed.routes_cost[worst_route] = destroyed.route_cost_calculator(
             worst_route
         )
@@ -481,12 +476,12 @@ def exchange_reducing_removal(
                                 # swap v1 and v2
                                 route1.customers_list[idx1] = v2
                                 route2.customers_list[idx2] = v1
-                                destroyed.update_times_attributes_routes(
-                                    first_route_index
-                                )
-                                destroyed.update_times_attributes_routes(
-                                    second_route_index
-                                )
+                                #destroyed.update_times_attributes_routes(
+                                #    first_route_index
+                                #)
+                                #destroyed.update_times_attributes_routes(
+                                #    second_route_index
+                                #)
                                 #destroyed.update_unassigned_list()
                                 destroyed.update_attributes()
 
