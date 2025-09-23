@@ -5,10 +5,10 @@ VRP States and classes
 ======================
 
 -----------
-CvrptwState
+CVRPTWState
 -----------
 
-.. autoclass:: lib.myvrplib.vrpstates.CvrptwState
+.. autoclass:: lib.myvrplib.CVRPTWState.CVRPTWState
     :members: 
 
 .. toctree::

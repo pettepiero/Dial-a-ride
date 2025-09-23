@@ -1,6 +1,6 @@
 import numpy as np
 from lib.myvrplib.myvrplib import END_OF_DAY, LOGGING_LEVEL
-from lib.myvrplib.vrpstates import CvrptwState
+from lib.myvrplib.CVRPTWState import CVRPTWState
 import logging
 
 logger = logging.getLogger(__name__)
@@ -8,24 +8,24 @@ logging.basicConfig(level=LOGGING_LEVEL)
 degree_of_destruction = 0.05
 
 
-def random_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
+def random_removal(state: CVRPTWState, rng: np.random) -> CVRPTWState:
     """
     Removes customers_to_remove randomly selected customers from the passed-in solution.
     Ignores first and last customers in the routes following cordeau dataset notation.
 
     Parameters
     ----------
-    state: CvrptwState
+    state: CVRPTWState
         The solution from which to remove customers.
     rng: np.random
         Random number generator.
 
     Returns
     -------
-    CvrptwState
+    CVRPTWState
         The solution after applying the destroy operator.
     """
-    destroyed: CvrptwState = state.copy()
+    destroyed: CVRPTWState = state.copy()
 
     # list of customers in solution
     solution_customers = state.served_customers()
@@ -57,19 +57,19 @@ def random_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
     return remove_empty_routes(destroyed)
 
 
-def remove_empty_routes(state: CvrptwState) -> CvrptwState:
+def remove_empty_routes(state: CVRPTWState) -> CVRPTWState:
     """
     Remove empty routes and corresponding cost after applying the destroy operator.
     Cordeau dataset notation is followed, so empty routes ar those with two elements.
         
     Parameters
     ----------
-    state: CvrptwState
+    state: CVRPTWState
         The solution from which to remove empty routes.
     
     Returns
     -------
-    CvrptwState
+    CVRPTWState
         The solution after removing empty routes.
     """
     for idx, route in enumerate(state.routes):
@@ -93,24 +93,24 @@ def remove_empty_routes(state: CvrptwState) -> CvrptwState:
     return state
 
 
-def random_route_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
+def random_route_removal(state: CVRPTWState, rng: np.random) -> CVRPTWState:
     """
     Based on (Wang et. al, 2024). This operator randomly selects customers_to_remove
     routes from a given solution and then removes a random customer from each route.
 
     Parameters
     ----------
-    state: CvrptwState
+    state: CVRPTWState
         The solution from which to remove customers.
     rng: np.random
         Random number generator.
 
     Returns
     -------
-    CvrptwState
+    CVRPTWState
         The solution after applying the destroy operator.
     """
-    destroyed: CvrptwState = state.copy()
+    destroyed: CVRPTWState = state.copy()
     customers_to_remove = int(destroyed.n_customers * degree_of_destruction)
     for route_idx in rng.choice(
         range(len(destroyed.routes)),
@@ -137,7 +137,7 @@ def random_route_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
     return remove_empty_routes(destroyed)
 
 
-def relatedness_function(state: CvrptwState, i: int, j: int) -> float:
+def relatedness_function(state: CVRPTWState, i: int, j: int) -> float:
     """
     Calculates how related two requests are. The lower the value, the more related.
     Based on (Wang et. al, 2024), formula (4), which is itself based on the work of
@@ -145,7 +145,7 @@ def relatedness_function(state: CvrptwState, i: int, j: int) -> float:
 
     Parameters
     ----------
-    state: CvrptwState
+    state: CVRPTWState
         The solution from which to remove customers.
     i: int
         The first customer.
@@ -178,7 +178,7 @@ def relatedness_function(state: CvrptwState, i: int, j: int) -> float:
     return value
 
 
-def shaw_removal(state: CvrptwState, rng) -> CvrptwState:
+def shaw_removal(state: CVRPTWState, rng) -> CVRPTWState:
     """
     Based on (Wang et. al, 2024), formula (4), which is itself based on the work of
     Shaw (1997) and Ropke and Pisinger (2006). This operator removes a customer_to_remove
@@ -186,18 +186,18 @@ def shaw_removal(state: CvrptwState, rng) -> CvrptwState:
 
     Parameters
     ----------
-    state: CvrptwState
+    state: CVRPTWState
         The solution from which to remove customers.
     rng: np.random
         Random number generator.
 
     Returns
     -------
-    CvrptwState
+    CVRPTWState
         The solution after applying the destroy operator.
     """
 
-    destroyed: CvrptwState = state.copy()
+    destroyed: CVRPTWState = state.copy()
     min_value = np.inf
     j_star = None
     route_star_idx = None
@@ -260,7 +260,7 @@ def shaw_removal(state: CvrptwState, rng) -> CvrptwState:
     return remove_empty_routes(destroyed)
 
 
-def cost_reducing_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
+def cost_reducing_removal(state: CVRPTWState, rng: np.random) -> CVRPTWState:
     """
     Cost reducing removal operator based on (Wang et al, 2024). Identifies
     customers that can be inserted into a solution route at a lower cost.
@@ -269,14 +269,14 @@ def cost_reducing_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
 
     Parameters
     ----------
-    state: CvrptwState
+    state: CVRPTWState
         The solution from which to remove customers.
     rng: np.random
         Random number generator.
 
     Returns
     -------
-    CvrptwState
+    CVRPTWState
         The solution after applying the destroy operator.
     """
 
@@ -353,20 +353,20 @@ def cost_reducing_removal(state: CvrptwState, rng: np.random) -> CvrptwState:
     return remove_empty_routes(destroyed)
 
 
-def worst_removal(state: CvrptwState, rng: np.random.Generator) -> CvrptwState:
+def worst_removal(state: CVRPTWState, rng: np.random.Generator) -> CVRPTWState:
     """
     Removes customers in decreasing order of service cost.
 
     Parameters
     ----------
-    state: CvrptwState
+    state: CVRPTWState
         The solution from which to remove customers.
     rng: np.random.Generator
         Random number generator.
 
     Returns
     -------
-    CvrptwState
+    CVRPTWState
         The solution after applying the destroy operator.
     """
     destroyed = state.copy()
@@ -401,22 +401,22 @@ def worst_removal(state: CvrptwState, rng: np.random.Generator) -> CvrptwState:
 
 
 def exchange_reducing_removal(
-    state: CvrptwState, rng: np.random.Generator
-) -> CvrptwState:
+    state: CVRPTWState, rng: np.random.Generator
+) -> CVRPTWState:
     """
     Variation of the cost-reducing removal based on Wang et. al (2024). Selects
     customers in pairs, allowing one customer to be replaced by another simultaneously.
 
     Parameters
     ----------
-    state: CvrptwState
+    state: CVRPTWState
         The solution from which to remove customers.
     rng: np.random.Generator
         Random number generator.
 
     Returns
     -------
-    CvrptwState
+    CVRPTWState
         The solution after applying the destroy operator.
     """
 

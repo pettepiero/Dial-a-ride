@@ -7,7 +7,7 @@ from lib.myvrplib.data_module import (
     get_initial_data,
     get_ids_of_time_slot,
 )
-from lib.myvrplib.vrpstates import CvrptwState
+from lib.myvrplib.CVRPTWState import CVRPTWState
 from lib.myvrplib.route import Route
 from lib.myvrplib.myvrplib import time_window_check, LOGGING_LEVEL
 
@@ -15,7 +15,7 @@ from lib.myvrplib.myvrplib import time_window_check, LOGGING_LEVEL
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=LOGGING_LEVEL)
 
-def neighbours(state: CvrptwState, customer: int) -> list:
+def neighbours(state: CVRPTWState, customer: int) -> list:
     """
     Return the customers IDs in order of increasing distance from the given
     customer, excluding the depots.
@@ -33,7 +33,7 @@ def neighbours(state: CvrptwState, customer: int) -> list:
 
     return [loc for loc in locations if loc not in state.depots["depots_indices"] and loc != customer]
 
-def time_neighbours(state: CvrptwState, customer: int) -> list:
+def time_neighbours(state: CVRPTWState, customer: int) -> list:
     """
     Return the customers in order of increasing start time after the given
     customer. Considers the customers that can be reached in time from the
@@ -60,13 +60,13 @@ def time_neighbours(state: CvrptwState, customer: int) -> list:
 
     return [loc[0] for loc in locations]
 
-def nearest_neighbor_tw(state: CvrptwState, cordeau:bool = True, initial_time_slot: bool = True) -> CvrptwState:
+def nearest_neighbor_tw(state: CVRPTWState, cordeau:bool = True, initial_time_slot: bool = True) -> CVRPTWState:
     """
     Build a solution by iteratively constructing routes, where the nearest
     time-window compatible customer is added until the route has met the
     vehicle capacity limit.
         Parameters:
-            state: CvrptwState
+            state: CVRPTWState
                 The current state of the CVRPTW problem.
             cordeau: bool
                 If True, the Cordeau dataset notation is used, else the
@@ -75,7 +75,7 @@ def nearest_neighbor_tw(state: CvrptwState, cordeau:bool = True, initial_time_sl
                 If True, only data related to customers that are called
                 in at the initial time step are considered.
         Returns:
-            CvrptwState
+            CVRPTWState
                 The initial solution to the CVRPTW problem.
     """
 
@@ -142,8 +142,8 @@ def nearest_neighbor_tw(state: CvrptwState, cordeau:bool = True, initial_time_sl
         for customer in route.customers_list:
             state.nodes_df.loc[customer, "route"] = route_num
     
-    # Create the solution object of type CvrptwState
-    solution = CvrptwState(
+    # Create the solution object of type CVRPTWState
+    solution = CVRPTWState(
             dataset             = state.dataset,
             routes              = routes, 
             nodes_df            = state.nodes_df, 

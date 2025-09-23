@@ -7,7 +7,7 @@ from alns.stop import MaxIterations
 
 from lib.myvrplib.myvrplib import LOGGING_LEVEL
 from lib.myvrplib.data_module import read_cordeau_data
-from lib.myvrplib.vrpstates import CvrptwState
+from lib.myvrplib.CVRPTWState import CVRPTWState 
 from lib.initial_solutions.initial_solutions import nearest_neighbor_tw
 from lib.operators.destroy import *
 from lib.operators.repair import *

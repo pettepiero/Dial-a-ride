@@ -5,7 +5,7 @@ from lib.myvrplib.myvrplib import (
     route_time_window_check,
     LOGGING_LEVEL,
 )
-from lib.myvrplib.vrpstates import CvrptwState
+from lib.myvrplib.CVRPTWState import CVRPTWState
 import logging
 from lib.myvrplib.route import Route
 from copy import deepcopy
@@ -16,24 +16,24 @@ logger.setLevel(LOGGING_LEVEL)
 
 
 
-def greedy_repair(state: CvrptwState, rng: np.random, tw: bool = True) -> CvrptwState:
+def greedy_repair(state: CVRPTWState, rng: np.random, tw: bool = True) -> CVRPTWState:
     if tw:
         return greedy_repair_tw(state=state, rng=rng)
     else:
         return greedy_repair_no_tw(state=state, rng=rng)
 
 
-def greedy_repair_no_tw(state: CvrptwState, rng: np.random) -> CvrptwState:
+def greedy_repair_no_tw(state: CVRPTWState, rng: np.random) -> CVRPTWState:
     """
     Inserts the unassigned customers in the best route. If there are no
     feasible insertions, then a new route is created. Only checks capacity constraints.
         Parameters:
-            state: CvrptwState
+            state: CVRPTWState
                 The current solution state.
             rng: np.random
                 The random number generator.
         Returns:
-            CvrptwState
+            CVRPTWState
                 The repaired solution state.
     """
     new_state = state.copy()
@@ -74,7 +74,7 @@ def greedy_repair_no_tw(state: CvrptwState, rng: np.random) -> CvrptwState:
     return new_state
 
 
-def greedy_repair_tw(state: CvrptwState, rng: np.random) -> CvrptwState:
+def greedy_repair_tw(state: CVRPTWState, rng: np.random) -> CVRPTWState:
     """
     Inserts the unassigned customers in the best route. If there are no
     feasible insertions, then a new route is created.
@@ -82,14 +82,14 @@ def greedy_repair_tw(state: CvrptwState, rng: np.random) -> CvrptwState:
 
     Parameters
     ----------
-    state: CvrptwState
+    state: CVRPTWState
         The current solution state.
     rng: np.random
         The random number generator.
 
     Returns
     -------
-    CvrptwState
+    CVRPTWState
         The repaired solution state.
     """
     new_state = state.copy()
@@ -148,7 +148,7 @@ def greedy_repair_tw(state: CvrptwState, rng: np.random) -> CvrptwState:
     return new_state
 
 
-# def best_insert(customer: int, state: CvrptwState) -> tuple:
+# def best_insert(customer: int, state: CVRPTWState) -> tuple:
 #     """
 #     Finds the best feasible route and insertion idx for the customer.
 #     Return (None, None) if no feasible route insertions are found.
@@ -156,7 +156,7 @@ def greedy_repair_tw(state: CvrptwState, rng: np.random) -> CvrptwState:
 #         Parameters:
 #             customer: int
 #                 The customer to be inserted.
-#             state: CvrptwState
+#             state: CVRPTWState
 #                 The current solution state.
 #         Returns:
 #             tuple
@@ -175,7 +175,7 @@ def greedy_repair_tw(state: CvrptwState, rng: np.random) -> CvrptwState:
 #     return best_route_idx, best_idx
 
 
-def best_insert_tw(customer: int, state: CvrptwState) -> tuple:
+def best_insert_tw(customer: int, state: CVRPTWState) -> tuple:
     """
     Finds the best feasible route and insertion idx for the customer.
     Return (None, None) if no feasible route insertions are found.
@@ -186,7 +186,7 @@ def best_insert_tw(customer: int, state: CvrptwState) -> tuple:
     ----------
     customer: int
         The customer to be inserted.
-    state: CvrptwState
+    state: CVRPTWState
         The current solution state.
 
     Returns
@@ -210,7 +210,7 @@ def best_insert_tw(customer: int, state: CvrptwState) -> tuple:
 # NOTE: I think performance can be improved by changing this function
 # maybe insert total demand in route
 def can_insert_tw(
-    customer: int, route_number: int, idx: int, state: CvrptwState
+    customer: int, route_number: int, idx: int, state: CVRPTWState
 ) -> bool:
     """
     Checks if inserting customer in route 'route_number' at position 'idx'
@@ -224,7 +224,7 @@ def can_insert_tw(
         The route number.
     idx: int
         The insertion index.
-    state: CvrptwState
+    state: CVRPTWState
         The current solution state.
 
     Returns
@@ -255,7 +255,7 @@ def can_insert_tw(
         return route_time_window_check(state, route, idx)
     return False
 
-def insert_cost(customer: int, route: list, idx: int, state: CvrptwState) -> float:
+def insert_cost(customer: int, route: list, idx: int, state: CVRPTWState) -> float:
     """
     Computes the insertion cost for inserting customer in route at idx.
 
@@ -267,7 +267,7 @@ def insert_cost(customer: int, route: list, idx: int, state: CvrptwState) -> flo
         The route where the customer is to be inserted.
     idx: int
         The insertion index.
-    state: CvrptwState
+    state: CVRPTWState
         The current solution state.
 
     Returns

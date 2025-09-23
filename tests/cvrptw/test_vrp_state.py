@@ -1,6 +1,6 @@
 import unittest
 from lib.myvrplib.data_module import *
-from lib.myvrplib.vrpstates import CvrptwState
+from lib.myvrplib.CVRPTWState import CVRPTWState
 from lib.myvrplib.route import Route
 
 
@@ -9,7 +9,7 @@ class TestCVRPTWState(unittest.TestCase):
         self.data = read_cordeau_data(
             "/home/pettepiero/tirocinio/dial-a-ride/data/c-mdvrptw/pr12"
         )
-        self.state = CvrptwState(dataset=data)
+        self.state = CVRPTWState(dataset=data)
 
     def test_get_qmax(self):
         qmax = self.state.get_qmax()
