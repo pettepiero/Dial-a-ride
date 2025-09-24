@@ -13,7 +13,7 @@ from lib.operators.destroy import *
 from lib.operators.repair import *
 from lib.operators.wang_operators import *
 from lib.output.analyze_solution import verify_time_windows
-from lib.myvrplib.input_output import print_results_dict, parse_options, print_cvrptw_dataset
+from lib.myvrplib.input_output import print_results_dict, parse_options, print_dataset
 from lib.output.video import generate_video
 #NUM_ITERATIONS = 100
 NUM_ITERATIONS = 50 
@@ -45,7 +45,7 @@ def main():
     data = read_cordeau_data(
         dataset_full_path, print_data=False
     )
-    print_cvrptw_dataset(data)
+    print_dataset(data)
 
     if args.num_iterations is not None:
         num_iterations = int(args.num_iterations)

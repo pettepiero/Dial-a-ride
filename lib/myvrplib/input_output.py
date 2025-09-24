@@ -10,7 +10,7 @@ def print_results_dict(results_dict: dict) -> None:
     print(tabulate.tabulate(results_dict, headers="keys", tablefmt="fancy_grid"))
 
 
-def print_cvrptw_dataset(dataset: dict) -> None:
+def print_dataset(dataset: dict) -> None:
     """
     Prints information about the cvrptw dataset
     """
@@ -30,23 +30,18 @@ def parse_options():
     )
 
     parser.add_argument("--config", type=str, help="Configuration file in JSON format.")
-   # parser.add_argument(
-   #     "--random",
-   #     action="store_true",
-   #     help="Use a random seed instead of a fixed one.",
-   # )
     parser.add_argument(
         "--seed",
         type=int,
         default=None,
         help="Set random seed.",
     )
-   # parser.add_argument(
-   #     "--logging",
-   #     type=str,
-   #     default="ERROR",
-   #     help="Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL).",
-   # )
+    parser.add_argument(
+        "--logging",
+        type=str,
+        default="ERROR",
+        help="Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL).",
+    )
     parser.add_argument(
         "--dataset", type=str, default="pr12", help="Dataset name (e.g., pr01 to pr20)."
     )
