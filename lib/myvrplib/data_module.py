@@ -325,7 +325,7 @@ def read_solution_format(file: str, print_data: bool = False) -> dict:
 
 def dynamic_df_from_dict(
         data: dict,
-        static: bool = False, 
+        static: bool = True, 
         n_steps:int = 20, seed: int = 0
     ) -> pd.DataFrame:
     """
@@ -354,23 +354,37 @@ def dynamic_df_from_dict(
     """
     np.random.seed(seed)
     n = data["dimension"] + data["n_depots"]+1
-    
-    data_df = pd.DataFrame(
-        {
-            "id": [i for i in range(n)],
-            "x": [coord[0] for coord in data["node_coord"][:n]],
-            "y": [coord[1] for coord in data["node_coord"][:n]],
-            "demand": data["demand"][:n],
-            "start_time": [tw[0] for tw in data["time_window"][:n]],
-            "end_time": [tw[1] for tw in data["time_window"][:n]],
-            "service_time": data["service_time"][:n],
-            "call_in_time_slot": np.zeros(n, dtype=int),
-            "route": [None]*n,
-            "done": [False]*n,
-        }
-    )
+    has_time_windows = 'time_windows' in data.keys() 
+    if has_time_windows:
+        data_df = pd.DataFrame(
+            {
+                "id": [i for i in range(n)],
+                "x": [coord[0] for coord in data["node_coord"][:n]],
+                "y": [coord[1] for coord in data["node_coord"][:n]],
+                "demand": data["demand"][:n],
+                "start_time": [tw[0] for tw in data["time_window"][:n]],
+                "end_time": [tw[1] for tw in data["time_window"][:n]],
+                "service_time": data["service_time"][:n],
+                "call_in_time_slot": np.zeros(n, dtype=int),
+                "route": [None]*n,
+                "done": [False]*n,
+            }
+        )
+    else:
+        data_df = pd.DataFrame(
+            {
+                "id": [i for i in range(n)],
+                "x": [coord[0] for coord in data["node_coord"][:n]],
+                "y": [coord[1] for coord in data["node_coord"][:n]],
+                "demand": data["demand"][:n],
+                "route": [None]*n,
+                "done": [False]*n,
+            }
+        )
     if static:
         return data_df
+    else:
+        raise NotImplementedError
     
     # Parameters of gamma  distribution
     k = 0.5  # Shape parameter
