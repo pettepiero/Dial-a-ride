@@ -30,6 +30,8 @@ def parse_options():
     )
 
     parser.add_argument("--config", type=str, help="Configuration file in JSON format.")
+    parser.add_argument("--problem_type", type=str, choices=["mdvrp", "MDVRP", "mdvrptw", "MDVRPTW"], help="Problem type", default=None)
+
     parser.add_argument(
         "--seed",
         type=int,
