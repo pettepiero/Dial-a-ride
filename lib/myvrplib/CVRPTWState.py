@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(LOGGING_LEVEL)
 
 
-class CvrptwState(CVRPState):
+class CVRPTWState(CVRPState):
     """
     Class representing the state of the CVRPTW problem.
 
@@ -87,7 +87,7 @@ class CvrptwState(CVRPState):
         )  # Note: maybe use only norm_tw in the future?
 
     def copy(self):
-        return CvrptwState(
+        return CVRPTWState(
             dataset             = self.dataset.copy(),
             routes              = [route.copy() for route in self.routes],  # Deep copy each Route
             routes_cost         = self.routes_cost.copy(),

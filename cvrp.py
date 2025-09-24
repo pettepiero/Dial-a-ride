@@ -6,7 +6,7 @@ from alns.select import *
 from alns.stop import MaxIterations
 
 from lib.myvrplib.myvrplib import LOGGING_LEVEL
-from lib.myvrplib.data_module import read_cordeau_data
+from lib.myvrplib.data_module import get_data_format
 from lib.myvrplib.CVRPTWState import CVRPTWState 
 from lib.initial_solutions.initial_solutions import nearest_neighbor_tw
 from lib.operators.destroy import *
@@ -36,15 +36,21 @@ def main():
         print(f"Initializing ALNS without explicit seed")
         alns = ALNS(rnd.default_rng())
 
-    dataset_name = args.dataset
-    valid_datasets = ["pr02",  "pr04",  "pr06",  "pr08",  "pr10",  "pr12",  "pr14",  "pr16",  "pr18",  "pr20", "pr01", "pr03", "pr05", "pr07",  "pr09",  "pr11",  "pr13",  "pr15",  "pr17",  "pr19"]
-    assert dataset_name in valid_datasets, f"Dataset {dataset_name} not found in ./data/c-mdvrptw"
     dataset_full_path = "./data/c-mdvrptw/" + dataset_name
     print(f"Chosen dataset: {dataset_full_path}")
-
-    data = read_cordeau_data(
-        dataset_full_path, print_data=False
-    )
+    
+    data_type = get_data_format(data)
+    if data_type == 'cordeau':
+        dataset_name = args.dataset
+        valid_datasets = ["pr02",  "pr04",  "pr06",  "pr08",  "pr10",  "pr12",  "pr14",  "pr16",  "pr18",  "pr20", "pr01", "pr03", "pr05", "pr07",  "pr09",  "pr11",  "pr13",  "pr15",  "pr17",  "pr19"]
+        assert dataset_name in valid_datasets, f"Dataset {dataset_name} not found in ./data/c-mdvrptw"
+    elif data_type == 'vrplib':
+        # convert dataset to cordeau and then read
+        new_path = dataset_full_path + "_vrplib"
+        convert_vrplib_to_cordeau(input_path=dataset_full_path, output_path=new_path)
+        dataset_full_path = new_path
+        
+    data = read_cordeau_data(dataset_full_path, print_data=False)
     print_dataset(data)
 
     if args.num_iterations is not None:

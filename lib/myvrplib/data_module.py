@@ -52,8 +52,8 @@ def read_cordeau_data(file: str, print_data: bool = False) -> dict:
 
     key = int(data[0].split()[0])
     problem_type = type_dict[key]  # Problem type
-    assert problem_type == "MDVRPTW", f"Available data is for {problem_type} and not for MDVRPTW"
-    problem_type = type_dict.get(6)
+    assert problem_type == "MDVRPTW" or problem_type == "MDVRP", f"Available data is for {problem_type} and not for MDVRPTW or MDVRP"
+
     m = int(data[0].split()[1])  # number of vehicles
     n = int(data[0].split()[2])  # number of customers
     t = int(data[0].split()[3])  # number of days/depots/vehicle types
@@ -102,16 +102,17 @@ def read_cordeau_data(file: str, print_data: bool = False) -> dict:
     demands = np.array([int(row[4]) for row in customers])
     data_dict["demand"] = np.concatenate((data_dict["demand"], demands))
     data_dict["demand"] = np.concatenate((data_dict["demand"], [0 for row in depots]))
+    
+    if problem_type == 'MDVRPTW':
+        begin_times = [row[11] for row in customers]
+        end_times = [row[12] for row in customers]
+        data_dict["time_window"] = [[-1, -1]]
+        data_dict["time_window"] += [[int(a), int(b)] for a, b in zip(begin_times, end_times)]
+        data_dict["time_window"] += [[0, END_OF_DAY] for row in depots]
 
-    begin_times = [row[11] for row in customers]
-    end_times = [row[12] for row in customers]
-    data_dict["time_window"] = [[-1, -1]]
-    data_dict["time_window"] += [[int(a), int(b)] for a, b in zip(begin_times, end_times)]
-    data_dict["time_window"] += [[0, END_OF_DAY] for row in depots]
-
-    data_dict["service_time"] = [None]
-    data_dict["service_time"] += [int(row[3]) for row in customers]
-    data_dict["service_time"] += [int(row[3]) for row in depots]
+        data_dict["service_time"] = [None]
+        data_dict["service_time"] += [int(row[3]) for row in customers]
+        data_dict["service_time"] += [int(row[3]) for row in depots]
     data_dict["edge_weight"] = cost_matrix_from_coords(data_dict["node_coord"])
     calculate_depots(data_dict)
 
