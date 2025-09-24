@@ -7,8 +7,8 @@ from alns.stop import MaxIterations
 
 from lib.myvrplib.myvrplib import LOGGING_LEVEL
 from lib.myvrplib.data_module import get_data_format, read_cordeau_data
-from lib.myvrplib.CVRPTWState import CVRPTWState 
-from lib.initial_solutions.initial_solutions import nearest_neighbor_tw
+from lib.myvrplib.CVRPState import CVRPState 
+from lib.initial_solutions.initial_solutions import nearest_neighbor
 from lib.operators.destroy import *
 from lib.operators.repair import *
 from lib.operators.wang_operators import *
@@ -51,6 +51,7 @@ def main():
         problem_type = args.problem_type
     #if valid choice, create dataset_full_path variable
     if problem_type in ["mdvrptw", "MDVRPTW"]:
+        raise ValueError(f"This script is meant to run MDVRP instances, not MDVRPTW")
         dataset_full_path = "./data/c-mdvrptw/" + dataset_name
     elif problem_type in ["mdvrp", "MDVRP"]:
         dataset_full_path = "./data/C-mdvrp/" + dataset_name
@@ -89,8 +90,9 @@ def main():
     alns.add_repair_operator(greedy_repair_tw)
     alns.add_repair_operator(wang_greedy_repair)
 
-    init = CVRPTWState(dataset=data)
-    initial_solution = nearest_neighbor_tw(state=init, initial_time_slot=False)
+    init = CVRPState(dataset=data)
+    initial_solution = nearest_neighbor(state=init)
+    print(f"Created initial solution")
     select = RouletteWheel(
             scores=[25, 5, 1, 0], 
             decay=0.8, 

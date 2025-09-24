@@ -8,6 +8,7 @@ from lib.myvrplib.data_module import (
     get_ids_of_time_slot,
 )
 from lib.myvrplib.CVRPTWState import CVRPTWState
+from lib.myvrplib.CVRPState import CVRPState
 from lib.myvrplib.route import Route
 from lib.myvrplib.myvrplib import time_window_check, LOGGING_LEVEL
 
@@ -59,6 +60,72 @@ def time_neighbours(state: CVRPTWState, customer: int) -> list:
     locations = [loc for loc in locations if loc != customer]
 
     return [loc[0] for loc in locations]
+
+def nearest_neighbor(state: CVRPState, cordeau:bool = True) -> CVRPState:
+    """
+    Build a solution by iteratively constructing routes, where the nearest
+    customer is added until the route has met the vehicle capacity limit. Does 
+    not use notion of time in general.
+        Parameters:
+            state: CVRPState
+                The current state of the CVRP problem.
+            cordeau: bool
+                If True, the Cordeau dataset notation is used, else the
+                Solomon dataset notation is used.
+        Returns:
+            CVRPState
+                The initial solution to the CVRP problem.
+    """
+    routes: list[Route] = []
+
+    start_idx = 1 if cordeau else 0
+    unvisited = set(range(start_idx, len(state.nodes_df["demand"])))
+
+    vehicle = 0
+
+    while vehicle < state.n_vehicles:
+        initial_depot = state.depots["vehicle_to_depot"][vehicle]
+        route = [initial_depot]
+        route_demands = 0
+        while unvisited:
+            # Add the nearest compatible unvisited customer to the route till max capacity
+            current = route[-1]
+            nearest = [
+                nb for nb in unvisited
+            ]  # Keep only unvisited customers
+            nearest.sort()
+            nearest = int(nearest[0])  # Nearest unvisited reachable customer
+            # Check vehicle capacity constraint
+            nearest_demand = state.nodes_df.loc[
+                nearest, "demand"
+            ].item()
+
+            if route_demands + nearest_demand > state.vehicle_capacity:
+                break
+
+            route.append(nearest)
+            unvisited.remove(nearest)
+            route_demands += nearest_demand
+
+        route.append(route[0])  # Return to the depot
+        route = Route(route, vehicle)
+        routes.append(route)
+        vehicle += 1
+
+    # Assign routes to customers in nodes_df
+    for route_num, route in enumerate(routes):
+        for customer in route.customers_list:
+            state.nodes_df.loc[customer, "route"] = route_num
+    
+    # Create the solution object of type CVRPState
+    solution = CVRPState(
+            dataset             = state.dataset,
+            routes              = routes, 
+            nodes_df            = state.nodes_df, 
+            given_unassigned    = list(unvisited)
+            )
+    return solution
+
 
 def nearest_neighbor_tw(state: CVRPTWState, cordeau:bool = True, initial_time_slot: bool = True) -> CVRPTWState:
     """
