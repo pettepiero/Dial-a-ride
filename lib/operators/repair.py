@@ -44,8 +44,9 @@ def greedy_repair_no_tw(state: CVRPState, rng: np.random) -> CVRPState:
 
         if route_idx is not None:
             new_state.routes[route_idx].insert(idx, customer)
-            new_state.update_est_lst(route_idx)
-            new_state.calculate_planned_times(route_idx)
+            if isinstance(state, CVRPTWState):
+                new_state.update_est_lst(route_idx)
+                new_state.calculate_planned_times(route_idx)
             new_state.routes_cost[route_idx] = new_state.route_cost_calculator(route_idx)
         # If possible, create a new route
         elif len(new_state.routes) < state.n_vehicles:

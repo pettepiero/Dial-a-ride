@@ -12,7 +12,7 @@ from lib.initial_solutions.initial_solutions import nearest_neighbor
 from lib.operators.destroy import *
 from lib.operators.repair import *
 from lib.operators.wang_operators import *
-from lib.output.analyze_solution import verify_time_windows
+from lib.output.analyze_solution import analyze_solution 
 from lib.myvrplib.input_output import print_results_dict, parse_options, print_dataset
 from lib.output.video import generate_video
 #NUM_ITERATIONS = 100
@@ -80,15 +80,32 @@ def main():
 
     print(f"num_iterations: {num_iterations}\n")
 
+
+    repair_ops = [
+            greedy_repair_no_tw
+            ]
+    destroy_ops = [
+            random_removal, 
+            random_route_removal, 
+            #cost_reducing_removal, 
+            worst_removal, 
+            #exchange_reducing_removal
+            ]
+
+    for op in destroy_ops:
+        alns.add_destroy_operator(op)
+    for op in repair_ops:
+        alns.add_repair_operator(op)
+
     # Set up ALNS operators
-    alns.add_destroy_operator(random_removal)
-    alns.add_destroy_operator(random_route_removal)
-    alns.add_destroy_operator(cost_reducing_removal)
-    alns.add_destroy_operator(worst_removal)
-    alns.add_destroy_operator(exchange_reducing_removal) 
-    # alns.add_destroy_operator(shaw_removal)   #to be implemented
-    alns.add_repair_operator(greedy_repair_no_tw)
-    alns.add_repair_operator(wang_greedy_repair)
+    #alns.add_destroy_operator(random_removal)
+    #alns.add_destroy_operator(random_route_removal)
+    #alns.add_destroy_operator(cost_reducing_removal)
+    #alns.add_destroy_operator(worst_removal)
+    #alns.add_destroy_operator(exchange_reducing_removal) 
+    ## alns.add_destroy_operator(shaw_removal)   #to be implemented
+    #alns.add_repair_operator(greedy_repair_no_tw)
+    ##alns.add_repair_operator(wang_greedy_repair)
 
     init = CVRPState(dataset=data)
     initial_solution = nearest_neighbor(state=init)
@@ -96,8 +113,8 @@ def main():
     select = RouletteWheel(
             scores=[25, 5, 1, 0], 
             decay=0.8, 
-            num_destroy=5,
-            num_repair=2
+            num_destroy=len(destroy_ops),
+            num_repair=len(repair_ops)
             )
     # select = RandomSelect(num_destroy=4, num_repair=2)
     accept = RecordToRecordTravel.autofit(
@@ -126,7 +143,7 @@ def main():
 
     print(f"Total number of served customers: {served_customers}")
     data_df = initial_solution.nodes_df
-    initial_solution_stats = verify_time_windows(data_df, initial_solution, percentage=False)
+    initial_solution_stats = {"total_served": served_customers}
 
     print(f"\nIn the HEURISTIC SOLUTION there are {len(solution.routes)} routes")
     served_customers = 0
@@ -140,20 +157,14 @@ def main():
         print(route.customers_list)
 
     print(f"Total number of served customers: {served_customers}")
-    # Calculating the late, early, ontime and left out customers
-    solution_stats = verify_time_windows(data_df, solution, percentage=False)
-
+    solution_stats = {"total_served": served_customers}
     # results dict
     results_dict = {
-        "Quantity": ["Total cost", "# Served customers", "# Late customers", "# Early customers", "# Ontime customers", "Sum early mins", "Sum late mins"],
+        "Quantity": ["Total cost", "# Served customers"],
         "Initial solution": [
-            initial_solution.objective(), initial_solution_stats["total_served"], initial_solution_stats["late"], initial_solution_stats["early"], 
-            initial_solution_stats["ontime"], initial_solution_stats["sum_early"], initial_solution_stats["sum_late"],
-        ],
+            initial_solution.objective(), initial_solution_stats["total_served"]],
         "Heuristic solution": [
-            solution.objective(), solution_stats["total_served"], solution_stats["late"], solution_stats["early"], 
-            solution_stats["ontime"], solution_stats["sum_early"], solution_stats["sum_late"],
-        ],
+            solution.objective(), solution_stats["total_served"]],
     }
 
     print_results_dict(results_dict)

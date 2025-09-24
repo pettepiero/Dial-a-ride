@@ -12,7 +12,7 @@ from lib.initial_solutions.initial_solutions import nearest_neighbor_tw
 from lib.operators.destroy import *
 from lib.operators.repair import *
 from lib.operators.wang_operators import *
-from lib.output.analyze_solution import verify_time_windows
+from lib.output.analyze_solution import analyze_solution
 from lib.myvrplib.input_output import print_results_dict, parse_options, print_dataset
 from lib.output.video import generate_video
 #NUM_ITERATIONS = 100
@@ -99,7 +99,7 @@ def main():
 
     print(f"Total number of served customers: {served_customers}")
     data_df = initial_solution.nodes_df
-    initial_solution_stats = verify_time_windows(data_df, initial_solution, percentage=False)
+    initial_solution_stats = analyze_solution(data_df, initial_solution, percentage=False)
 
     print(f"\nIn the HEURISTIC SOLUTION there are {len(solution.routes)} routes")
     served_customers = 0
@@ -114,7 +114,7 @@ def main():
 
     print(f"Total number of served customers: {served_customers}")
     # Calculating the late, early, ontime and left out customers
-    solution_stats = verify_time_windows(data_df, solution, percentage=False)
+    solution_stats = analyze_solution(data_df, solution, percentage=False)
 
     # results dict
     results_dict = {

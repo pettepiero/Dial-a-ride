@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
-def verify_time_windows(data: pd.DataFrame, sol: CVRPTWState, percentage: bool = False) -> dict:
+def analyze_solution(data: pd.DataFrame, sol: CVRPTWState, percentage: bool = False) -> dict:
     """
     Verifies the time windows of the solution and returns the early/late/ontime counts.
     If percentage is True, then the counts are returned as percentages of served customers.

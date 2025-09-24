@@ -259,7 +259,7 @@ def shaw_removal(state: CVRPTWState, rng) -> CVRPTWState:
     return remove_empty_routes(destroyed)
 
 
-def cost_reducing_removal(state: CVRPTWState, rng: np.random) -> CVRPTWState:
+def cost_reducing_removal(state: CVRPTWState, rng: np.random.Generator) -> CVRPTWState:
     """
     Cost reducing removal operator based on (Wang et al, 2024). Identifies
     customers that can be inserted into a solution route at a lower cost.
@@ -270,7 +270,7 @@ def cost_reducing_removal(state: CVRPTWState, rng: np.random) -> CVRPTWState:
     ----------
     state: CVRPTWState
         The solution from which to remove customers.
-    rng: np.random
+    rng: np.random.Generator
         Random number generator.
 
     Returns
