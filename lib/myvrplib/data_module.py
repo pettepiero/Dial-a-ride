@@ -2,9 +2,28 @@ import numpy as np
 import numpy.random as rnd
 import copy
 import pandas as pd
+import os
 
 END_OF_DAY = 1000
 SEED = 1234
+
+def get_data_format(file: str) -> str:
+    """
+    Receives a path to a data file and returns 'vrplib' or 'cordeau' based on format of data. In particual, it understands the format by reading the first line.
+    """
+    assert os.path.isfile(file), f"Provided file path {file} is not a file."
+    lines = []
+    with open(file, "r") as f:
+        lines = f.readlines()
+    if lines[0].split()[0] == 'NAME':
+        return 'vrplib'
+    elif int(lines[0].split()[0]) in list(range(8)):
+        if len(lines[0].split()) == 4:
+            return 'cordeau'
+        else:
+            raise ValueError(f"Error in understanding format of file {file}")
+    else:
+        raise ValueError(f"Error in understanding format of file {file}")
 
 def read_cordeau_data(file: str, print_data: bool = False) -> dict:
     """
