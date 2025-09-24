@@ -147,31 +147,31 @@ def greedy_repair_tw(state: CVRPTWState, rng: np.random) -> CVRPTWState:
     return new_state
 
 
-# def best_insert(customer: int, state: CVRPState) -> tuple:
-#     """
-#     Finds the best feasible route and insertion idx for the customer.
-#     Return (None, None) if no feasible route insertions are found.
-#     Only checks capacity constraints.
-#         Parameters:
-#             customer: int
-#                 The customer to be inserted.
-#             state: CVRPState
-#                 The current solution state.
-#         Returns:
-#             tuple
-#                 The best route and insertion indices for the customer.
-#     """
-#     best_cost, best_route_idx, best_idx = None, None, None
+def best_insert(customer: int, state: CVRPState) -> tuple:
+    """
+    Finds the best feasible route and insertion idx for the customer.
+    Return (None, None) if no feasible route insertions are found.
+    Only checks capacity constraints.
+        Parameters:
+            customer: int
+                The customer to be inserted.
+            state: CVRPState
+                The current solution state.
+        Returns:
+            tuple
+                The best route and insertion indices for the customer.
+    """
+    best_cost, best_route_idx, best_idx = None, None, None
 
-#     for route_number, route in enumerate(state.routes):
-#         for idx in range(1, len(route)-1):
-#             if can_insert(customer, route_number, idx, state):
-#                 cost = insert_cost(customer, route.customers_list, idx, state)
+    for route_number, route in enumerate(state.routes):
+        for idx in range(1, len(route)-1):
+            if can_insert(customer, route_number, idx, state):
+                cost = insert_cost(customer, route.customers_list, idx, state)
 
-#                 if best_cost is None or cost < best_cost:
-#                     best_cost, best_route_idx, best_idx = cost, route_number, idx
+                if best_cost is None or cost < best_cost:
+                    best_cost, best_route_idx, best_idx = cost, route_number, idx
 
-#     return best_route_idx, best_idx
+    return best_route_idx, best_idx
 
 
 def best_insert_tw(customer: int, state: CVRPTWState) -> tuple:
@@ -204,6 +204,43 @@ def best_insert_tw(customer: int, state: CVRPTWState) -> tuple:
                     best_cost, best_route_idx, best_idx = cost, route_number, idx
 
     return best_route_idx, best_idx
+
+
+def can_insert(customer: int, route_number: int, idx: int, state: CVRPState) -> bool:
+    """
+    Checks if inserting customer in route 'route_number' at position 'idx'
+    does not exceed vehicle capacity and time window constraints.
+
+    Parameters
+    ----------
+    customer: int
+        The customer to be inserted.
+    route_number: int
+        The route number.
+    idx: int
+        The insertion index.
+    state: CVRPState
+        The current solution state.
+
+    Returns
+    -------
+    bool
+        True if the insertion is feasible, False otherwise.
+    """
+    df = state.nodes_df
+    route = state.routes[route_number]
+
+    # Capacity check
+    if route.demand is not None:
+        total = route.demand + df.loc[customer, "demand"]
+    else:
+        sub_df = df[df["id"].isin(route.customers_list)]["demand"]
+        total = sub_df.sum() + df.loc[customer, "demand"].item()
+    if total > state.vehicle_capacity:
+        return False
+
+    return True 
+
 
 
 # NOTE: I think performance can be improved by changing this function

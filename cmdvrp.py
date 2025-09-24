@@ -87,7 +87,7 @@ def main():
     alns.add_destroy_operator(worst_removal)
     alns.add_destroy_operator(exchange_reducing_removal) 
     # alns.add_destroy_operator(shaw_removal)   #to be implemented
-    alns.add_repair_operator(greedy_repair_tw)
+    alns.add_repair_operator(greedy_repair_no_tw)
     alns.add_repair_operator(wang_greedy_repair)
 
     init = CVRPState(dataset=data)
