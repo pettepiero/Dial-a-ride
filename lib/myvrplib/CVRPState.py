@@ -224,6 +224,8 @@ class CVRPState:
         Update the list of unassigned customers.
         """
         self.unassigned = self.nodes_df.loc[pd.isna(self.nodes_df["route"]), "id"].tolist()
+        # drop customer 0 (cordeau notation)
+        self.unassigned.remove(0)
         # filter out depots
         self.unassigned = [customer for customer in self.unassigned if customer not in self.depots["depots_indices"]]
 
