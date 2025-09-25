@@ -15,11 +15,98 @@ from copy import deepcopy
 logger = logging.getLogger(__name__)
 logger.setLevel(LOGGING_LEVEL)
 
-def greedy_repair(state: CVRPState, rng: np.random, tw: bool = True) -> CVRPState:
-    if tw:
-        return greedy_repair_tw(state=state, rng=rng)
-    else:
-        return greedy_repair_no_tw(state=state, rng=rng)
+
+def lowest_delta_position(state: CVRPState, customer: int, route_idx: int) -> tuple[float, int]:
+    route = state.routes[route_idx]
+    base_cost = state.route_cost_calculator(route_idx)
+
+    best_delta = float("inf")
+    best_pos = 0
+    for pos in range(len(route) + 1):
+        route.insert(pos, customer)
+        delta = state.route_cost_calculator(route_idx) - base_cost
+        route.remove(customer)
+        if delta < best_delta:
+            best_delta, best_pos = delta, pos
+    return best_delta, best_pos
+
+def regret3_insertion(state: CVRPState, rng: np.random.Generator) -> CVRPState:
+    """
+    Regret-k insertion with k=3, based on [WaSH24]
+    """
+    new_state = state.copy()
+    while len(new_state.unassigned) > 0: #while there are customers to serve
+        R = len(new_state.routes) # number of routes
+        U = len(new_state.unassigned) # number of unassigned customers
+
+        regrets          = np.full(U, -np.inf, dtype=float) # for each customer
+        best_first_delta = np.full(U, np.inf, dtype=float)
+        best_first_route = np.full(U, -1, dtype=int)
+        best_first_pos   = np.full(U, -1, dtype=int)
+
+        for ui, cust in enumerate(new_state.unassigned): # loop over unassigned
+            deltas = np.full(R, np.inf, dtype=float) # for customer cust, prepare deltas  and pos list
+            positions  = np.full(R, -1, dtype=int)
+
+            for r in range(R): # loop over routes and store best position and delta
+                delta, pos = lowest_delta_position(new_state, cust, r)
+                deltas[r] = delta
+                positions[r] = pos
+                
+            valid = np.isfinite(deltas) & (positions >= 0) #boolean mask
+            if not np.any(valid):
+                continue # this means no feasible solutions for customer cust
+
+            valid_routes = np.nonzero(valid)[0] #feasible routes indices
+            valid_deltas = deltas[valid] 
+            valid_positions = positions[valid] 
+
+            k = min(3, valid_deltas.size)
+            sel = np.argpartition(valid_deltas, k-1)[:k]
+            ordk = np.argsort(valid_deltas[sel])
+
+            top_delta = valid_deltas[sel][ordk]
+            top_route= valid_routes[sel][ordk]
+            top_pos = valid_positions[sel][ordk]
+
+
+            best_first_delta[ui] = float(top_delta[0])
+            best_first_route[ui] = int(top_route[0])
+            best_first_pos[ui] = int(top_pos[0])
+            regrets[ui] = float(np.sum(top_delta[1:] - top_delta[:1]))
+
+        if not np.isfinite(regrets).any():
+            print(f"DEBUG: regrets")
+            raise RuntimeError("no feasible insertion for any remaining customer")
+
+        max_regret = np.max(regrets)
+        cand = np.where(regrets == max_regret)[0]
+
+        # Tie-breaker : random choice of cand if there is more than one
+        pick_idx = int(cand[rng.integers(cand.size)])
+        customer = new_state.unassigned[pick_idx]
+        r_ins    = int(best_first_route[pick_idx])
+        p_ins    = int(best_first_pos[pick_idx])
+       
+        if r_ins < 0 or p_ins < 0 or not np.isfinite(best_first_delta[pick_idx]):
+            raise RuntimeError(f"regret3_insertion: chosen customer {customer} has no feasible insertion.")
+
+        new_state.routes[r_ins].insert(p_ins, customer)
+        new_state.unassigned.pop(pick_idx)
+    new_state.update_attributes()
+
+    return new_state
+
+
+
+
+    
+
+#def greedy_repair(state: CVRPState, rng: np.random, tw: bool = True) -> CVRPState:
+#    if tw:
+#        return greedy_repair_tw(state=state, rng=rng)
+#    else:
+#        return greedy_repair_no_tw(state=state, rng=rng)
 
 
 def greedy_repair_no_tw(state: CVRPState, rng: np.random) -> CVRPState:
