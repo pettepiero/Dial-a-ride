@@ -22,7 +22,6 @@ NUM_ITERATIONS = 50
 import logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=LOGGING_LEVEL)
-
 degree_of_destruction = 0.05
 
 def main():
@@ -82,7 +81,8 @@ def main():
 
 
     repair_ops = [
-            greedy_repair_no_tw
+            greedy_repair_no_tw,
+            regret3_insertion,
             ]
     destroy_ops = [
             random_removal, 

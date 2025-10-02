@@ -113,8 +113,8 @@ def random_route_removal(state: CVRPState, rng: np.random) -> CVRPState:
     destroyed: CVRPState = state.copy()
     customers_to_remove = int(destroyed.n_customers * degree_of_destruction)
     for route_idx in rng.choice(
-        range(len(destroyed.routes)),
-        min(customers_to_remove, state.n_served_customers()),
+        a=range(len(destroyed.routes)),
+        size=min(customers_to_remove, state.n_served_customers()),
         replace=True,
     ):
         route = destroyed.routes[route_idx]
@@ -126,6 +126,7 @@ def random_route_removal(state: CVRPState, rng: np.random) -> CVRPState:
             # Update df
             destroyed.nodes_df.loc[customer.item(), "route"] = None
             destroyed.nodes_df.loc[customer.item(), "done"] = False
+            # update routes costs
             if len(destroyed.routes[route_idx]) != 2:
                 destroyed.routes_cost[route_idx] = destroyed.route_cost_calculator(
                     route_idx

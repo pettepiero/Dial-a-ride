@@ -37,6 +37,9 @@ class Route():
     def __str__(self) -> str:
         return(str(self.customers_list))
 
+    def __repr__(self) -> str:
+        return f"Route(customers={self.customers_list}, vehicle={self.vehicle})"
+
     def __len__(self) -> int:
         """
         Returns the number of customers in the route, including the depot

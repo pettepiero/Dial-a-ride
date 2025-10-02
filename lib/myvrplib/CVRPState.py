@@ -215,9 +215,9 @@ class CVRPState:
         """
         Return the list of served customers.
         """
-        return [customer for route in self.routes for customer in route.customers_list[1:-1]]
-
-        # TODO: Test this method
+        customers = [customer for route in self.routes for customer in route.customers_list[1:-1]]
+        customers = [cust for cust in customers if cust not in self.depots['depots_indices']]
+        return customers
 
     def update_unassigned_list(self):
         """
