@@ -13,7 +13,7 @@ from lib.operators.destroy import *
 from lib.operators.repair import *
 from lib.operators.wang_operators import *
 from lib.output.analyze_solution import analyze_solution 
-from lib.myvrplib.input_output import print_results_dict, parse_options, print_dataset
+from lib.myvrplib.input_output import print_results_dict, parse_options, print_instance
 from lib.output.video import generate_video
 #NUM_ITERATIONS = 100
 NUM_ITERATIONS = 50 
@@ -35,42 +35,42 @@ def main():
         print(f"Initializing ALNS without explicit seed")
         alns = ALNS(rnd.default_rng())
 
-    dataset_name = args.dataset
+    instance_name = args.instance
 
     if args.problem_type is None:
         # determine from file name or raise error
-        ext = os.path.splitext(args.dataset)[-1]
+        ext = os.path.splitext(args.instance)[-1]
         if ext == '.mdvrp' or ext == '.cmdvrp':
             problem_type = "MDVRP"
         elif ext == '.mdvrptw' or ext == '.cmdvrptw':
             problem_type = "MDVRPTW"
         else:
-            raise ValueError(f"Unkown extension of dataset, please provide problem_type of dataset with explicit extension in order to determine problem type.")
+            raise ValueError(f"Unkown extension of instance, please provide problem_type of instance with explicit extension in order to determine problem type.")
     else:
         problem_type = args.problem_type
-    #if valid choice, create dataset_full_path variable
+    #if valid choice, create instance_full_path variable
     if problem_type in ["mdvrptw", "MDVRPTW"]:
         raise ValueError(f"This script is meant to run MDVRP instances, not MDVRPTW")
-        dataset_full_path = "./data/c-mdvrptw/" + dataset_name
+        instance_full_path = "./data/c-mdvrptw/" + instance_name
     elif problem_type in ["mdvrp", "MDVRP"]:
-        dataset_full_path = "./data/C-mdvrp/" + dataset_name
+        instance_full_path = "./data/C-mdvrp/" + instance_name
     else:
-        raise ValueError(f"Unkown extension of dataset")
+        raise ValueError(f"Unkown extension of instance")
 
-    print(f"Chosen dataset: {dataset_full_path}")
+    print(f"Chosen instance: {instance_full_path}")
     
-    data_type = get_data_format(dataset_full_path)
+    data_type = get_data_format(instance_full_path)
     if data_type == 'cordeau':
-        valid_datasets = ["pr02",  "pr04",  "pr06",  "pr08",  "pr10",  "pr12",  "pr14",  "pr16",  "pr18",  "pr20", "pr01", "pr03", "pr05", "pr07",  "pr09",  "pr11",  "pr13",  "pr15",  "pr17",  "pr19"]
-        assert dataset_name in valid_datasets, f"Dataset {dataset_name} not found in ./data/c-mdvrptw"
+        valid_instances = ["pr02",  "pr04",  "pr06",  "pr08",  "pr10",  "pr12",  "pr14",  "pr16",  "pr18",  "pr20", "pr01", "pr03", "pr05", "pr07",  "pr09",  "pr11",  "pr13",  "pr15",  "pr17",  "pr19"]
+        assert instance_name in valid_instances, f"Instance {instance_name} not found in ./data/c-mdvrptw"
     elif data_type == 'vrplib':
-        # convert dataset to cordeau and then read
-        new_path = dataset_full_path + "_vrplib"
-        convert_vrplib_to_cordeau(input_path=dataset_full_path, output_path=new_path)
-        dataset_full_path = new_path
+        # convert instance to cordeau and then read
+        new_path = instance_full_path + "_vrplib"
+        convert_vrplib_to_cordeau(input_path=instance_full_path, output_path=new_path)
+        instance_full_path = new_path
         
-    data = read_cordeau_data(dataset_full_path, print_data=False)
-    print_dataset(data)
+    data = read_cordeau_data(instance_full_path, print_data=False)
+    print_instance(data)
 
     if args.num_iterations is not None:
         num_iterations = int(args.num_iterations)
@@ -107,7 +107,7 @@ def main():
     #alns.add_repair_operator(greedy_repair_no_tw)
     ##alns.add_repair_operator(wang_greedy_repair)
 
-    init = CVRPState(dataset=data)
+    init = CVRPState(instance=data)
     initial_solution = nearest_neighbor(state=init)
     print(f"Created initial solution")
     select = RouletteWheel(

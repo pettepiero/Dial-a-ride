@@ -23,8 +23,8 @@ class CVRPState:
         List of routes in the state.
     routes_cost: list
         List of costs of each route.
-    dataset: dict
-        Dictionary containing the dataset.
+    instance: dict
+        Dictionary containing the instance.
     unassigned: list
         List of unassigned customers.
     nodes_df: pd.DataFrame
@@ -42,19 +42,19 @@ class CVRPState:
     #norm_tw: np.ndarray
     #    Normalized time window compatibility matrix.
     n_vehicles: int
-        Number of vehicles in the dataset.
+        Number of vehicles in the instance.
     depots: dict
         Dictionary containing the depots information
     n_customers: int
-        Number of customers in the dataset.
+        Number of customers in the instance.
     vehicle_capacity: int
-        Capacity of the vehicles in the dataset.
+        Capacity of the vehicles in the instance.
     #current_time: int
     #    Current time of the simulation.
     """
     def __init__(
         self,
-        dataset: dict,
+        instance: dict,
         routes: list[Route] = None,
         routes_cost: list = None,
         given_unassigned: list = None,
@@ -63,7 +63,7 @@ class CVRPState:
         seed: int = 0,
     ):
 
-        self.dataset = dataset
+        self.instance = instance
         self.seed = seed
         if seed is not None:
             rng = np.random.default_rng(seed)
@@ -74,7 +74,7 @@ class CVRPState:
         if nodes_df is not None:
             self.nodes_df = nodes_df
         else:
-            self.nodes_df = dynamic_df_from_dict(dataset, seed=seed)
+            self.nodes_df = dynamic_df_from_dict(instance, seed=seed)
         # Initialize distances matrix
 
         full_coordinates = self.nodes_df[["x", "y"]].values
@@ -98,7 +98,7 @@ class CVRPState:
 
         assert len(self.routes) == len(self.routes_cost), "Routes and routes_cost must have the same length."
 
-        self.depots = create_depots_dict(dataset)
+        self.depots = create_depots_dict(instance)
         if given_unassigned is not None:
             self.unassigned = given_unassigned
         else:
@@ -111,17 +111,17 @@ class CVRPState:
 
         self.qmax = self.get_qmax()
         self.dmax = self.get_dmax()
-        self.n_vehicles = dataset["vehicles"]
+        self.n_vehicles = instance["vehicles"]
         self.n_customers = len(self.nodes_df) -1     # first line is not a customer
         self.n_planned_customers = self.n_served_customers() 
-        self.vehicle_capacity = dataset["capacity"]
+        self.vehicle_capacity = instance["capacity"]
 
     def __str__(self):
         return f"Routes: {[route.customers_list for route in self.routes]}, \nUnassigned: {self.unassigned}"
 
     def copy(self):
         return CVRPState(
-            dataset             = self.dataset.copy(),
+            instance             = self.instance.copy(),
             routes              = [route.copy() for route in self.routes],  # Deep copy each Route
             routes_cost         = self.routes_cost.copy(),
             given_unassigned    = self.unassigned.copy(),
@@ -196,7 +196,7 @@ class CVRPState:
         """
         Get the maximum distance between any two customers.
         """
-        # return np.max(self.dataset["edge_weight"])
+        # return np.max(self.instance["edge_weight"])
         return np.max(self.distances)
 
     def get_qmax(self):

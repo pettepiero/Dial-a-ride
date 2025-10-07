@@ -119,7 +119,7 @@ def nearest_neighbor(state: CVRPState, cordeau:bool = True) -> CVRPState:
     
     # Create the solution object of type CVRPState
     solution = CVRPState(
-            dataset             = state.dataset,
+            instance            = state.instance,
             routes              = routes, 
             nodes_df            = state.nodes_df, 
             given_unassigned    = list(unvisited)
@@ -211,7 +211,7 @@ def nearest_neighbor_tw(state: CVRPTWState, cordeau:bool = True, initial_time_sl
     
     # Create the solution object of type CVRPTWState
     solution = CVRPTWState(
-            dataset             = state.dataset,
+            instance            = state.instance,
             routes              = routes, 
             nodes_df            = state.nodes_df, 
             given_unassigned    = list(unvisited)

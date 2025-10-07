@@ -10,15 +10,15 @@ def print_results_dict(results_dict: dict) -> None:
     print(tabulate.tabulate(results_dict, headers="keys", tablefmt="fancy_grid"))
 
 
-def print_dataset(dataset: dict) -> None:
+def print_instance(instance: dict) -> None:
     """
-    Prints information about the cvrptw dataset
+    Prints information about the cvrptw instance 
     """
     print("\n")
-    print(f"Dataset name: {dataset['name']}")
-    print(f"Number of customers: {dataset['dimension']}")
-    print(f"Number of vehicles: {dataset['vehicles']}")
-    print(f"Number of depots: {dataset['n_depots']}")
+    print(f"Dataset name: {instance['name']}")
+    print(f"Number of customers: {instance['dimension']}")
+    print(f"Number of vehicles: {instance['vehicles']}")
+    print(f"Number of depots: {instance['n_depots']}")
     print("\n")
 
 def parse_options():
@@ -45,7 +45,7 @@ def parse_options():
         help="Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL).",
     )
     parser.add_argument(
-        "--dataset", type=str, default="pr12", help="Dataset name (e.g., pr01 to pr20)."
+        "--instance", type=str, default="pr12", help="Instance name (e.g., pr01 to pr20)."
     )
    # parser.add_argument(
    #     "--degree_of_destruction",
