@@ -72,24 +72,16 @@ def remove_empty_routes(state: CVRPState) -> CVRPState:
     CVRPState
         The solution after removing empty routes.
     """
-    for idx, route in enumerate(state.routes):
-        if len(route) == 2:
-            logger.debug(f"Route {idx} is empty and will be removed.")
-            del state.routes[idx]
-            state.routes_cost = np.delete(state.routes_cost, idx)
+    new_routes = []
+    new_costs = []
+    for route, cost in zip(state.routes, state.routes_cost):
+        if len(route) > 2:
+            new_routes.append(route)
+            new_costs.append(cost)
 
-    # routes_idx_to_remove = [
-    #     idx for idx, route in enumerate(state.routes) if len(route) == 2
-    # ]
-    # state.routes = [
-    #     route
-    #     for idx, route in enumerate(state.routes)
-    #     if idx not in routes_idx_to_remove
-    # ]
+    state.routes = new_routes
+    state.routes_cost = new_costs
 
-    # state.routes_cost = [
-    #     state.route_cost_calculator(idx) for idx in range(len(state.routes))
-    # ]
     return state
 
 
@@ -396,7 +388,7 @@ def worst_removal(state: CVRPTWState, rng: np.random.Generator) -> CVRPTWState:
 
     #destroyed.update_unassigned_list()
     destroyed.update_attributes()
-    return destroyed
+    return remove_empty_routes(destroyed)
 
 
 def exchange_reducing_removal(
