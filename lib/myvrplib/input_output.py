@@ -29,6 +29,10 @@ def parse_options():
         description="Run the ALNS algorithm for the CVRPTW problem."
     )
 
+    parser.add_argument(
+        "--mode", type=str, default="single_instance", choices=['single_instance', 'batch'],  help="Mode of operation. Options are 'single_instance, 'batch'"
+    )
+
     parser.add_argument("--config", type=str, help="Configuration file in JSON format.")
     parser.add_argument("--problem_type", type=str, choices=["mdvrp", "MDVRP", "mdvrptw", "MDVRPTW"], help="Problem type", default=None)
 
@@ -46,6 +50,9 @@ def parse_options():
     )
     parser.add_argument(
         "--instance", type=str, default="pr12", help="Instance name (e.g., pr01 to pr20)."
+    )
+    parser.add_argument(
+        "--dir", type=str, default=None, help="Directory containing instances for batch mode."
     )
    # parser.add_argument(
    #     "--degree_of_destruction",
@@ -71,17 +78,30 @@ def parse_options():
    #     default=1,
    #     help="Acceptance criterion (1 means RecordToRecordTravel).",
    # )
-   # parser.add_argument(
-   #     "--stop_criterion",
-   #     type=int,
-   #     default=1,
-   #     help="Stop criterion (1 means MaxIterations).",
-   # )
     parser.add_argument(
-        "--num_iterations",
+        "--stop_criterion", "--stop",
+        type=str,
+        default='iters',
+        choices=['iters', 'runtime'],
+        help="Stop criterion. Options are 'iters', 'runtime'.",
+    )
+    parser.add_argument(
+        "--num_iters",
         type=int,
-        default=None,
-        help="Number of iterations for stopping (default: NUM_ITERATIONS variable).",
+        default=100,
+        help="Number of iterations for stopping criterion 'iters'. Default: 100 iterations",
+    )
+    parser.add_argument(
+        "--RRT_num_iters",
+        type=int,
+        default=100,
+        help="Number of iterations for acceptance criterion RecordToRecordTravel. Default: 100 iterations",
+    )
+    parser.add_argument(
+        "--max_time",
+        type=int,
+        default=30,
+        help="Maximum run time per instance for stopping criterion 'runtime'. Default: 30 seconds",
     )
    # parser.add_argument(
    #     "--operator_selection_schemes",
