@@ -3,9 +3,44 @@ import numpy.random as rnd
 import copy
 import pandas as pd
 import os
+from lib.myvrplib.data_format_conversions import convert_vrplib_to_cordeau
 
 END_OF_DAY = 1000
 SEED = 1234
+
+def get_instance_full_path(instance_name: str, problem_type: str) -> str:
+    if problem_type is None:
+        # determine from file name or raise error
+        ext = os.path.splitext(instance_name)[-1]
+        if ext == '.mdvrp' or ext == '.cmdvrp':
+            problem_type = "MDVRP"
+        elif ext == '.mdvrptw' or ext == '.cmdvrptw':
+            problem_type = "MDVRPTW"
+        else:
+            raise ValueError(f"Unkown extension of instance, please provide problem_type of instance with explicit extension in order to determine problem type.")
+    else:
+        problem_type = problem_type
+    #if valid choice, create instance_full_path variable
+    if problem_type in ["mdvrptw", "MDVRPTW"]:
+        raise ValueError(f"This script is meant to run MDVRP instances, not MDVRPTW")
+        instance_full_path = "./data/c-mdvrptw/" + instance_name
+    elif problem_type in ["mdvrp", "MDVRP"]:
+        instance_full_path = "./data/C-mdvrp/" + instance_name
+    else:
+        raise ValueError(f"Unkown extension of instance")
+
+    data_type = get_data_format(instance_full_path)
+    if data_type == 'cordeau':
+        valid_instances = ["pr02",  "pr04",  "pr06",  "pr08",  "pr10",  "pr12",  "pr14",  "pr16",  "pr18",  "pr20", "pr01", "pr03", "pr05", "pr07",  "pr09",  "pr11",  "pr13",  "pr15",  "pr17",  "pr19"]
+        assert instance_name in valid_instances, f"Instance {instance_name} not found in ./data/c-mdvrptw"
+    elif data_type == 'vrplib':
+        # convert instance to cordeau and then read
+        new_path = instance_full_path + "_vrplib"
+        convert_vrplib_to_cordeau(input_path=instance_full_path, output_path=new_path)
+        instance_full_path = new_path
+
+    return instance_full_path
+
 
 def get_data_format(file: str) -> str:
     """

@@ -2,3 +2,4 @@ outputs/
 **/__pycache__/
 docs/build/
 docs/_build/
+data/cmdvrp_subdataset3/

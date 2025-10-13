@@ -237,7 +237,7 @@ def convert_vrplib_to_cordeau(input_path: str, output_path: str | None = None) -
       - DEPOT_SECTION lists depot indices (ending with -1).
       - DEMAND_SECTION provides integer demands; depots have demand 0.
       - CAPACITY is a single scalar (uniform Q for all depots).
-      - VEHICLES present (integer).
+      - VEHICLES present (integer or 'INF').
       - NODE_COORD_SECTION present with 2D coordinates.
       - VEHICLES_DEPOT_SECTION is ignored here (Cordeau does not store per-depot counts).
 
@@ -272,6 +272,10 @@ def convert_vrplib_to_cordeau(input_path: str, output_path: str | None = None) -
         if idx is None:
             raise CordeauFormatError(f"Missing header line starting with '{prefix}'.")
         try:
+            if prefix == 'VEHICLES':
+                #accept 'INF' too and set equal to 0 
+                return 0 
+
             return cast(raw[idx].split(":")[1].strip())
         except Exception as e:
             raise CordeauFormatError(f"Malformed header: '{raw[idx]}'") from e
@@ -295,6 +299,8 @@ def convert_vrplib_to_cordeau(input_path: str, output_path: str | None = None) -
 
     dimension = int(read_scalar_after("DIMENSION"))
     vehicles = int(read_scalar_after("VEHICLES"))
+    if vehicles == 0: # meaning 'INF' case
+        vehicles = dimension
     capacity = int(read_scalar_after("CAPACITY"))
     # EDGE_WEIGHT_TYPE is ignored; coordinates are taken as-is.
 
