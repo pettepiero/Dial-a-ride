@@ -98,10 +98,6 @@ def regret3_insertion(state: CVRPState, rng: np.random.Generator) -> CVRPState:
     return new_state
 
 
-
-
-    
-
 #def greedy_repair(state: CVRPState, rng: np.random, tw: bool = True) -> CVRPState:
 #    if tw:
 #        return greedy_repair_tw(state=state, rng=rng)
@@ -109,7 +105,7 @@ def regret3_insertion(state: CVRPState, rng: np.random.Generator) -> CVRPState:
 #        return greedy_repair_no_tw(state=state, rng=rng)
 
 
-def greedy_repair_no_tw(state: CVRPState, rng: np.random) -> CVRPState:
+def greedy_repair_no_tw(state: CVRPState, rng: np.random, random_noise_mu: float = 0) -> CVRPState:
     """
     Inserts the unassigned customers in the best route. If there are no
     feasible insertions, then a new route is created. Only checks capacity constraints.
@@ -118,6 +114,8 @@ def greedy_repair_no_tw(state: CVRPState, rng: np.random) -> CVRPState:
                 The current solution state.
             rng: np.random
                 The random number generator.
+            random_noise_mu: float
+                Random noise parameter used by GIN insertion heuristic
         Returns:
             CVRPState
                 The repaired solution state.
@@ -127,7 +125,7 @@ def greedy_repair_no_tw(state: CVRPState, rng: np.random) -> CVRPState:
 
     while len(new_state.unassigned) != 0:
         customer = new_state.unassigned.pop()
-        route_idx, idx = best_insert(customer, new_state)
+        route_idx, idx = best_insert(customer, new_state, random_noise_mu)
 
         if route_idx is not None:
             new_state.routes[route_idx].insert(idx, customer)
@@ -235,7 +233,7 @@ def greedy_repair_tw(state: CVRPTWState, rng: np.random) -> CVRPTWState:
     return new_state
 
 
-def best_insert(customer: int, state: CVRPState) -> tuple:
+def best_insert(customer: int, state: CVRPState, random_noise_mu: float = 0) -> tuple:
     """
     Finds the best feasible route and insertion idx for the customer.
     Return (None, None) if no feasible route insertions are found.
@@ -245,6 +243,9 @@ def best_insert(customer: int, state: CVRPState) -> tuple:
                 The customer to be inserted.
             state: CVRPState
                 The current solution state.
+            random_noise_mu: float
+                Random noise parameter used by GIN insertion heuristic. Default means
+                no noise.
         Returns:
             tuple
                 The best route and insertion indices for the customer.
@@ -254,7 +255,7 @@ def best_insert(customer: int, state: CVRPState) -> tuple:
     for route_number, route in enumerate(state.routes):
         for idx in range(1, len(route)-1):
             if can_insert(customer, route_number, idx, state):
-                cost = insert_cost(customer, route.customers_list, idx, state)
+                cost = insert_cost(customer, route.customers_list, idx, state, random_noise_mu)
 
                 if best_cost is None or cost < best_cost:
                     best_cost, best_route_idx, best_idx = cost, route_number, idx
@@ -379,7 +380,7 @@ def can_insert_tw(
         return route_time_window_check(state, route, idx)
     return False
 
-def insert_cost(customer: int, route: list, idx: int, state: CVRPState) -> float:
+def insert_cost(customer: int, route: list, idx: int, state: CVRPState, mu: float = 0, seed: int = None) -> float:
     """
     Computes the insertion cost for inserting customer in route at idx.
 
@@ -393,7 +394,11 @@ def insert_cost(customer: int, route: list, idx: int, state: CVRPState) -> float
         The insertion index.
     state: CVRPState
         The current solution state.
-
+    mu: float
+        Random noise parameter. Default = 0 means no noise.
+        Used by GIN insertion heuristic.
+    seed: seed 
+        Seed for random number generator used for random noise
     Returns
     -------
     float
@@ -402,6 +407,46 @@ def insert_cost(customer: int, route: list, idx: int, state: CVRPState) -> float
     dist = state.distances
     pred = 0 if idx == 0 else route[idx - 1]
     succ = 0 if idx == len(route) else route[idx]
+   
+    if mu is None:
+        cost = dist[pred][customer] + dist[customer][succ] - dist[pred][succ] 
+    else:
+        if seed is not None:
+            rng = np.random.default_rng(seed)
+        else:
+            rng = np.random.default_rng()
+        epsilon = rng.random() 
+        noise = mu*state.dmax*epsilon
+        # Increase in cost of adding customer, minus cost of removing old edge
+        cost = dist[pred][customer] + dist[customer][succ] - dist[pred][succ] + noise
+    return  cost
 
-    # Increase in cost of adding customer, minus cost of removing old edge
-    return dist[pred][customer] + dist[customer][succ] - dist[pred][succ]
+
+def GIN_repair_no_tw(state: CVRPState, rng: np.random.Generator, mu: float = 0.1) -> CVRPState:
+    """
+    Greedy Insertion with Noise function proposed by [AlSh17].
+    Inserts the unassigned customers in the best route. If there are no
+    feasible insertions, then a new route is created. The criterion to choose the best
+    route and position is corrupted with some random noise. When evaluating the cost of
+    an insertion, a noise term is summed to the cost. The noise is given by d*mu*epsilon, 
+    where:
+    - d is the maximum distance between nodes
+    - epsilon is a random number in [0, 1]
+    - mu is a parameter with default value 0.1
+    The insertion with the best corrupted cost is performed. 
+
+    Parameters
+    ----------
+    state: CVRPTWState
+        The current solution state.
+    rng: np.random.Generator
+        The random number generator.
+    mu: float
+        Coefficient of random term. Default value: 0.1
+
+    Returns
+    -------
+    CVRPTWState
+        The repaired solution state.
+    """
+    return greedy_repair_no_tw(state=state, rng=rng, random_noise_mu=mu)

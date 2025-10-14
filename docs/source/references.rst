@@ -11,6 +11,7 @@ References
 
 .. [HoTi20] `Hottung A.; Tierney K.; Neural Large Neighborhood Search for the Capacitated Vehicle Routing Problem <https://doi.org/10.48550/arXiv.1911.09539>`_
 
+.. [AlSh17] `Alinaghian M.; Shokouhi N.; Multi-depot multi-compartment vehicle routing problem, solved by a hybrid adaptive large neighborhood search. <https://doi.org/10.1016/j.omega.2017.05.002>
 
 .. toctree::
    :maxdepth: 2

@@ -73,6 +73,7 @@ def main():
     repair_ops = [
             greedy_repair_no_tw,
             regret3_insertion,
+            GIN_repair_no_tw,
             ]
     destroy_ops = [
             random_removal, 
