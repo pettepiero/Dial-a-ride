@@ -139,9 +139,9 @@ def greedy_repair_no_tw(state: CVRPState, rng: np.random, random_noise_mu: float
             new_state.routes.append(
                     Route(
                         [
-                            state.depots["vehicle_to_depot"],
+                            state.depots["vehicle_to_depot"][vehicle_number],
                             customer,
-                            state.depots["vehicle_to_depot"],
+                            state.depots["vehicle_to_depot"][vehicle_number],
                         ]
                     )
             )

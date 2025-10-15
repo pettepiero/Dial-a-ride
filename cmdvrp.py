@@ -1,5 +1,6 @@
 import numpy.random as rnd
 import numpy as np
+import datetime
 import os
 from alns import ALNS
 from alns.accept import RecordToRecordTravel
@@ -17,22 +18,45 @@ from lib.output.analyze_solution import analyze_solution
 from lib.myvrplib.input_output import print_results_dict, parse_options, print_instance
 from lib.output.video import generate_video
 from lib.myvrplib.data_format_conversions import convert_vrplib_to_cordeau
-
-# logging setup
 import logging
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=LOGGING_LEVEL)
+import csv
+
 degree_of_destruction = 0.05
 
 def main():
+    # logging setup
+    run_id = np.random.randint(10000, 99999)
+    current_path = os.getcwd()
+    log_dir = os.path.join(current_path, "logs")
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+    log_filename = os.path.join(log_dir, f"log_{run_id}.txt")
+    logging.basicConfig(filename=log_filename, level=logging.DEBUG, force=True)
+    print(f"Running cmdvrp.py with run_id {run_id}")
+    print(f"\nLog of this execution is being written to {log_filename}")
+    now = datetime.datetime.now()
+    logging.debug(f"Log of compare_models_single_mode.py run on {now.day}/{now.month}/{now.year} at {now.hour}:{now.minute}:{now.second}")
+    # results setup
+    results_dir = os.path.join(current_path, "results")
+    if not os.path.exists(results_dir):
+        os.makedirs(results_dir)
+    results_filename = os.path.join(results_dir, f"results_{run_id}.csv")
+    print(f"Results of this execution are being written to {results_filename}\n")
+
     args = parse_options()
+
+    logging.debug(f"Parsed args:")
+    for el in vars(args):
+        logging.debug(f"{el}")
     print(f"Arguments: {args}")
     
     if args.seed is not None:
         print(f"Initializing with explicit seed: {args.seed}")
+        logging.debug(f"Initializing with explicit seed: {args.seed}")
         alns = ALNS(rnd.default_rng(args.seed))
     else:
         print(f"Initializing ALNS without explicit seed")
+        logging.debug(f"Initializing ALNS without explicit seed")
         alns = ALNS(rnd.default_rng())
 
     instances_to_solve = []
@@ -50,7 +74,7 @@ def main():
         instances_names = [os.path.join(args.dir, inst) for inst in instances_names if inst.endswith('.mdvrp')]
         assert len(instances_names) > 0, f"Did not find any instances in provided dir {args.dir} that end with '.mdvrp'"
 
-        print(f"Found {len(instances_names)} instances in {args.dir}")
+        logging.debug(f"Found {len(instances_names)} instances in {args.dir}")
 
         for instance_full_path in instances_names:
         #    instance_full_path = get_instance_full_path(instance_name=inst, problem_type=args.problem_type)
@@ -62,13 +86,13 @@ def main():
             data = read_cordeau_data(instance_full_path, print_data=False)
             instances_to_solve.append(data)
 
-    stop_c = args.stop_criterion
-    if stop_c == 'iters':
-        stop = MaxIterations(args.num_iters)
-    elif stop_c == 'runtime':
-        stop = MaxRuntime(args.max_time)
-    else:
-        raise ValueError(f"Unknown stopping criterion: {stop_c}")
+    #stop_c = args.stop_criterion
+    #if stop_c == 'iters':
+    #    stop = MaxIterations(args.num_iters)
+    #elif stop_c == 'runtime':
+    #    stop = MaxRuntime(args.max_time)
+    #else:
+    #    raise ValueError(f"Unknown stopping criterion: {stop_c}")
 
     repair_ops = [
             greedy_repair_no_tw,
@@ -90,7 +114,8 @@ def main():
     initial_sol_costs = []
     final_costs = []
 
-    for data in tqdm(instances_to_solve):
+    for i, data in enumerate(tqdm(instances_to_solve)):
+        logging.debug(f"\nDoing instance {i}: {instances_names[i]}")
         init = CVRPState(instance=data)
         initial_solution = nearest_neighbor(state=init)
         #print(f"Created initial solution")
@@ -104,6 +129,14 @@ def main():
         accept = RecordToRecordTravel.autofit(
             initial_solution.objective(), 0.02, 0, args.RRT_num_iters 
         )
+        stop_c = args.stop_criterion
+        if stop_c == 'iters':
+            stop = MaxIterations(args.num_iters)
+        elif stop_c == 'runtime':
+            stop = MaxRuntime(args.max_time)
+        else:
+            raise ValueError(f"Unknown stopping criterion: {stop_c}")
+
 
         initial_sol_costs.append(initial_solution.objective())
 
@@ -114,6 +147,11 @@ def main():
         solution = result.best_state
         #objective = round(solution.objective(), 2)
         final_costs.append(solution.objective())
+        initial_cost = initial_solution.objective()
+        final_cost = solution.objective()
+        diff = initial_cost - final_cost
+        logging.debug(f"Instance {i}/{len(instances_to_solve)}: initial cost: {initial_cost} | final_cost: {final_cost} | improved by: {diff}")
+
         #print(f"Best heuristic objective is {objective}.")
 
         #print(f"\nIn the INITIAL SOLUTION there were {len(initial_solution.routes)} routes")
@@ -155,9 +193,17 @@ def main():
 
         #print_results_dict(results_dict)
 
+    with open(results_filename, 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(["instance_idx", "initial_cost", "final_cost", "diff"])
+        for i, (initial_cost, final_cost) in enumerate(zip(initial_sol_costs, final_costs)):
+            writer.writerow([i, round(initial_cost, 3), round(final_cost, 3), round(initial_cost - final_cost, 3)])
+
     #if args.video:
     #    generate_video(image_base_folder="./outputs/plots", default_output_folder="./outputs/videos", desidered_fps=12)
-    print(f"Finished.")
-    print(f"Mean cost of batch: {round(np.array(final_costs).mean(), 3)}")
+    logging.debug(f"Finished.")
+    logging.debug(f"Mean cost of batch: {round(np.array(final_costs).mean(), 3)}")
+    logging.debug(f"Mean cost of initial solutions of batch: {round(np.array(initial_sol_costs).mean(), 3)}")
+    print("Finished")
 if __name__ == "__main__":
     main()

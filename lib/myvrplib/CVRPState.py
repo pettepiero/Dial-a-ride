@@ -138,7 +138,6 @@ class CVRPState:
         cost = 0
         for idx, customer in enumerate(route[:-1]):
             next_customer = route[idx + 1]
-            logger.debug(f"Route: {route}")
             cost += self.distances[customer][next_customer]
 
         return round(cost, 2)
