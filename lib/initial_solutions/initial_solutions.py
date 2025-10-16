@@ -79,8 +79,7 @@ def nearest_neighbor(state: CVRPState, cordeau:bool = True) -> CVRPState:
     routes: list[Route] = []
 
     start_idx = 1 if cordeau else 0
-    unvisited = set(range(start_idx, len(state.nodes_df["demand"])))
-
+    unvisited = state.nodes_df.loc[state.nodes_df['demand'].fillna(0) > 0, 'id'].astype(int).tolist()
     vehicle = 0
 
     while vehicle < state.n_vehicles:
@@ -91,26 +90,28 @@ def nearest_neighbor(state: CVRPState, cordeau:bool = True) -> CVRPState:
             # Add the nearest compatible unvisited customer to the route till max capacity
             current = route[-1]
             nearest = [
-                nb for nb in unvisited
+                (nb, state.distances[current, nb].item()) for nb in unvisited
             ]  # Keep only unvisited customers
-            nearest.sort()
-            nearest = int(nearest[0])  # Nearest unvisited reachable customer
+            nearest.sort(key=lambda a: a[1])
+            nearest_cust, _ = nearest[0]  # Nearest unvisited reachable customer
             # Check vehicle capacity constraint
             nearest_demand = state.nodes_df.loc[
-                nearest, "demand"
+                nearest_cust, "demand"
             ].item()
 
             if route_demands + nearest_demand > state.vehicle_capacity:
                 break
 
-            route.append(nearest)
-            unvisited.remove(nearest)
+            route.append(nearest_cust)
+            unvisited.remove(nearest_cust)
             route_demands += nearest_demand
-
+        
         route.append(route[0])  # Return to the depot
         route = Route(route, vehicle)
         routes.append(route)
         vehicle += 1
+        if not unvisited:
+            break
 
     # Assign routes to customers in nodes_df
     for route_num, route in enumerate(routes):
