@@ -61,7 +61,12 @@ def main():
 
     instances_to_solve = []
     if args.mode == 'single_instance':
-        instance_full_path = get_instance_full_path(instance_name=args.instance, problem_type=args.problem_type)
+        assert (args.instance_path is not None) or (args.instance_code is not None), f"Selected single_instance mode but did not provide instance path nor code."
+        if args.instance_path is not None:
+            assert os.path.exists(args.instance_path), f"instance_path {args.instance_path} does not exist."
+            instance_full_path = args.instance_path
+        elif args.instance_code is not None:
+            instance_full_path = get_instance_full_path(instance_name=args.instance_code, problem_type=args.problem_type)
         data = read_cordeau_data(instance_full_path, print_data=False)
         print_instance(data)
         instances_to_solve.append(data)
@@ -113,9 +118,12 @@ def main():
         alns.add_repair_operator(op)
     initial_sol_costs = []
     final_costs = []
-
+    solution = None
+    initial_solution = None
+    init = None
     for i, data in enumerate(tqdm(instances_to_solve)):
-        logging.debug(f"\nDoing instance {i}: {instances_names[i]}")
+        if args.mode == 'batch':
+            logging.debug(f"\nDoing instance {i}: {instances_names[i]}")
         init = CVRPState(instance=data)
         initial_solution = nearest_neighbor(state=init)
         #print(f"Created initial solution")
@@ -145,53 +153,11 @@ def main():
         )    
 
         solution = result.best_state
-        #objective = round(solution.objective(), 2)
         final_costs.append(solution.objective())
         initial_cost = initial_solution.objective()
         final_cost = solution.objective()
         diff = initial_cost - final_cost
         logging.debug(f"Instance {i}/{len(instances_to_solve)}: initial cost: {initial_cost} | final_cost: {final_cost} | improved by: {diff}")
-
-        #print(f"Best heuristic objective is {objective}.")
-
-        #print(f"\nIn the INITIAL SOLUTION there were {len(initial_solution.routes)} routes")
-        #served_customers = 0
-        #for route in initial_solution.routes:
-        #    customers = [
-        #        cust
-        #        for cust in route.customers_list
-        #        if cust not in init.depots["depots_indices"]
-        #    ]
-        #    served_customers += len(customers)
-        #    #print(route.customers_list)
-
-        ##print(f"Total number of served customers: {served_customers}")
-        #data_df = initial_solution.nodes_df
-        #initial_solution_stats = {"total_served": served_customers}
-
-        ##print(f"\nIn the HEURISTIC SOLUTION there are {len(solution.routes)} routes")
-        #served_customers = 0
-        #for route in solution.routes:
-        #    customers = [
-        #        cust
-        #        for cust in route.customers_list
-        #        if cust not in solution.depots["depots_indices"]
-        #    ]
-        #    served_customers += len(customers)
-        #    print(route.customers_list)
-
-        #print(f"Total number of served customers: {served_customers}")
-        #solution_stats = {"total_served": served_customers}
-        # results dict
-        #results_dict = {
-        #    "Quantity": ["Total cost", "# Served customers"],
-        #    "Initial solution": [
-        #        initial_solution.objective(), initial_solution_stats["total_served"]],
-        #    "Heuristic solution": [
-        #        solution.objective(), solution_stats["total_served"]],
-        #}
-
-        #print_results_dict(results_dict)
 
     with open(results_filename, 'w', newline='') as f:
         writer = csv.writer(f)
@@ -199,11 +165,64 @@ def main():
         for i, (initial_cost, final_cost) in enumerate(zip(initial_sol_costs, final_costs)):
             writer.writerow([i, round(initial_cost, 3), round(final_cost, 3), round(initial_cost - final_cost, 3)])
 
+    if args.mode == 'single_instance' and args.show_solution:
+        show_solution(solution, initial_solution, init)
+
     #if args.video:
     #    generate_video(image_base_folder="./outputs/plots", default_output_folder="./outputs/videos", desidered_fps=12)
     logging.debug(f"Finished.")
     logging.debug(f"Mean cost of batch: {round(np.array(final_costs).mean(), 3)}")
     logging.debug(f"Mean cost of initial solutions of batch: {round(np.array(initial_sol_costs).mean(), 3)}")
     print("Finished")
+
+
+def show_solution(solution, initial_solution, init):
+    print(f"\nShowing solution:")
+    objective = round(solution.objective(), 2)
+    print(f"Best heuristic objective is {objective}.")
+    print(f"\nIn the INITIAL SOLUTION there were {len(initial_solution.routes)} routes")
+    served_customers = 0
+    for route in initial_solution.routes:
+        customers = [
+            cust
+            for cust in route.customers_list
+            if cust not in init.depots["depots_indices"]
+        ]
+        served_customers += len(customers)
+        #print(route.customers_list)
+
+    print(f"DEBUG: routes in initial_solution:")
+    for el in initial_solution.routes:
+        print(el.customers_list)
+
+    #print(f"Total number of served customers: {served_customers}")
+    data_df = initial_solution.nodes_df
+    initial_solution_stats = {"total_served": served_customers}
+
+    print(f"\nIn the HEURISTIC SOLUTION there are {len(solution.routes)} routes")
+    served_customers = 0
+    for route in solution.routes:
+        customers = [
+            cust
+            for cust in route.customers_list
+            if cust not in solution.depots["depots_indices"]
+        ]
+        served_customers += len(customers)
+        print(route.customers_list)
+
+    print(f"Total number of served customers: {served_customers}")
+    solution_stats = {"total_served": served_customers}
+    results_dict = {
+        "Quantity": ["Total cost", "# Served customers"],
+        "Initial solution": [
+            initial_solution.objective(), initial_solution_stats["total_served"]],
+        "Heuristic solution": [
+            solution.objective(), solution_stats["total_served"]],
+    }
+
+    print_results_dict(results_dict)
+
+
+
 if __name__ == "__main__":
     main()

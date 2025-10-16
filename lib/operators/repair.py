@@ -22,7 +22,9 @@ def lowest_delta_position(state: CVRPState, customer: int, route_idx: int) -> tu
 
     best_delta = float("inf")
     best_pos = 0
-    for pos in range(len(route) + 1):
+    #for pos in range(len(route) + 1):
+    # don't allow insertion at position 0 or len(route)+1 (i.e. replacing depots)
+    for pos in range(1, len(route)):
         route.insert(pos, customer)
         delta = state.route_cost_calculator(route_idx) - base_cost
         route.remove(customer)
@@ -44,7 +46,7 @@ def regret3_insertion(state: CVRPState, rng: np.random.Generator) -> CVRPState:
         best_first_route = np.full(U, -1, dtype=int)
         best_first_pos   = np.full(U, -1, dtype=int)
 
-        for ui, cust in enumerate(new_state.unassigned): # loop over unassigned
+        for ui, cust in enumerate(new_state.unassigned): # loop over requests
             deltas = np.full(R, np.inf, dtype=float) # for customer cust, prepare deltas  and pos list
             positions  = np.full(R, -1, dtype=int)
 
@@ -76,7 +78,7 @@ def regret3_insertion(state: CVRPState, rng: np.random.Generator) -> CVRPState:
             regrets[ui] = float(np.sum(top_delta[1:] - top_delta[:1]))
 
         if not np.isfinite(regrets).any():
-            print(f"DEBUG: regrets")
+            #print(f"DEBUG: regrets")
             raise RuntimeError("no feasible insertion for any remaining customer")
 
         max_regret = np.max(regrets)
@@ -92,7 +94,9 @@ def regret3_insertion(state: CVRPState, rng: np.random.Generator) -> CVRPState:
             raise RuntimeError(f"regret3_insertion: chosen customer {customer} has no feasible insertion.")
 
         new_state.routes[r_ins].insert(p_ins, customer)
-        new_state.unassigned.pop(pick_idx)
+        new_state.nodes_df.loc[customer, "route"] = r_ins 
+        #new_state.unassigned.pop(pick_idx)
+        del new_state.unassigned[pick_idx]
     new_state.update_attributes()
 
     return new_state
@@ -129,6 +133,7 @@ def greedy_repair_no_tw(state: CVRPState, rng: np.random, random_noise_mu: float
 
         if route_idx is not None:
             new_state.routes[route_idx].insert(idx, customer)
+            new_state.nodes_df.loc[customer, "route"] = route_idx
             if isinstance(state, CVRPTWState):
                 new_state.update_est_lst(route_idx)
                 new_state.calculate_planned_times(route_idx)
@@ -253,7 +258,7 @@ def best_insert(customer: int, state: CVRPState, random_noise_mu: float = 0) -> 
     best_cost, best_route_idx, best_idx = None, None, None
 
     for route_number, route in enumerate(state.routes):
-        for idx in range(1, len(route)-1):
+        for idx in range(1, len(route)):
             if can_insert(customer, route_number, idx, state):
                 cost = insert_cost(customer, route.customers_list, idx, state, random_noise_mu)
 
