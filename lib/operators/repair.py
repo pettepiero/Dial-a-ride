@@ -14,6 +14,7 @@ from copy import deepcopy
 
 logger = logging.getLogger(__name__)
 logger.setLevel(LOGGING_LEVEL)
+logger.setLevel(logging.DEBUG)
 
 
 def lowest_delta_position(state: CVRPState, customer: int, route_idx: int) -> tuple[float, int]:
@@ -37,6 +38,11 @@ def regret3_insertion(state: CVRPState, rng: np.random.Generator) -> CVRPState:
     Regret-k insertion with k=3, based on [WaSH24]
     """
     new_state = state.copy()
+    logger.debug("Starting regret3_insertion")
+    logger.debug(f"Routes =")
+    for idx, route in enumerate(new_state.routes):
+        logger.debug(f"Route {idx}: {route.customers_list}")
+    logger.debug(f"Unassigned customers: {new_state.unassigned}")
     while len(new_state.unassigned) > 0: #while there are customers to serve
         R = len(new_state.routes) # number of routes
         U = len(new_state.unassigned) # number of unassigned customers
@@ -95,18 +101,18 @@ def regret3_insertion(state: CVRPState, rng: np.random.Generator) -> CVRPState:
 
         new_state.routes[r_ins].insert(p_ins, customer)
         new_state.nodes_df.loc[customer, "route"] = r_ins 
-        #new_state.unassigned.pop(pick_idx)
+        logger.debug(f"Inserted customer {customer} in route {r_ins} at pos {p_ins}")
         del new_state.unassigned[pick_idx]
     new_state.update_attributes()
 
+    logger.debug("At the end of regret3_insertion:")
+    logger.debug(f"Routes =")
+    for idx, route in enumerate(new_state.routes):
+        logger.debug(f"Route {idx}: {route.customers_list}")
+    logger.debug(f"Unassigned customers: {new_state.unassigned}")
+    logger.debug("\n\n")
+
     return new_state
-
-
-#def greedy_repair(state: CVRPState, rng: np.random, tw: bool = True) -> CVRPState:
-#    if tw:
-#        return greedy_repair_tw(state=state, rng=rng)
-#    else:
-#        return greedy_repair_no_tw(state=state, rng=rng)
 
 
 def greedy_repair_no_tw(state: CVRPState, rng: np.random, random_noise_mu: float = 0) -> CVRPState:
@@ -125,6 +131,11 @@ def greedy_repair_no_tw(state: CVRPState, rng: np.random, random_noise_mu: float
                 The repaired solution state.
     """
     new_state = state.copy()
+    logger.debug("Starting greedy_repair_no_tw")
+    logger.debug(f"Routes =")
+    for idx, route in enumerate(new_state.routes):
+        logger.debug(f"Route {idx}: {route.customers_list}")
+    logger.debug(f"Unassigned customers: {new_state.unassigned}")
     rng.shuffle(new_state.unassigned)
 
     while len(new_state.unassigned) != 0:
@@ -134,6 +145,7 @@ def greedy_repair_no_tw(state: CVRPState, rng: np.random, random_noise_mu: float
         if route_idx is not None:
             new_state.routes[route_idx].insert(idx, customer)
             new_state.nodes_df.loc[customer, "route"] = route_idx
+            logger.debug(f"Inserted customer {customer} in route {route_idx} at pos {idx}")
             if isinstance(state, CVRPTWState):
                 new_state.update_est_lst(route_idx)
                 new_state.calculate_planned_times(route_idx)
@@ -152,14 +164,14 @@ def greedy_repair_no_tw(state: CVRPState, rng: np.random, random_noise_mu: float
             )
             # append to cost vector new cost
             new_state.routes_cost.append(new_state.route_cost_calculator(len(new_state.routes) - 1))
-        # debug
-    logger.debug("At the end of greedy repair:")
-    [
-        logger.debug(f"Route {idx}: {route.planned_windows}")
-        for idx, route in enumerate(new_state.routes)
-    ]
-    #new_state.update_unassigned_list()
     new_state.update_attributes()
+
+    logger.debug("At the end of greedy repair:")
+    logger.debug(f"Routes =")
+    for idx, route in enumerate(new_state.routes):
+        logger.debug(f"Route {idx}: {route.customers_list}")
+    logger.debug(f"Unassigned customers: {new_state.unassigned}")
+    logger.debug("\n\n")
 
     return new_state
 
@@ -184,10 +196,11 @@ def greedy_repair_tw(state: CVRPTWState, rng: np.random) -> CVRPTWState:
     """
     new_state = state.copy()
 
-    logger.debug(f"In greedy_repair_tw, before loop unassigned = {sorted(new_state.unassigned)}")
+    logger.debug("Starting greedy_repair_tw")
     logger.debug(f"Routes =")
     for idx, route in enumerate(new_state.routes):
         logger.debug(f"Route {idx}: {route.customers_list}")
+    logger.debug(f"Unassigned customers: {new_state.unassigned}")
     
     counter = 0
     n_unassigned = len(new_state.unassigned)
@@ -201,6 +214,7 @@ def greedy_repair_tw(state: CVRPTWState, rng: np.random) -> CVRPTWState:
         if route_idx is not None:
             new_state.routes[route_idx].insert(idx, customer)
             new_state.nodes_df.loc[customer, "route"] = route_idx
+            logger.debug(f"Inserted customer {customer} in route {route_idx} at pos {idx}")
             new_state.update_times_attributes_routes(route_idx)
             new_state.routes_cost[route_idx] = new_state.route_cost_calculator(route_idx)
             new_state.compute_route_demand(route_idx)
@@ -232,9 +246,15 @@ def greedy_repair_tw(state: CVRPTWState, rng: np.random) -> CVRPTWState:
 
         else:
             new_state.unassigned.insert(0, customer)
-
-    #new_state.update_unassigned_list()
     new_state.update_attributes()
+
+    logger.debug("At the end of greedy_repair_tw:")
+    logger.debug(f"Routes =")
+    for idx, route in enumerate(new_state.routes):
+        logger.debug(f"Route {idx}: {route.customers_list}")
+    logger.debug(f"Unassigned customers: {new_state.unassigned}")
+    logger.debug("\n\n")
+
     return new_state
 
 

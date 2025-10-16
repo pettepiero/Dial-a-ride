@@ -36,6 +36,7 @@ def main():
     print(f"\nLog of this execution is being written to {log_filename}")
     now = datetime.datetime.now()
     logging.debug(f"Log of compare_models_single_mode.py run on {now.day}/{now.month}/{now.year} at {now.hour}:{now.minute}:{now.second}")
+    logging.debug(f"Running cmdvrp.py with run_id {run_id}")
     # results setup
     results_dir = os.path.join(current_path, "results")
     if not os.path.exists(results_dir):

@@ -28,6 +28,12 @@ def random_removal(state: CVRPState, rng: np.random) -> CVRPState:
     """
     destroyed: CVRPState = state.copy()
 
+    logger.debug("Starting random_removal")
+    logger.debug(f"Routes =")
+    for idx, route in enumerate(destroyed.routes):
+        logger.debug(f"Route {idx}: {route.customers_list}")
+    logger.debug(f"Unassigned customers: {destroyed.unassigned}")
+
     # list of customers in solution
     solution_customers = state.served_customers()
     customers_to_remove = min(int(destroyed.n_customers * degree_of_destruction), len(solution_customers))
@@ -52,8 +58,15 @@ def random_removal(state: CVRPState, rng: np.random) -> CVRPState:
             logger.debug(
                 f"Error: customer {customer.item()} not found in any route but picked from served customers."
             )
-    #destroyed.update_unassigned_list()
     destroyed.update_attributes()
+
+    logger.debug("At the end of random_removal:")
+    logger.debug(f"Routes =")
+    for idx, route in enumerate(destroyed.routes):
+        logger.debug(f"Route {idx}: {route.customers_list}")
+    logger.debug(f"Unassigned customers: {destroyed.unassigned}")
+    logger.debug("\n\n")
+
     return remove_empty_routes(destroyed)
 
 
@@ -103,6 +116,13 @@ def random_route_removal(state: CVRPState, rng: np.random) -> CVRPState:
         The solution after applying the destroy operator.
     """
     destroyed: CVRPState = state.copy()
+
+    logger.debug("Starting random_route_removal")
+    logger.debug(f"Routes =")
+    for idx, route in enumerate(destroyed.routes):
+        logger.debug(f"Route {idx}: {route.customers_list}")
+    logger.debug(f"Unassigned customers: {destroyed.unassigned}")
+
     customers_to_remove = int(destroyed.n_customers * degree_of_destruction)
     for route_idx in rng.choice(
         a=range(len(destroyed.routes)),
@@ -113,8 +133,9 @@ def random_route_removal(state: CVRPState, rng: np.random) -> CVRPState:
         # for route in rng.choice(destroyed.routes, customers_to_remove, replace=True):
         if len(route.customers_list[1:-1]) != 0:
             customer = rng.choice(route.customers_list[1:-1], 1, replace=False)
-            destroyed.unassigned.append(customer.item())
             destroyed.routes[route_idx].remove(customer)
+            destroyed.unassigned.append(customer.item())
+            logger.debug(f"Customer {customer.item()} removed from route {route_idx}.")
             # Update df
             destroyed.nodes_df.loc[customer.item(), "route"] = None
             destroyed.nodes_df.loc[customer.item(), "done"] = False
@@ -123,9 +144,15 @@ def random_route_removal(state: CVRPState, rng: np.random) -> CVRPState:
                 destroyed.routes_cost[route_idx] = destroyed.route_cost_calculator(
                     route_idx
                 )
-
-    #destroyed.update_unassigned_list()
     destroyed.update_attributes()
+
+    logger.debug("At the end of random_route_removal:")
+    logger.debug(f"Routes =")
+    for idx, route in enumerate(destroyed.routes):
+        logger.debug(f"Route {idx}: {route.customers_list}")
+    logger.debug(f"Unassigned customers: {destroyed.unassigned}")
+    logger.debug("\n\n")
+
     return remove_empty_routes(destroyed)
 
 
@@ -188,8 +215,14 @@ def shaw_removal(state: CVRPTWState, rng) -> CVRPTWState:
     CVRPTWState
         The solution after applying the destroy operator.
     """
-
     destroyed: CVRPTWState = state.copy()
+
+    logger.debug("Starting shaw_removal")
+    logger.debug(f"Routes =")
+    for idx, route in enumerate(destroyed.routes):
+        logger.debug(f"Route {idx}: {route.customers_list}")
+    logger.debug(f"Unassigned customers: {destroyed.unassigned}")
+
     min_value = np.inf
     j_star = None
     route_star_idx = None
@@ -233,11 +266,12 @@ def shaw_removal(state: CVRPTWState, rng) -> CVRPTWState:
         )
     i_selection.append(j_star)
     destroyed.unassigned.append(j_star)
-    j_star = None
-    min_value = np.inf
-    route_star_idx = None
+     #j_star = None
+     #min_value = np.inf
+     #route_star_idx = None
 
     route_i.remove(first_customer)
+    logger.debug(f"Customer {customer.item()} removed from route {route_i_idx}.")
     # Update df
     destroyed.nodes_df.loc[first_customer.item(), "route"] = None
     destroyed.nodes_df.loc[first_customer.item(), "done"] = False
@@ -246,9 +280,15 @@ def shaw_removal(state: CVRPTWState, rng) -> CVRPTWState:
         destroyed.routes_cost[route_i_idx] = destroyed.route_cost_calculator(
             route_i_idx
         )
-
-    #destroyed.update_unassigned_list()
     destroyed.update_attributes()
+
+    logger.debug("At the end of shaw_removal:")
+    logger.debug(f"Routes =")
+    for idx, route in enumerate(destroyed.routes):
+        logger.debug(f"Route {idx}: {route.customers_list}")
+    logger.debug(f"Unassigned customers: {destroyed.unassigned}")
+    logger.debug("\n\n")
+
     return remove_empty_routes(destroyed)
 
 
@@ -273,9 +313,13 @@ def cost_reducing_removal(state: CVRPTWState, rng: np.random.Generator) -> CVRPT
     """
 
     # TODO: Implement the limit on the iterations for this operator
-
-    logger.debug(f"In cost reducing removal")
     destroyed = state.copy()
+
+    logger.debug("Starting cost_reducing_removal")
+    logger.debug(f"Routes =")
+    for idx, route in enumerate(destroyed.routes):
+        logger.debug(f"Route {idx}: {route.customers_list}")
+    logger.debug(f"Unassigned customers: {destroyed.unassigned}")
 
     iterations = 10
     for i in range(iterations):
@@ -339,9 +383,15 @@ def cost_reducing_removal(state: CVRPTWState, rng: np.random.Generator) -> CVRPT
                                 logger.debug(f"No customer found to remove.")
                         # else:
                         # print(f"Time window check failed.")
-
-    #destroyed.update_unassigned_list()
     destroyed.update_attributes()
+
+    logger.debug("At the end of cost_reducing_removal:")
+    logger.debug(f"Routes =")
+    for idx, route in enumerate(destroyed.routes):
+        logger.debug(f"Route {idx}: {route.customers_list}")
+    logger.debug(f"Unassigned customers: {destroyed.unassigned}")
+    logger.debug("\n\n")
+
     return remove_empty_routes(destroyed)
 
 
@@ -362,6 +412,13 @@ def worst_removal(state: CVRPTWState, rng: np.random.Generator) -> CVRPTWState:
         The solution after applying the destroy operator.
     """
     destroyed = state.copy()
+
+    logger.debug("Starting worst_removal")
+    logger.debug(f"Routes =")
+    for idx, route in enumerate(destroyed.routes):
+        logger.debug(f"Route {idx}: {route.customers_list}")
+    logger.debug(f"Unassigned customers: {destroyed.unassigned}")
+
     max_service_cost = 0
 
     for route_idx, route in enumerate(destroyed.routes):
@@ -385,9 +442,18 @@ def worst_removal(state: CVRPTWState, rng: np.random.Generator) -> CVRPTWState:
             worst_route
         )
     destroyed.unassigned.append(worst_customer)
+    logger.debug(f"Customer {worst_customer} removed from route {worst_route}.")
 
     #destroyed.update_unassigned_list()
     destroyed.update_attributes()
+
+    logger.debug("At the end of worst_removal:")
+    logger.debug(f"Routes =")
+    for idx, route in enumerate(destroyed.routes):
+        logger.debug(f"Route {idx}: {route.customers_list}")
+    logger.debug(f"Unassigned customers: {destroyed.unassigned}")
+    logger.debug("\n\n")
+
     return remove_empty_routes(destroyed)
 
 
@@ -410,8 +476,13 @@ def exchange_reducing_removal(
     CVRPTWState
         The solution after applying the destroy operator.
     """
-
     destroyed = state.copy()
+
+    logger.debug("Starting exchange_reducing_removal")
+    logger.debug(f"Routes =")
+    for idx, route in enumerate(destroyed.routes):
+        logger.debug(f"Route {idx}: {route.customers_list}")
+    logger.debug(f"Unassigned customers: {destroyed.unassigned}")
 
     iterations = 50
     twc_checks = 0
@@ -469,6 +540,7 @@ def exchange_reducing_removal(
                                 # swap v1 and v2
                                 route1.customers_list[idx1] = v2
                                 route2.customers_list[idx2] = v1
+                                logger.debug(f"Swapping customer {v1} from route {idx1} with customer {v2} from route {idx2}.")
                                 #destroyed.update_times_attributes_routes(
                                 #    first_route_index
                                 #)
@@ -478,6 +550,20 @@ def exchange_reducing_removal(
                                 #destroyed.update_unassigned_list()
                                 destroyed.update_attributes()
 
+                                logger.debug("At the end of exchange_reducing_removal:")
+                                logger.debug(f"Routes =")
+                                for idx, route in enumerate(destroyed.routes):
+                                    logger.debug(f"Route {idx}: {route.customers_list}")
+                                logger.debug(f"Unassigned customers: {destroyed.unassigned}")
+                                logger.debug("\n\n")
+
                                 return remove_empty_routes(destroyed)
+
+    logger.debug("At the end of exchange_reducing_removal:")
+    logger.debug(f"Routes =")
+    for idx, route in enumerate(destroyed.routes):
+        logger.debug(f"Route {idx}: {route.customers_list}")
+    logger.debug(f"Unassigned customers: {destroyed.unassigned}")
+    logger.debug("\n\n")
 
     return remove_empty_routes(destroyed)
