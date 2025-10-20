@@ -225,8 +225,6 @@ def convert_cordeau_to_vrplib(input_path: str, output_path: str | None = None) -
         f.write(text)
     return output_path
 
-
-
 def convert_vrplib_to_cordeau(input_path: str, output_path: str | None = None) -> str:
     """
     Convert a VRPLIB instance (CVRP or MDVRP) into a Cordeau-style text file
@@ -237,7 +235,6 @@ def convert_vrplib_to_cordeau(input_path: str, output_path: str | None = None) -
       - DEPOT_SECTION lists depot indices (ending with -1).
       - DEMAND_SECTION provides integer demands; depots have demand 0.
       - CAPACITY is a single scalar (uniform Q for all depots).
-      - VEHICLES present (integer or 'INF').
       - NODE_COORD_SECTION present with 2D coordinates.
       - VEHICLES_DEPOT_SECTION is ignored here (Cordeau does not store per-depot counts).
 
@@ -298,8 +295,17 @@ def convert_vrplib_to_cordeau(input_path: str, output_path: str | None = None) -
         raise NotImplementedError(f"TYPE '{type_token}' not supported (only CVRP/MDVRP).")
 
     dimension = int(read_scalar_after("DIMENSION"))
-    vehicles = int(read_scalar_after("VEHICLES"))
-    if vehicles == 0: # meaning 'INF' case
+    
+    # first check if VEHICLES line exists
+    has_v_line = False
+    for line in raw:
+        if line.strip().upper().startswith("VEHICLES"):
+            has_v_line = True
+    has_v_line = False
+    vehicles = 0
+    if has_v_line:
+        vehicles = int(read_scalar_after("VEHICLES"))
+    if (vehicles == 0) or not has_v_line: # meaning 'INF' case
         vehicles = dimension
     capacity = int(read_scalar_after("CAPACITY"))
     # EDGE_WEIGHT_TYPE is ignored; coordinates are taken as-is.

@@ -37,14 +37,17 @@ def main():
     now = datetime.datetime.now()
     logging.debug(f"Log of compare_models_single_mode.py run on {now.day}/{now.month}/{now.year} at {now.hour}:{now.minute}:{now.second}")
     logging.debug(f"Running cmdvrp.py with run_id {run_id}")
+    args = parse_options()
+
     # results setup
     results_dir = os.path.join(current_path, "results")
-    if not os.path.exists(results_dir):
-        os.makedirs(results_dir)
-    results_filename = os.path.join(results_dir, f"results_{run_id}.csv")
+    if args.output_path is None:
+        if not os.path.exists(results_dir):
+            os.makedirs(results_dir)
+        results_filename = os.path.join(results_dir, f"results_{run_id}.csv")
+    else:
+        results_filename = args.output_path
     print(f"Results of this execution are being written to {results_filename}\n")
-
-    args = parse_options()
 
     logging.debug(f"Parsed args:")
     for el in vars(args):
@@ -86,19 +89,11 @@ def main():
         #    instance_full_path = get_instance_full_path(instance_name=inst, problem_type=args.problem_type)
             problem_type = get_data_format(instance_full_path)
             if problem_type == 'vrplib':
-                new_path = instance_full_path + "_vrplib"
+                new_path = instance_full_path + "_cordeau"
                 convert_vrplib_to_cordeau(input_path=instance_full_path, output_path=new_path)
                 instance_full_path = new_path
             data = read_cordeau_data(instance_full_path, print_data=False)
             instances_to_solve.append(data)
-
-    #stop_c = args.stop_criterion
-    #if stop_c == 'iters':
-    #    stop = MaxIterations(args.num_iters)
-    #elif stop_c == 'runtime':
-    #    stop = MaxRuntime(args.max_time)
-    #else:
-    #    raise ValueError(f"Unknown stopping criterion: {stop_c}")
 
     repair_ops = [
             greedy_repair_no_tw,
@@ -145,7 +140,6 @@ def main():
             stop = MaxRuntime(args.max_time)
         else:
             raise ValueError(f"Unknown stopping criterion: {stop_c}")
-
 
         initial_sol_costs.append(initial_solution.objective())
 
@@ -222,8 +216,6 @@ def show_solution(solution, initial_solution, init):
     }
 
     print_results_dict(results_dict)
-
-
 
 if __name__ == "__main__":
     main()

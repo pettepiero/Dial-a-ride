@@ -57,30 +57,6 @@ def parse_options():
     parser.add_argument(
         "--dir", type=str, default=None, help="Directory containing instances for batch mode."
     )
-   # parser.add_argument(
-   #     "--degree_of_destruction",
-   #     type=float,
-   #     default=0.05,
-   #     help="Degree of destruction (default: 0.05).",
-   # )
-   # parser.add_argument(
-   #     "--removal_operators",
-   #     type=int,
-   #     default=1,
-   #     help="Number of removal operators (1 means all implemented).",
-   # )
-   # parser.add_argument(
-   #     "--insertion_operators",
-   #     type=int,
-   #     default=1,
-   #     help="Number of insertion operators (1 means all implemented).",
-   # )
-   # parser.add_argument(
-   #     "--acceptance_criterion",
-   #     type=int,
-   #     default=1,
-   #     help="Acceptance criterion (1 means RecordToRecordTravel).",
-   # )
     parser.add_argument(
         "--stop_criterion", "--stop",
         type=str,
@@ -106,28 +82,21 @@ def parse_options():
         default=30,
         help="Maximum run time per instance for stopping criterion 'runtime'. Default: 30 seconds",
     )
-   # parser.add_argument(
-   #     "--operator_selection_schemes",
-   #     type=int,
-   #     default=1,
-   #     help="Operator selection schemes (1 means RouletteWheel).",
-   # )
-    
     parser.add_argument(
         '--show_solution', 
         action='store_true', 
         default=False, 
         help="If used, shows solution of single instance search"
     )
+    parser.add_argument(
+        '--output_path',
+        type=str,
+        default=None,
+        help="Output file path for batch search results"
+    )
     
     parser.add_argument('--video', action=argparse.BooleanOptionalAction, help='Generate video from images. Video is saved in outputs/videos, and images in outputs/images. \
                         Use --video to create video, --no-video otherwise.', default=False)
-    # parser.add_argument(
-    #     "--video",
-    #     type=bool,
-    #     default=False,
-    #     help="Generate video from images. Video is saved in outputs/videos, and images in outputs/images.",
-    # )
 
     # Parse initial command-line arguments
     args = parser.parse_args()
