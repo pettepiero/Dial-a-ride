@@ -249,5 +249,7 @@ class CVRPState:
     def update_attributes(self):
         self.update_unassigned_list()
         self.n_planned_customers = self.n_served_customers() 
+        for idx in range(len(self.routes)):
+            self.routes_cost[idx] = self.route_cost_calculator(idx)
 
 

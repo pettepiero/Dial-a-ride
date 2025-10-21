@@ -20,6 +20,7 @@ from lib.output.video import generate_video
 from lib.myvrplib.data_format_conversions import convert_vrplib_to_cordeau
 import logging
 import csv
+import pickle
 
 degree_of_destruction = 0.05
 
@@ -72,6 +73,7 @@ def main():
         elif args.instance_code is not None:
             instance_full_path = get_instance_full_path(instance_name=args.instance_code, problem_type=args.problem_type)
         data = read_cordeau_data(instance_full_path, print_data=False)
+
         print_instance(data)
         instances_to_solve.append(data)
 
@@ -153,6 +155,18 @@ def main():
         final_cost = solution.objective()
         diff = initial_cost - final_cost
         logging.debug(f"Instance {i}/{len(instances_to_solve)}: initial cost: {initial_cost} | final_cost: {final_cost} | improved by: {diff}")
+
+        if args.cost_debug:
+            #DEBUG save edge weigth and solution of last instance
+            logging.debug("Saving initial solution cost, final solution cost and distances to .temp folder")
+            if not os.path.exists('.temp'):
+                os.mkdir('.temp')
+            with open('.temp/edge_weight.pt', 'wb') as f:
+                pickle.dump(data['edge_weight'], f)
+            with open('.temp/solution.pt', 'wb') as f:
+                pickle.dump(solution, f)
+            with open('.temp/initial_solution.pt', 'wb') as f:
+                pickle.dump(initial_solution, f)
 
     with open(results_filename, 'w', newline='') as f:
         writer = csv.writer(f)

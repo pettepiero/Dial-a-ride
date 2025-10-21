@@ -94,6 +94,11 @@ def parse_options():
         default=None,
         help="Output file path for batch search results"
     )
+    parser.add_argument(
+            '--cost_debug',
+            action='store_true',
+            help="If True, saves initial solution, final solution and distances to .temp folder for debugging costs of solutions with 'verify.py'"
+            )
     
     parser.add_argument('--video', action=argparse.BooleanOptionalAction, help='Generate video from images. Video is saved in outputs/videos, and images in outputs/images. \
                         Use --video to create video, --no-video otherwise.', default=False)
