@@ -25,8 +25,8 @@ class CVRPTWState(CVRPState):
         List of routes in the state.
     routes_cost: list
         List of costs of each route.
-    dataset: dict
-        Dictionary containing the dataset.
+    instance: dict
+        Dictionary containing the instance.
     unassigned: list
         List of unassigned customers.
     nodes_df: pd.DataFrame
@@ -44,20 +44,20 @@ class CVRPTWState(CVRPState):
     norm_tw: np.ndarray
         Normalized time window compatibility matrix.
     n_vehicles: int
-        Number of vehicles in the dataset.
+        Number of vehicles in the instance.
     depots: dict
         Dictionary containing the depots information
     n_customers: int
-        Number of customers in the dataset.
+        Number of customers in the instance.
     vehicle_capacity: int
-        Capacity of the vehicles in the dataset.
+        Capacity of the vehicles in the instance.
     current_time: int
         Current time of the simulation.
     """
 
     def __init__(
         self,
-        dataset: dict,
+        instance: dict,
         routes: list[Route] = None,
         routes_cost: list = None,
         given_unassigned: list = None,
@@ -66,14 +66,14 @@ class CVRPTWState(CVRPState):
         current_time: int = 0,
         seed: int = 0,
     ):
-        super().__init__(dataset=dataset, routes=routes, routes_cost=routes_cost,
+        super().__init__(instance=instance, routes=routes, routes_cost=routes_cost,
                 given_unassigned=given_unassigned, distances=distances, nodes_df=nodes_df,
                 seed=seed)
 
         # Initialize time window compatibility matrix
         full_times = self.nodes_df[["start_time", "end_time"]].values
     
-        for depot in dataset["depots"]:
+        for depot in instance["depots"]:
             full_times = np.append(full_times, [[0, END_OF_DAY]], axis=0)
         full_times = full_times.tolist()
         self.twc = self.generate_twc_matrix(
@@ -88,7 +88,7 @@ class CVRPTWState(CVRPState):
 
     def copy(self):
         return CVRPTWState(
-            dataset             = self.dataset.copy(),
+            instance             = self.instance.copy(),
             routes              = [route.copy() for route in self.routes],  # Deep copy each Route
             routes_cost         = self.routes_cost.copy(),
             given_unassigned    = self.unassigned.copy(),

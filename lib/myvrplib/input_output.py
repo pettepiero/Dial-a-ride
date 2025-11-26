@@ -52,7 +52,7 @@ def parse_options():
         "--instance_code", type=str, default=None, help="Instance code (e.g., pr01 to pr20)."
     )
     parser.add_argument(
-        "--instance_path", type=str, default=None, help="Instance path for single_instance mode."
+        "--instance_path", type=str, default=None, help="Instance path for single_instance mode. Expects VRPLIB formatted instances"
     )
     parser.add_argument(
         "--dir", type=str, default=None, help="Directory containing instances for batch mode."

@@ -8,7 +8,7 @@ from lib.myvrplib.data_format_conversions import convert_vrplib_to_cordeau
 END_OF_DAY = 1000
 SEED = 1234
 
-def get_instance_full_path(instance_name: str, problem_type: str) -> str:
+def get_instance_full_path(instance_name: str, problem_type: str=None) -> str:
     if problem_type is None:
         # determine from file name or raise error
         ext = os.path.splitext(instance_name)[-1]
@@ -361,7 +361,8 @@ def read_solution_format(file: str, print_data: bool = False) -> dict:
 def dynamic_df_from_dict(
         data: dict,
         static: bool = True, 
-        n_steps:int = 20, seed: int = 0
+        n_steps:int = 20, 
+        seed: int = 0,
     ) -> pd.DataFrame:
     """
     Convert a data dictionary to a pandas DataFrame for dynamic customer and depot information.
@@ -389,7 +390,7 @@ def dynamic_df_from_dict(
     """
     np.random.seed(seed)
     n = data["dimension"] + data["n_depots"]+1
-    has_time_windows = 'time_windows' in data.keys() 
+    has_time_windows = 'time_window' in data.keys() 
     if has_time_windows:
         data_df = pd.DataFrame(
             {

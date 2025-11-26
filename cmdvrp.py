@@ -26,6 +26,7 @@ degree_of_destruction = 0.05
 
 def main():
     # logging setup
+    args = parse_options()
     run_id = np.random.randint(10000, 99999)
     current_path = os.getcwd()
     log_dir = os.path.join(current_path, "logs")
@@ -36,9 +37,8 @@ def main():
     print(f"Running cmdvrp.py with run_id {run_id}")
     print(f"\nLog of this execution is being written to {log_filename}")
     now = datetime.datetime.now()
-    logging.debug(f"Log of compare_models_single_mode.py run on {now.day}/{now.month}/{now.year} at {now.hour}:{now.minute}:{now.second}")
+    logging.debug(f"Log of cmdvrp.py run on {now.day}/{now.month}/{now.year} at {now.hour}:{now.minute}:{now.second}")
     logging.debug(f"Running cmdvrp.py with run_id {run_id}")
-    args = parse_options()
 
     # results setup
     results_dir = os.path.join(current_path, "results")
