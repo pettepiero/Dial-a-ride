@@ -18,8 +18,7 @@ from lib.operators.wang_operators import *
 from lib.output.analyze_solution import analyze_solution
 from lib.myvrplib.input_output import print_results_dict, parse_options, print_instance
 from lib.output.video import generate_video
-#NUM_ITERATIONS = 100
-NUM_ITERATIONS = 50 
+from lib.myvrplib.data_format_conversions import convert_vrplib_to_cordeau, convert_cordeau_to_vrplib
 
 # logging setup
 import logging
@@ -82,15 +81,33 @@ def main():
         assert os.path.exists(args.dir), f"Provided dir {args.dir} does not exist"
         assert os.path.isdir(args.dir), f"Provided dir {args.dir} is not a directory"
         instances_names = os.listdir(args.dir)
-        instances_names = [os.path.join(args.dir, inst) for inst in instances_names if inst.endswith('.cvrptw')]
-        assert len(instances_names) > 0, f"Did not find any instances in provided dir {args.dir} that end with '.cvrptw'"
+        instances_names.sort()
+        instances_names = [os.path.join(args.dir, inst) for inst in instances_names]
+        #if len(instances_names) == 0:
+        #    instances_names = os.listdir(args.dir)
+        #    instances_names = [os.path.join(args.dir, inst) for inst in instances_names]
+        #    assert len(instances_names) > 0, f"Empty dir {args.dir}"
+        #    data_format = get_data_format(instances_names[0])
+        #    if data_format == 'cordeau':
+        #        for instance_full_path in instances_names:
+        #            new_path = instance_full_path + "_vrplib.cvrptw"
+        #            convert_cordeau_to_vrplib(input_path=instance_full_path, output_path=new_path)
+        #            logging.debug(f"Converted {instance_full_path} instance to vrplib format: {new_path}")
+
+        #        print(f"Converted cordeau instances to vrplib")
+
+        #instances_names = os.listdir(args.dir)
+        #instances_names = [os.path.join(args.dir, inst) for inst in instances_names if inst.endswith('.cvrptw')]
+
+        #assert len(instances_names) > 0, f"Did not find any instances in provided dir {args.dir} that end with '.cvrptw'"
+        assert len(instances_names) > 0, f"Did not find any instances in provided dir {args.dir}"
 
         logging.debug(f"Found {len(instances_names)} instances in {args.dir}")
 
         for instance_full_path in instances_names:
         #    instance_full_path = get_instance_full_path(instance_name=inst, problem_type=args.problem_type)
-            problem_type = get_data_format(instance_full_path)
-            if problem_type == 'vrplib':
+            data_format = get_data_format(instance_full_path)
+            if data_format == 'vrplib':
                 new_path = instance_full_path + "_cordeau"
                 convert_vrplib_to_cordeau(input_path=instance_full_path, output_path=new_path)
                 instance_full_path = new_path

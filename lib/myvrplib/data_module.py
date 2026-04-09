@@ -26,13 +26,18 @@ def get_instance_full_path(instance_name: str, problem_type: str=None) -> str:
         instance_full_path = "./data/c-mdvrptw/" + instance_name
     elif problem_type in ["mdvrp", "MDVRP"]:
         instance_full_path = "./data/C-mdvrp/" + instance_name
+    elif problem_type in ["cvrptw", "CVRPTW", "vrptw", "VRPTW"]:
+        instance_full_path = "./data/c-vrptw/" + instance_name
     else:
         raise ValueError(f"Unkown extension of instance")
 
     data_type = get_data_format(instance_full_path)
     if data_type == 'cordeau':
-        valid_instances = ["pr02",  "pr04",  "pr06",  "pr08",  "pr10",  "pr12",  "pr14",  "pr16",  "pr18",  "pr20", "pr01", "pr03", "pr05", "pr07",  "pr09",  "pr11",  "pr13",  "pr15",  "pr17",  "pr19"]
-        assert instance_name in valid_instances, f"Instance {instance_name} not found in ./data/c-mdvrptw"
+        if problem_type == 'MDVRP' or problem_type == 'mdvrp':
+            valid_instances = ["pr02",  "pr04",  "pr06",  "pr08",  "pr10",  "pr12",  "pr14",  "pr16",  "pr18",  "pr20", "pr01", "pr03", "pr05", "pr07",  "pr09",  "pr11",  "pr13",  "pr15",  "pr17",  "pr19"]
+        elif problem_type == 'VRPTW' or problem_type == 'vrptw':
+            valid_instances = ["c101", "c102", "c103"]
+        assert instance_name in valid_instances, f"Instance {instance_name} not found in valid_instances: {valid_instances}"
     elif data_type == 'vrplib':
         # convert instance to cordeau and then read
         new_path = instance_full_path + "_vrplib"
@@ -84,14 +89,21 @@ def read_cordeau_data(file: str, print_data: bool = False) -> dict:
         6: "MDVRPTW",
         7: "SDVRPTW",
     }
-
+    
     key = int(data[0].split()[0])
+    assert key in list(type_dict.keys())
     problem_type = type_dict[key]  # Problem type
-    assert problem_type == "MDVRPTW" or problem_type == "MDVRP", f"Available data is for {problem_type} and not for MDVRPTW or MDVRP"
 
     m = int(data[0].split()[1])  # number of vehicles
     n = int(data[0].split()[2])  # number of customers
     t = int(data[0].split()[3])  # number of days/depots/vehicle types
+
+    if problem_type in ('VRP', 'VRPTW'):
+        shift = 1
+    elif problem_type in ('MDVRP', 'MDVRPTW'):
+        shift = 0
+    else:
+        raise NotImplementedError
 
     # Save depots max duration and max load in array
     depots_info = []
@@ -101,7 +113,7 @@ def read_cordeau_data(file: str, print_data: bool = False) -> dict:
 
     # Save customers in array
     customers = []
-    for i in range(n):
+    for i in range(shift, n):
         line = data[t + 1 + i]
         customers.append(line.split())
 
@@ -138,9 +150,9 @@ def read_cordeau_data(file: str, print_data: bool = False) -> dict:
     data_dict["demand"] = np.concatenate((data_dict["demand"], demands))
     data_dict["demand"] = np.concatenate((data_dict["demand"], [0 for row in depots]))
     
-    if problem_type == 'MDVRPTW':
-        begin_times = [row[11] for row in customers]
-        end_times = [row[12] for row in customers]
+    if problem_type in ('MDVRPTW', 'VRPTW'):
+        begin_times = [row[-2] for row in customers]
+        end_times = [row[-1] for row in customers]
         data_dict["time_window"] = [[-1, -1]]
         data_dict["time_window"] += [[int(a), int(b)] for a, b in zip(begin_times, end_times)]
         data_dict["time_window"] += [[0, END_OF_DAY] for row in depots]

@@ -72,6 +72,11 @@ def main():
             instance_full_path = args.instance_path
         elif args.instance_code is not None:
             instance_full_path = get_instance_full_path(instance_name=args.instance_code, problem_type=args.problem_type)
+        data_format = get_data_format(instance_full_path)
+        if data_format != 'cordeau':
+            new_path = instance_full_path + 'cordeau'
+            convert_vrplib_to_cordeau(input_path=instance_full_path, output_path=new_path)
+            instance_full_path = new_path
         data = read_cordeau_data(instance_full_path, print_data=False)
 
         print_instance(data)
@@ -89,8 +94,8 @@ def main():
 
         for instance_full_path in instances_names:
         #    instance_full_path = get_instance_full_path(instance_name=inst, problem_type=args.problem_type)
-            problem_type = get_data_format(instance_full_path)
-            if problem_type == 'vrplib':
+            data_format = get_data_format(instance_full_path)
+            if data_format == 'vrplib':
                 new_path = instance_full_path + "_cordeau"
                 convert_vrplib_to_cordeau(input_path=instance_full_path, output_path=new_path)
                 instance_full_path = new_path

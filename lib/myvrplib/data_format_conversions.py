@@ -21,7 +21,7 @@ class CordeauFormatError(ValueError):
 
 def convert_cordeau_to_vrplib(input_path: str, output_path: str | None = None) -> str:
     """
-    Convert a Cordeau-format instance (types 0=VRP/CVRP or 2=MDVRP) to a VRPLIB file
+    Convert a Cordeau-format instance (types 0=VRP/CVRP or 2=MDVRP or 4=CVRPTW) to a VRPLIB file
     compatible with PyVRP's reader.
 
     - For VRP/CVRP (type 0): assumes a single depot (index 0 in Cordeau).
@@ -75,7 +75,7 @@ def convert_cordeau_to_vrplib(input_path: str, output_path: str | None = None) -
             "First line must be: 'type m n t' with 4 integers."
         ) from e
 
-    if type_ not in (0, 2):
+    if type_ not in (0, 2, 4):
         raise NotImplementedError(
             f"type={type_} not supported (only 0=VRP/CVRP and 2=MDVRP)."
         )
@@ -93,7 +93,7 @@ def convert_cordeau_to_vrplib(input_path: str, output_path: str | None = None) -
 
     # --- node lines:
     remain = lines[1 + t:]  # everything after DQ
-    if type_ == 0:
+    if type_ in (0, 4): #single depot but with or w/o TW
         # VRP/CVRP: lines go 0..n (depot + n customers)
         expected = n + 1
         if len(remain) < expected:
@@ -104,22 +104,34 @@ def convert_cordeau_to_vrplib(input_path: str, output_path: str | None = None) -
         depot_raw = node_lines[0].split()
         if len(depot_raw) < 5:
             raise CordeauFormatError("Depot line must contain at least 'i x y d q'.")
+            if type_ == 4:
+                if len(depot_raw) < 7:
+                    raise CordeauFormatError("Depot line must contain at least 'i x y d q e l' for VRPTW.")
         # collect customers
         cust_raws = [ln.split() for ln in node_lines[1:]]
         for cr in cust_raws:
             if len(cr) < 5:
                 raise CordeauFormatError("Customer line must contain at least 'i x y d q'.")
+            if type_ == 4:
+                if len(cr) < 7:
+                    raise CordeauFormatError("Customer line must contain at least 'i x y d q e l' for VRPTW.")
 
         # Build VRPLIB blocks
         Q_unique = DQ[0][1]  # single depot/day in VRP
         vehicles = m
         # VRPLIB node order: put depot as 1, then customers 2..n+1
         dep_x, dep_y = float(depot_raw[1]), float(depot_raw[2])
+        if type_ == 4:
+            dep_start, dep_end = float(depot_raw[-2]), float(depot_raw[-1])
+            tws = [(1, dep_start, dep_end)]
         nodes = [(1, dep_x, dep_y)]
         demands = [(1, 0)]
         # customers: renumber 2..n+1
         for k, cr in enumerate(cust_raws, start=2):
             x, y = float(cr[1]), float(cr[2])
+            if type_ == 4:
+                cr_start, cr_end = float(cr[-2]), float(cr[-1])
+                tws.append((k, cr_start, cr_end))
             q = int(float(cr[4]))
             nodes.append((k, x, y))
             demands.append((k, q))
@@ -128,11 +140,14 @@ def convert_cordeau_to_vrplib(input_path: str, output_path: str | None = None) -
         veh_depot = [1] * vehicles  # all vehicles at the single depot
 
         name = p.stem
-        out_type = "CVRP"
+        if type_ == 0:
+            out_type = "CVRP"
+        elif type_ == 4:
+            out_type = "CVRPTW"
         dimension = 1 + n
         capacity = Q_unique
 
-    elif type_ == 2:
+    elif type_ in (2, 6): #mdvrp or mdvrptw
         # MDVRP: lines go 1..n+t, last t entries are depots
         expected = n + t
         if len(remain) < expected:
@@ -142,6 +157,9 @@ def convert_cordeau_to_vrplib(input_path: str, output_path: str | None = None) -
         for tok in node_tokens:
             if len(tok) < 5:
                 raise CordeauFormatError("Each node line must contain at least 'i x y d q'.")
+            if type_ == 6:
+                if len(tok) < 7:
+                    raise CordeauFormatError("Each node line must contain at least 'i x y d q e l'. for MDVRPTW")
 
         # Split customers vs depots
         cust_tokens = node_tokens[:n]          # first n are customers
@@ -158,20 +176,26 @@ def convert_cordeau_to_vrplib(input_path: str, output_path: str | None = None) -
         vehicles = m
 
         # Node order in VRPLIB: put depots first (1..t), then customers (t+1..t+n)
-        nodes = []
+        nodes   = []
         demands = []
         dep_ids = []
+        if type_ == 6:
+            tws = []
         for k, dt in enumerate(depot_tokens, start=1):
             x, y = float(dt[1]), float(dt[2])
             nodes.append((k, x, y))
             demands.append((k, 0))
             dep_ids.append(k)
+            if type_ == 6:
+                tws.append((k, float(dt[-2]), float(dt[-1])))
 
         for j, ct in enumerate(cust_tokens, start=t+1):
             x, y = float(ct[1]), float(ct[2])
             q = int(float(ct[4]))
             nodes.append((j, x, y))
             demands.append((j, q))
+            if type_ == 6:
+                tws.append((j, ct[-2], ct[-1]))
 
         # Assign vehicles to depots evenly (round-robin)
         veh_depot = []
@@ -179,7 +203,10 @@ def convert_cordeau_to_vrplib(input_path: str, output_path: str | None = None) -
             veh_depot.append(dep_ids[vid % t])
 
         name = p.stem
-        out_type = "MDVRP"
+        if type_ == 2:
+            out_type = "MDVRP"
+        elif type_ == 6:
+            out_type = "MDVRPTW"
         dimension = n + t
 
     # --- Compose VRPLIB text
@@ -203,6 +230,11 @@ def convert_cordeau_to_vrplib(input_path: str, output_path: str | None = None) -
     for idx, q in demands:
         vrplib_lines.append(f"{idx} {int(q)}")
 
+    if type_ in (4, 6):
+        vrplib_lines.append("TIME_WINDOW_SECTION")
+        for idx, e, l in tws:
+            vrplib_lines.append(f"{idx} {e} {l}")
+
     vrplib_lines.append("DEPOT_SECTION")
     for dep in dep_ids:
         vrplib_lines.append(str(dep))
@@ -219,7 +251,14 @@ def convert_cordeau_to_vrplib(input_path: str, output_path: str | None = None) -
     # --- Write file
     if output_path is None:
         # Use .vrp for single depot, .mdvrp for multi-depot for clarity
-        ext = ".vrp" if out_type == "CVRP" else ".mdvrp"
+        if out_type == 'CVRP':
+            ext = ".vrp"
+        elif out_type == 'MDVRP':
+            ext = ".mdvrp"
+        elif out_type == 'CVRPTW':
+            ext = ".vrptw"
+        elif out_type == 'MDVRPTW':
+            ext = ".mdvrptw"
         output_path = str(p.with_suffix(ext))
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(text)
@@ -291,7 +330,7 @@ def convert_vrplib_to_cordeau(input_path: str, output_path: str | None = None) -
     if type_line is None:
         raise CordeauFormatError("Missing TYPE line.")
     type_token = raw[type_line].split(":")[1].strip().upper()
-    if type_token not in ("CVRP", "MDVRP"):
+    if type_token not in ("CVRP", "MDVRP", "CVRPTW", "MDVRPTW"):
         raise NotImplementedError(f"TYPE '{type_token}' not supported (only CVRP/MDVRP).")
 
     dimension = int(read_scalar_after("DIMENSION"))
